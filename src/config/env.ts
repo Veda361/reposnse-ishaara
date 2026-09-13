@@ -5,10 +5,10 @@ dotenv.config();
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test"]).default("development"),
-  PORT: z.string().transform((val) => parseInt(val, 10)).default("5000"),
+  PORT: z.coerce.number().default(5000),
   MONGODB_URI: z.string().default("mongodb://127.0.0.1:27017/isahara"),
   CLIENT_URL: z.string().default("http://localhost:3000"),
-  ADMIN_SECRET_KEY: z.string().default("isahara-admin-secret-2026"),
+  ADMIN_SECRET_KEY: z.string().default("replace_with_secure_secret"),
 });
 
 const _env = envSchema.safeParse(process.env);

@@ -11,16 +11,31 @@ import { sendSuccess, sendError } from "./utils/response";
 export const createApp = (): Express => {
   const app = express();
 
+  // Trust proxy for Render/Cloudflare reverse proxy environments
+  app.set("trust proxy", 1);
+
   // Basic security headers
   app.use(helmet());
+
+  // Allowed origins: production client URL and local development
+  const allowedOrigins = Array.from(
+    new Set(
+      [
+        env.CLIENT_URL,
+        env.CLIENT_URL ? env.CLIENT_URL.replace(/\/$/, "") : "",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+      ].filter(Boolean)
+    )
+  );
 
   // CORS configuration
   app.use(
     cors({
-      origin: [env.CLIENT_URL, "http://localhost:3000", "http://127.0.0.1:3000"],
+      origin: allowedOrigins,
       credentials: true,
       methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-      allowedHeaders: ["Content-Type", "Authorization"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
     })
   );
 
