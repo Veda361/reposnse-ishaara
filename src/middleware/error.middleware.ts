@@ -6,16 +6,16 @@ import { sendError } from "../utils/response";
 export interface AppError extends Error {
   statusCode?: number;
   code?: string;
-  details?: any;
+  details?: unknown;
 }
 
 export const errorHandler = (
-  err: any,
+  err: unknown,
   req: Request,
   res: Response,
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
-) => {
+): Response => {
   // Handle Zod Validation Errors
   if (err instanceof ZodError) {
     const formattedErrors = err.errors.map((e) => ({
@@ -49,13 +49,19 @@ export const errorHandler = (
       statusCode: 400,
       code: "VALIDATION_ERROR",
       message: err.message,
+      details: Object.values(err.errors).map((valErr) => ({
+        field: valErr.path,
+        message: valErr.message,
+      })),
     });
   }
 
-  // Handle explicit application errors
-  const statusCode = err.statusCode || 500;
-  const code = err.code || "INTERNAL_SERVER_ERROR";
-  const message = err.message || "An unexpected error occurred";
+  // Handle explicit application errors or general exceptions
+  const isError = err instanceof Error;
+  const appError = isError ? (err as AppError) : undefined;
+  const statusCode = appError?.statusCode || 500;
+  const code = appError?.code || "INTERNAL_SERVER_ERROR";
+  const message = isError ? err.message : "An unexpected error occurred";
 
   console.error("Unhandled Error:", err);
 
@@ -64,6 +70,6 @@ export const errorHandler = (
     statusCode,
     code,
     message,
-    details: process.env.NODE_ENV === "development" ? err.stack : undefined,
+    details: process.env.NODE_ENV === "development" && isError ? err.stack : undefined,
   });
 };
