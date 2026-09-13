@@ -1,6 +1,6 @@
 import { Response } from "express";
 
-export interface ApiResponseOptions<T = any> {
+export interface ApiResponseOptions<T = unknown> {
   res: Response;
   statusCode?: number;
   message?: string;
@@ -33,7 +33,7 @@ export interface ApiErrorOptions {
   statusCode?: number;
   code?: string;
   message: string;
-  details?: any;
+  details?: unknown;
 }
 
 export const sendError = ({
@@ -48,7 +48,7 @@ export const sendError = ({
     error: {
       code: string;
       message: string;
-      details?: any;
+      details?: unknown;
     };
   } = {
     success: false,

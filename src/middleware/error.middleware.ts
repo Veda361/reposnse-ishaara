@@ -44,15 +44,35 @@ export const errorHandler = (
 
   // Handle Mongoose Schema Validation Errors
   if (err instanceof mongoose.Error.ValidationError) {
+    const errorMessage = err instanceof Error ? err.message : "Validation failed";
+    const details = Object.entries(err.errors).map(([pathKey, errorItem]) => {
+      let fieldPath = pathKey;
+      let fieldMessage = "Validation failed";
+
+      if (errorItem instanceof mongoose.Error.ValidatorError) {
+        fieldPath = errorItem.path || pathKey;
+        fieldMessage = errorItem.message || errorItem.properties?.message || "Validation error";
+      } else if (errorItem instanceof mongoose.Error.CastError) {
+        fieldPath = errorItem.path || pathKey;
+        fieldMessage = `Invalid format for ${fieldPath}`;
+      } else {
+        const fallback = errorItem as unknown as { message?: string; path?: string };
+        fieldPath = fallback?.path || pathKey;
+        fieldMessage = fallback?.message || "Validation failed";
+      }
+
+      return {
+        field: fieldPath,
+        message: fieldMessage,
+      };
+    });
+
     return sendError({
       res,
       statusCode: 400,
       code: "VALIDATION_ERROR",
-      message: err.message,
-      details: Object.values(err.errors).map((valErr) => ({
-        field: valErr.path,
-        message: valErr.message,
-      })),
+      message: errorMessage,
+      details,
     });
   }
 
