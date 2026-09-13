@@ -50,11 +50,11 @@ export const errorHandler = (
       let fieldMessage = "Validation failed";
 
       if (errorItem instanceof mongoose.Error.ValidatorError) {
-        fieldPath = errorItem.path || pathKey;
-        fieldMessage = errorItem.message || errorItem.properties?.message || "Validation error";
+        fieldPath = errorItem.path;
+        fieldMessage = errorItem.properties.message;
       } else if (errorItem instanceof mongoose.Error.CastError) {
-        fieldPath = errorItem.path || pathKey;
-        fieldMessage = `Invalid format for ${fieldPath}`;
+        fieldPath = errorItem.path;
+        fieldMessage = `Invalid format for ${errorItem.path}`;
       } else {
         const fallback = errorItem as unknown as { message?: string; path?: string };
         fieldPath = fallback?.path || pathKey;
