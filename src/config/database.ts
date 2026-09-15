@@ -1,33 +1,46 @@
 import mongoose from "mongoose";
 import { env } from "./env";
+import { logger } from "./logger";
 
+/**
+ * Checks if the MongoDB connection is currently established.
+ */
+export const isDatabaseConnected = (): boolean => {
+  return mongoose.connection.readyState === 1;
+};
+
+/**
+ * Connects to MongoDB with duplicate-connection prevention and error handling.
+ */
 export const connectDatabase = async (uri: string = env.MONGODB_URI): Promise<typeof mongoose> => {
+  if (isDatabaseConnected()) {
+    logger.info("MongoDB is already connected.");
+    return mongoose;
+  }
+
   try {
     const conn = await mongoose.connect(uri);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
+    logger.info(`MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return conn;
   } catch (error) {
-    console.error("❌ MongoDB connection error:", error);
+    logger.error("MongoDB connection failed:", error);
     throw error;
   }
 };
 
+/**
+ * Disconnects from MongoDB gracefully.
+ */
 export const disconnectDatabase = async (): Promise<void> => {
+  if (mongoose.connection.readyState === 0) {
+    return;
+  }
+
   try {
     await mongoose.connection.close();
-    console.log("ℹ️  MongoDB connection closed.");
+    logger.info("MongoDB connection closed.");
   } catch (error) {
-    console.error("❌ Error while disconnecting MongoDB:", error);
+    logger.error("Error while closing MongoDB connection:", error);
+    throw error;
   }
 };
-
-// Graceful shutdown listeners
-process.on("SIGINT", async () => {
-  await disconnectDatabase();
-  process.exit(0);
-});
-
-process.on("SIGTERM", async () => {
-  await disconnectDatabase();
-  process.exit(0);
-});

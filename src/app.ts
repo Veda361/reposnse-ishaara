@@ -1,53 +1,52 @@
 import express, { Express, Request, Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
-import mongoose from "mongoose";
 import { env } from "./config/env";
-import surveyRoutes from "./routes/survey.routes";
-import adminRoutes from "./routes/admin.routes";
-import { errorHandler } from "./middleware/error.middleware";
-import { sendSuccess, sendError } from "./utils/response";
+import { logger } from "./config/logger";
+import { toNodeHandler } from "better-auth/node";
+import { auth } from "./modules/auth/auth.config";
+import apiV1Router from "./routes";
+import { errorHandler } from "./middleware/error";
+import { sendError } from "./shared/responses/api-response";
+import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants";
+import { ERROR_CODES } from "./shared/errors/error-codes";
 
-export const createApp = (): Express => {
+export interface CreateAppOptions {
+  preRouterMiddleware?: express.RequestHandler;
+}
+
+/**
+ * Creates and configures the Express application instance.
+ */
+export const createApp = (options?: CreateAppOptions): Express => {
   const app = express();
 
-  // Trust proxy for Render/Cloudflare reverse proxy environments
+  // Trust reverse proxy headers (for Render, Cloudflare, AWS ALB)
   app.set("trust proxy", 1);
 
-  // Basic security headers
+  // Security headers
   app.use(helmet());
 
   /**
-   * CORS CONFIGURATION
-   *
-   * Frontend development:
-   *   http://localhost:5173
-   *
-   * Production:
-   *   env.CLIENT_URL
-   *
-   * Also allow common localhost development ports.
+   * CORS Configuration
+   * In development: allows configured CLIENT_URL and standard localhost origins.
+   * In production: restricts strictly to configured CLIENT_URL.
    */
-  const allowedOrigins = new Set(
+  const allowedOrigins = new Set<string>(
     [
       env.CLIENT_URL,
-      env.CLIENT_URL?.replace(/\/$/, ""),
-
-      // Vite
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-
-      // Common React development ports
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ].filter(Boolean)
+      env.CLIENT_URL.replace(/\/$/, ""),
+      env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined,
+      env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : undefined,
+      env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined,
+      env.NODE_ENV !== "production" ? "http://127.0.0.1:5173" : undefined,
+    ].filter((origin): origin is string => Boolean(origin))
   );
 
   app.use(
     cors({
       origin: (origin, callback) => {
-        // Allow requests without an Origin header
-        // (Postman, server-to-server requests, health checks, etc.)
+        // Allow requests without an origin (e.g. server-to-server, mobile apps, cURL, health checks)
         if (!origin) {
           return callback(null, true);
         }
@@ -56,80 +55,46 @@ export const createApp = (): Express => {
           return callback(null, true);
         }
 
-        console.warn(`CORS blocked origin: ${origin}`);
-
-        return callback(
-          new Error(`CORS policy: Origin ${origin} is not allowed`)
-        );
+        logger.warn(`CORS blocked request from origin: ${origin}`);
+        return callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
       },
-
       credentials: true,
-
-      methods: [
-        "GET",
-        "POST",
-        "PUT",
-        "PATCH",
-        "DELETE",
-        "OPTIONS",
-      ],
-
-      allowedHeaders: [
-        "Content-Type",
-        "Authorization",
-        "x-admin-key",
-      ],
-
-      optionsSuccessStatus: 204,
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+      allowedHeaders: ["Content-Type", "Authorization", "x-admin-key", "Cookie"],
+      optionsSuccessStatus: HTTP_STATUS.NO_CONTENT,
     })
   );
 
-  // Body parser with strict size limit
+  // Mount Better Auth endpoints BEFORE body parsers
+  app.all("/api/auth", toNodeHandler(auth));
+  app.all("/api/auth/*", toNodeHandler(auth));
+
+  // Body parsers with sensible limits to prevent payload exhaustion attacks
   app.use(express.json({ limit: "50kb" }));
   app.use(express.urlencoded({ extended: true, limit: "50kb" }));
 
-  /**
-   * HEALTH CHECK
-   *
-   * GET /api/v1/health
-   */
-  app.get("/api/v1/health", (_req: Request, res: Response) => {
-    const isDbConnected = mongoose.connection.readyState === 1;
+  // Optional pre-router middleware (for testing harness authentication)
+  if (options?.preRouterMiddleware) {
+    app.use(options.preRouterMiddleware);
+  }
 
-    return sendSuccess({
-      res,
-      statusCode: isDbConnected ? 200 : 503,
-      data: {
-        status: isDbConnected ? "healthy" : "degraded",
-        database: isDbConnected ? "connected" : "disconnected",
-      },
-    });
-  });
+  // Mount central versioned API routes
+  app.use(API_PREFIX, apiV1Router);
 
-  /**
-   * API ROUTES
-   */
-  app.use("/api/v1/survey", surveyRoutes);
-  app.use("/api/v1/admin", adminRoutes);
-
-  /**
-   * 404 HANDLER
-   */
+  // 404 Route Handler for undefined endpoints
   app.use((req: Request, res: Response) => {
     return sendError({
       res,
-      statusCode: 404,
-      code: "ROUTE_NOT_FOUND",
+      statusCode: HTTP_STATUS.NOT_FOUND,
+      code: ERROR_CODES.ROUTE_NOT_FOUND,
       message: `Cannot ${req.method} ${req.originalUrl}`,
     });
   });
 
-  /**
-   * CENTRALIZED ERROR HANDLER
-   */
+  // Global Centralized Error Handling Middleware
   app.use(errorHandler);
 
   return app;
 };
 
-export default createApp();
+export default createApp;

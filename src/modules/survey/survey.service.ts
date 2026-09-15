@@ -1,5 +1,16 @@
-import { SurveyResponse, ISurveyResponse } from "../models/SurveyResponse";
-import { CreateSurveyInput } from "../validators/survey.validator";
+import { SurveyResponse, ISurveyResponse } from "./survey.model";
+import { CreateSurveyInput } from "./survey.schema";
+
+export interface GetSurveysQuery {
+  page?: number;
+  limit?: number;
+  college?: string;
+  wouldTryIsahara?: string;
+  interestedInPilot?: boolean | string;
+  search?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+}
 
 export class SurveyService {
   /**
@@ -13,16 +24,7 @@ export class SurveyService {
   /**
    * Retrieves paginated survey responses with search & filtering.
    */
-  async getSurveys(query: {
-    page?: number;
-    limit?: number;
-    college?: string;
-    wouldTryIsahara?: string;
-    interestedInPilot?: boolean | string;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: "asc" | "desc";
-  }) {
+  async getSurveys(query: GetSurveysQuery) {
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(query.limit) || 20));
     const skip = (page - 1) * limit;

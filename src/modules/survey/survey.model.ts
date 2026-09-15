@@ -11,7 +11,7 @@ import {
   WOULD_USE_RIDE_SIGNALS,
   BIGGEST_PROBLEMS,
   WOULD_TRY_ISAHARAS,
-} from "../validators/survey.validator";
+} from "./survey.schema";
 
 export interface IStudent {
   name?: string;
