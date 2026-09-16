@@ -75,3 +75,13 @@ export const voiceRateLimiter = createRateLimiter({
   message: "Voice processing rate limit exceeded. Please wait a moment before trying again.",
 });
 
+/**
+ * Discovery rate limiter to prevent excessive matching computations and routing calls.
+ */
+export const discoveryRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 45, // 45 requests per minute
+  message: "Trip discovery rate limit exceeded. Please wait a moment before searching again.",
+});
+
+

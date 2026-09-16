@@ -71,6 +71,29 @@ const envSchema = z.object({
   REALTIME_MAX_CHUNK_BYTES: z.coerce.number().int().positive().default(65536),
   REALTIME_SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
 
+  // Phase 7: Routing & Trip Discovery Configuration
+  ROUTING_PROVIDER: z.enum(["google_routes", "mock"]).default("google_routes"),
+  ROUTING_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  ROUTING_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+
+  MATCHING_MAX_CANDIDATES: z.coerce.number().int().positive().default(50),
+  MATCHING_MAX_ROUTE_CALCULATIONS: z.coerce.number().int().positive().default(10),
+  MATCHING_PICKUP_RADIUS_METERS: z.coerce.number().positive().default(1500),
+  MATCHING_DESTINATION_RADIUS_METERS: z.coerce.number().positive().default(3000),
+  MATCHING_DIRECTION_SAME_THRESHOLD_DEGREES: z.coerce.number().positive().default(45),
+  MATCHING_DIRECTION_OPPOSITE_THRESHOLD_DEGREES: z.coerce.number().positive().default(135),
+  MATCHING_MAX_DETOUR_METERS: z.coerce.number().positive().default(4000),
+  DISCOVERY_SESSION_TTL_MINUTES: z.coerce.number().positive().default(15),
+  DISCOVERY_MAX_RESULTS: z.coerce.number().int().positive().default(20),
+
+  // Matching Weights
+  MATCHING_PICKUP_WEIGHT: z.coerce.number().positive().default(0.30),
+  MATCHING_DESTINATION_WEIGHT: z.coerce.number().positive().default(0.25),
+  MATCHING_DIRECTION_WEIGHT: z.coerce.number().positive().default(0.15),
+  MATCHING_PROGRESS_WEIGHT: z.coerce.number().positive().default(0.15),
+  MATCHING_DETOUR_WEIGHT: z.coerce.number().positive().default(0.10),
+  MATCHING_FRESHNESS_WEIGHT: z.coerce.number().positive().default(0.05),
+
   // Legacy / Future phase environment variables
   REDIS_URL: z.string().optional(),
   MAPS_API_KEY: z.string().optional(),

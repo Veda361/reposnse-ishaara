@@ -9,6 +9,8 @@ import { logger } from "../../config/logger";
 import { IUserDocument } from "../users/user.types";
 import { IDriverProfileDocument } from "../drivers/driver.types";
 
+import { parse as parseUrl } from "url";
+
 export interface AuthenticatedDriverContext {
   user: IUserDocument;
   driverProfile: IDriverProfileDocument;
@@ -21,6 +23,11 @@ export class RealtimeAuthService {
   async authenticateUpgradeRequest(
     req: IncomingMessage
   ): Promise<AuthenticatedDriverContext> {
+    const urlObj = parseUrl(req.url || "", true);
+    if (!req.headers.authorization && urlObj.query.token) {
+      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    }
+
     const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
 
     if (!sessionResult || !sessionResult.user) {
@@ -72,6 +79,47 @@ export class RealtimeAuthService {
       user: applicationUser,
       driverProfile,
     };
+  }
+
+  /**
+   * Validates Better Auth session for passenger / user discovery WebSocket upgrade.
+   */
+  async authenticateDiscoveryUpgradeRequest(
+    req: IncomingMessage
+  ): Promise<IUserDocument> {
+    const urlObj = parseUrl(req.url || "", true);
+    if (!req.headers.authorization && urlObj.query.token) {
+      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    }
+
+    const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
+
+    if (!sessionResult || !sessionResult.user) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Authentication required. No valid session found.",
+        401
+      );
+    }
+
+    const applicationUser = await userService.findOrCreateUserFromAuth(
+      sessionResult.user
+    );
+
+    if (applicationUser.isActive === false) {
+      throw new AppError(
+        ERROR_CODES.USER_INACTIVE,
+        "User account is deactivated.",
+        403
+      );
+    }
+
+    logger.debug("Realtime discovery connection authenticated", {
+      userId: applicationUser._id.toString(),
+      role: applicationUser.role,
+    });
+
+    return applicationUser;
   }
 }
 

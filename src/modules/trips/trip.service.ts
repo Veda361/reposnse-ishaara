@@ -19,6 +19,8 @@ import {
 } from "../../shared/errors/app-error";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
 import { logger } from "../../config/logger";
+import { routingService } from "../routing/routing.service";
+import { tripDiscoveryChangeSource } from "../realtime/trip-discovery-change.source";
 
 /**
  * Computes great-circle distance between two geographic coordinates in meters
@@ -226,7 +228,35 @@ export class TripService {
       );
     }
 
-    // 6. Atomic state transition: CREATED -> ACTIVE
+    // 6. Ensure normalized route geometry is present before activation
+    let routeToPersist = trip.route;
+    if (!trip.route?.geometry?.coordinates || trip.route.geometry.coordinates.length < 2) {
+      try {
+        const computed = await routingService.computeRoute({
+          origin: {
+            latitude: trip.origin.coordinates.coordinates[1],
+            longitude: trip.origin.coordinates.coordinates[0],
+          },
+          destination: {
+            latitude: trip.destination.coordinates.coordinates[1],
+            longitude: trip.destination.coordinates.coordinates[0],
+          },
+        });
+        routeToPersist = {
+          geometry: computed.geometry,
+          distanceMeters: computed.distanceMeters,
+          durationSeconds: computed.durationSeconds,
+          provider: computed.provider,
+        };
+      } catch (routeErr: any) {
+        logger.warn("Route computation failed during trip start, using fallback geometry", {
+          tripId,
+          error: routeErr.message,
+        });
+      }
+    }
+
+    // 7. Atomic state transition: CREATED -> ACTIVE
     const now = new Date();
     try {
       const updated = await TripModel.findOneAndUpdate(
@@ -238,6 +268,7 @@ export class TripService {
         {
           status: TripStatus.ACTIVE,
           startedAt: now,
+          ...(routeToPersist ? { route: routeToPersist } : {}),
         },
         { new: true }
       );
@@ -252,6 +283,14 @@ export class TripService {
       // Synchronize driver operational status to ON_RIDE
       driverProfile.status = DriverStatus.ON_RIDE;
       await driverProfile.save();
+
+      // Dispatch discovery synchronization event to affected subscribers
+      tripDiscoveryChangeSource.notifyTripChange(updated, "ACTIVATED").catch((err) => {
+        logger.error("Error dispatching discovery notification on trip activation", {
+          tripId,
+          err,
+        });
+      });
 
       logger.info("Trip started (CREATED -> ACTIVE)", {
         tripId,
@@ -325,6 +364,14 @@ export class TripService {
       { status: DriverStatus.ONLINE }
     );
 
+    // Dispatch discovery synchronization event to affected subscribers
+    tripDiscoveryChangeSource.notifyTripChange(updated, "COMPLETED").catch((err) => {
+      logger.error("Error dispatching discovery notification on trip completion", {
+        tripId,
+        err,
+      });
+    });
+
     logger.info("Trip completed (ACTIVE -> COMPLETED)", {
       tripId,
       driverId: driverId.toString(),
@@ -388,6 +435,14 @@ export class TripService {
         { status: DriverStatus.ONLINE }
       );
     }
+
+    // Dispatch discovery synchronization event to affected subscribers
+    tripDiscoveryChangeSource.notifyTripChange(updated, "CANCELLED").catch((err) => {
+      logger.error("Error dispatching discovery notification on trip cancellation", {
+        tripId,
+        err,
+      });
+    });
 
     logger.info("Trip cancelled", {
       tripId,

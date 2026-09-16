@@ -13,9 +13,13 @@ import {
   SessionStartPayload,
   AudioChunkPayload,
   SessionEndedPayload,
+  ServerMessageType,
 } from "./realtime.types";
 import { VoiceSessionStatus } from "../voice/sessions/voice-session.model";
 import { InputMode } from "../voice/voice.types";
+import { IUserDocument } from "../users/user.types";
+import { DiscoverySessionModel } from "../matching/discovery-session.model";
+import { discoverySubscriptionIndex } from "./discovery-subscription.index";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
@@ -53,41 +57,64 @@ export class RealtimeGateway {
   }
 
   /**
-   * Attaches the gateway to the HTTP server, intercepting upgrade requests to /api/v1/voice/realtime.
+   * Attaches the gateway to the HTTP server, intercepting upgrade requests to:
+   * 1. /api/v1/voice/realtime (Driver conductor voice interaction)
+   * 2. /api/v1/discovery/realtime (Passenger trip discovery stream)
    */
   attach(server: HttpServer): void {
     server.on("upgrade", async (req: IncomingMessage, socket, head) => {
       const pathname = parseUrl(req.url || "").pathname;
 
-      if (pathname !== "/api/v1/voice/realtime") {
-        return; // Allow other upgrade handlers (or 404)
-      }
+      if (pathname === "/api/v1/voice/realtime") {
+        try {
+          const authContext = await this.authService.authenticateUpgradeRequest(req);
 
-      try {
-        const authContext = await this.authService.authenticateUpgradeRequest(req);
+          this.wss.handleUpgrade(req, socket, head, (ws) => {
+            this.wss.emit("connection", ws, req, authContext);
+          });
+        } catch (err: any) {
+          logger.warn("Voice WebSocket upgrade authentication rejected", {
+            error: err.message,
+            code: err.code || err.errorCode,
+          });
 
-        this.wss.handleUpgrade(req, socket, head, (ws) => {
-          this.wss.emit("connection", ws, req, authContext);
-        });
-      } catch (err: any) {
-        logger.warn("WebSocket upgrade authentication rejected", {
-          error: err.message,
-          code: err.code || err.errorCode,
-        });
+          const statusCode = err.statusCode || 401;
+          const statusMessage = err.message || "Unauthorized";
+          socket.write(
+            `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
+            `Connection: close\r\n` +
+            `Content-Type: application/json\r\n\r\n` +
+            JSON.stringify({ error: err.message, code: err.code || err.errorCode })
+          );
+          socket.destroy();
+        }
+      } else if (pathname === "/api/v1/discovery/realtime") {
+        try {
+          const user = await this.authService.authenticateDiscoveryUpgradeRequest(req);
 
-        const statusCode = err.statusCode || 401;
-        const statusMessage = err.message || "Unauthorized";
-        socket.write(
-          `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
-          `Connection: close\r\n` +
-          `Content-Type: application/json\r\n\r\n` +
-          JSON.stringify({ error: err.message, code: err.code || err.errorCode })
-        );
-        socket.destroy();
+          this.wss.handleUpgrade(req, socket, head, (ws) => {
+            this.handleDiscoveryConnection(ws, req, user);
+          });
+        } catch (err: any) {
+          logger.warn("Discovery WebSocket upgrade authentication rejected", {
+            error: err.message,
+            code: err.code || err.errorCode,
+          });
+
+          const statusCode = err.statusCode || 401;
+          const statusMessage = err.message || "Unauthorized";
+          socket.write(
+            `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
+            `Connection: close\r\n` +
+            `Content-Type: application/json\r\n\r\n` +
+            JSON.stringify({ error: err.message, code: err.code || err.errorCode })
+          );
+          socket.destroy();
+        }
       }
     });
 
-    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime");
+    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime and /api/v1/discovery/realtime");
   }
 
   private setupConnectionHandling(): void {
@@ -396,11 +423,19 @@ export class RealtimeGateway {
             case "SESSION_CANCEL": {
               if (!activeContext) return;
               logger.info("Client requested SESSION_CANCEL", { sessionId: activeContext.sessionId });
+              try {
+                await this.sessionService.updateStatus(
+                  activeContext.sessionId,
+                  VoiceSessionStatus.CANCELLED
+                );
+              } catch (err) {
+                logger.error("Error updating session status on cancel", { err });
+              }
               activeContext.transport.send("SESSION_ENDED", {
                 reason: "Cancelled by driver client",
                 finalStatus: VoiceSessionStatus.CANCELLED,
               } as SessionEndedPayload);
-              await cleanupSession("Client cancelled", VoiceSessionStatus.CANCELLED);
+              await cleanupSession("Client cancelled");
               activeContext.transport.close(1000, "Session cancelled");
               break;
             }
@@ -432,6 +467,223 @@ export class RealtimeGateway {
         });
       }
     );
+  }
+
+  private handleDiscoveryConnection(
+    ws: WebSocket,
+    req: IncomingMessage,
+    user: IUserDocument
+  ): void {
+    const urlObj = parseUrl(req.url || "", true);
+    const initialSessionId = urlObj.query.discoverySessionId as string | undefined;
+
+    let activeSessionId: string | undefined;
+    let transport: WebSocketTransport | undefined;
+    let expirationTimer: NodeJS.Timeout | undefined;
+    let pingTimer: NodeJS.Timeout | undefined;
+
+    const cleanup = (reason: string) => {
+      if (activeSessionId) {
+        discoverySubscriptionIndex.removeSubscriber(activeSessionId);
+        logger.info("Discovery subscriber removed", {
+          sessionId: activeSessionId,
+          userId: user._id.toString(),
+          reason,
+        });
+        activeSessionId = undefined;
+      }
+      if (expirationTimer) {
+        clearTimeout(expirationTimer);
+        expirationTimer = undefined;
+      }
+      if (pingTimer) {
+        clearInterval(pingTimer);
+        pingTimer = undefined;
+      }
+    };
+
+    const subscribeToSession = async (sessionId: string) => {
+      if (!sessionId || typeof sessionId !== "string") {
+        ws.send(
+          JSON.stringify({
+            type: "DISCOVERY_ERROR",
+            sessionId: "unknown",
+            sequence: 0,
+            timestamp: new Date().toISOString(),
+            payload: {
+              code: ERROR_CODES.VALIDATION_ERROR,
+              message: "discoverySessionId is required to subscribe",
+              fatal: false,
+            },
+          })
+        );
+        return;
+      }
+
+      try {
+        const session = await DiscoverySessionModel.findOne({
+          sessionId,
+          userId: user._id,
+          expiresAt: { $gt: new Date() },
+        });
+
+        if (!session) {
+          ws.send(
+            JSON.stringify({
+              type: "DISCOVERY_ERROR",
+              sessionId,
+              sequence: 0,
+              timestamp: new Date().toISOString(),
+              payload: {
+                code: ERROR_CODES.DISCOVERY_SESSION_NOT_FOUND,
+                message: "Discovery session not found or has expired",
+                fatal: true,
+              },
+            })
+          );
+          ws.close(4004, "Session not found or expired");
+          return;
+        }
+
+        // Clean up previous subscription if switching sessions on same socket
+        if (activeSessionId && activeSessionId !== session.sessionId) {
+          discoverySubscriptionIndex.removeSubscriber(activeSessionId);
+          if (expirationTimer) clearTimeout(expirationTimer);
+        }
+
+        activeSessionId = session.sessionId;
+        transport = new WebSocketTransport(ws, activeSessionId);
+
+        discoverySubscriptionIndex.addSubscriber(session, ws, transport);
+
+        transport.send("DISCOVERY_SUBSCRIBED", {
+          discoverySessionId: session.sessionId,
+          expiresAt: session.expiresAt.toISOString(),
+          pickup: [session.origin.longitude, session.origin.latitude],
+          destination: [session.destination.longitude, session.destination.latitude],
+        });
+
+        const ttlMs = Math.max(0, session.expiresAt.getTime() - Date.now());
+        if (expirationTimer) clearTimeout(expirationTimer);
+        expirationTimer = setTimeout(() => {
+          if (transport?.isOpen()) {
+            transport.send("DISCOVERY_EXPIRED", {
+              discoverySessionId: session.sessionId,
+            });
+            transport.close(1000, "Discovery session expired");
+          }
+          cleanup("TTL Expired");
+        }, ttlMs);
+      } catch (err: any) {
+        logger.error("Error subscribing to discovery session", {
+          sessionId,
+          userId: user._id.toString(),
+          err,
+        });
+        ws.send(
+          JSON.stringify({
+            type: "DISCOVERY_ERROR",
+            sessionId,
+            sequence: 0,
+            timestamp: new Date().toISOString(),
+            payload: {
+              code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+              message: "Failed to subscribe to discovery session",
+              fatal: true,
+            },
+          })
+        );
+      }
+    };
+
+    // Auto-subscribe if initial discoverySessionId is in URL query
+    if (initialSessionId) {
+      subscribeToSession(initialSessionId);
+    }
+
+    // Heartbeat ping every 30s
+    pingTimer = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 30000);
+
+    ws.on("message", async (data: any, isBinary: boolean) => {
+      if (isBinary) {
+        // Discovery protocol only supports JSON control frames
+        return;
+      }
+
+      let envelope: RealtimeEnvelope<any>;
+      try {
+        envelope = RealtimeEventBuilder.parseClientMessage(data.toString());
+      } catch (err) {
+        logger.warn("Received malformed JSON on discovery WebSocket", { err });
+        ws.send(
+          JSON.stringify({
+            type: "DISCOVERY_ERROR",
+            sessionId: activeSessionId || "unknown",
+            sequence: 0,
+            timestamp: new Date().toISOString(),
+            payload: {
+              code: ERROR_CODES.BAD_REQUEST,
+              message: "Payload must be valid JSON matching RealtimeEnvelope",
+              fatal: false,
+            },
+          })
+        );
+        return;
+      }
+
+      switch (envelope.type) {
+        case "PING": {
+          if (transport) {
+            transport.send("PONG", { pongAt: new Date().toISOString() });
+          } else {
+            ws.send(
+              JSON.stringify({
+                type: "PONG",
+                sessionId: "unknown",
+                sequence: 0,
+                timestamp: new Date().toISOString(),
+                payload: { pongAt: new Date().toISOString() },
+              })
+            );
+          }
+          break;
+        }
+
+        case "DISCOVERY_SUBSCRIBE": {
+          const sid = envelope.payload?.discoverySessionId || envelope.sessionId;
+          await subscribeToSession(sid);
+          break;
+        }
+
+        case "DISCOVERY_UNSUBSCRIBE": {
+          cleanup("Client unsubscribed");
+          break;
+        }
+      }
+    });
+
+    ws.on("close", (code, reason) => {
+      logger.info("Discovery WebSocket connection closed", {
+        userId: user._id.toString(),
+        sessionId: activeSessionId,
+        code,
+        reason: reason.toString(),
+      });
+      cleanup("Socket closed");
+    });
+
+    ws.on("error", (err) => {
+      logger.error("Discovery WebSocket socket error", {
+        userId: user._id.toString(),
+        sessionId: activeSessionId,
+        err,
+      });
+      cleanup("Socket error");
+    });
   }
 
   getWebSocketServer(): WebSocketServer {

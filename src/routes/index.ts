@@ -8,6 +8,7 @@ import vehicleRoutes from "../modules/vehicles/vehicle.routes";
 import locationRoutes from "../modules/locations/location.routes";
 import tripRoutes from "../modules/trips/trip.routes";
 import voiceRoutes from "../modules/voice/voice.routes";
+import discoveryRoutes from "../modules/matching/discovery.routes";
 
 const apiV1Router = Router();
 
@@ -19,6 +20,7 @@ apiV1Router.use("/vehicles", vehicleRoutes);
 apiV1Router.use("/locations", locationRoutes);
 apiV1Router.use("/trips", tripRoutes);
 apiV1Router.use("/voice", voiceRoutes);
+apiV1Router.use("/discovery", discoveryRoutes);
 apiV1Router.use("/survey", surveyRoutes);
 apiV1Router.use("/admin", adminRoutes);
 
