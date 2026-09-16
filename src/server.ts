@@ -3,6 +3,7 @@ import { connectDatabase, disconnectDatabase } from "./config/database";
 import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { mongoAuthClient } from "./modules/auth/auth.config";
+import { realtimeGateway } from "./modules/realtime/realtime.gateway";
 import { Server } from "http";
 
 const PORT = Number(process.env.PORT) || env.PORT || 5000;
@@ -78,9 +79,12 @@ const startServer = async () => {
 📝 Survey API:   http://localhost:${PORT}/api/v1/survey
 📊 Admin API:    http://localhost:${PORT}/api/v1/admin/surveys
 📈 Analytics:    http://localhost:${PORT}/api/v1/admin/analytics/overview
+🎙️ Voice RT:     ws://localhost:${PORT}/api/v1/voice/realtime
 =====================================================
       `);
     });
+
+    realtimeGateway.attach(server);
 
     // Signal listeners for graceful shutdown
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

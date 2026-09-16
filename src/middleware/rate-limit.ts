@@ -56,3 +56,22 @@ export const apiRateLimiter = createRateLimiter({
   max: 200,
   message: "API rate limit exceeded. Please try again later.",
 });
+
+/**
+ * Dedicated location search rate limiter to prevent API budget exhaustion.
+ */
+export const locationRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: "Location search rate limit exceeded. Please slow down.",
+});
+
+/**
+ * Voice processing rate limiter to prevent speech/LLM compute and provider quota exhaustion.
+ */
+export const voiceRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 30, // 30 requests per minute per IP
+  message: "Voice processing rate limit exceeded. Please wait a moment before trying again.",
+});
+

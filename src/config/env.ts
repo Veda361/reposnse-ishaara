@@ -25,7 +25,53 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
 
-  // Future phase environment variables
+  // Location System configuration (Phase 4)
+  GOOGLE_MAPS_API_KEY: z.string().optional(),
+  SERPAPI_API_KEY: z.string().optional(),
+  GOOGLE_MAPS_ENABLED: z.coerce.boolean().default(true),
+  SERPAPI_ENABLED: z.coerce.boolean().default(true),
+  LOCATION_PRIMARY_PROVIDER: z
+    .enum(["google_maps", "serpapi"])
+    .default("google_maps"),
+  LOCATION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
+  LOCATION_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(600),
+
+  // Voice-First Driver System configuration (Phase 6)
+  SPEECH_PRIMARY_PROVIDER: z
+    .enum(["google", "openai", "whisper", "device"])
+    .default("google"),
+  SPEECH_FALLBACK_PROVIDER: z
+    .enum(["openai", "whisper", "none"])
+    .default("openai"),
+  SPEECH_TIMEOUT_MS: z.coerce.number().int().positive().default(10000),
+  VOICE_MAX_AUDIO_MB: z.coerce.number().positive().default(5),
+  VOICE_MAX_DURATION_SECONDS: z.coerce.number().positive().default(30),
+  VOICE_DRAFT_TTL_MINUTES: z.coerce.number().positive().default(15),
+
+  GOOGLE_STT_API_KEY: z.string().optional(),
+  GOOGLE_CLOUD_PROJECT_ID: z.string().optional(),
+  GOOGLE_SPEECH_MODEL: z.string().default("chirp_2"),
+
+  OPENAI_API_KEY: z.string().optional(),
+  OPENAI_SPEECH_MODEL: z.string().default("whisper-1"),
+
+  WHISPER_BASE_URL: z.string().optional(),
+  WHISPER_API_KEY: z.string().optional(),
+  WHISPER_MODEL: z.string().default("turbo"),
+
+  INTENT_PROVIDER: z.enum(["deterministic", "openai"]).default("deterministic"),
+  INTENT_MODEL: z.string().default("gpt-4o-mini"),
+
+  // Phase 6.1: Realtime Voice Interaction Configuration
+  REALTIME_SPEECH_PROVIDER: z
+    .enum(["google", "mock", "whisper_buffered"])
+    .default("google"),
+  REALTIME_MAX_SESSION_SECONDS: z.coerce.number().int().positive().default(60),
+  REALTIME_IDLE_TIMEOUT_SECONDS: z.coerce.number().int().positive().default(15),
+  REALTIME_MAX_CHUNK_BYTES: z.coerce.number().int().positive().default(65536),
+  REALTIME_SESSION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+
+  // Legacy / Future phase environment variables
   REDIS_URL: z.string().optional(),
   MAPS_API_KEY: z.string().optional(),
 });

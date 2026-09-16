@@ -28,14 +28,30 @@ export class AppError extends Error {
 }
 
 export class NotFoundError extends AppError {
-  constructor(message: string = "Resource not found", details?: unknown) {
-    super(ERROR_CODES.NOT_FOUND, message, 404, true, details);
+  constructor(
+    message: string = "Resource not found",
+    codeOrDetails?: string | unknown,
+    details?: unknown
+  ) {
+    if (typeof codeOrDetails === "string") {
+      super(codeOrDetails, message, 404, true, details);
+    } else {
+      super(ERROR_CODES.NOT_FOUND, message, 404, true, codeOrDetails);
+    }
   }
 }
 
 export class BadRequestError extends AppError {
-  constructor(message: string = "Bad request", details?: unknown) {
-    super(ERROR_CODES.BAD_REQUEST, message, 400, true, details);
+  constructor(
+    message: string = "Bad request",
+    codeOrDetails?: string | unknown,
+    details?: unknown
+  ) {
+    if (typeof codeOrDetails === "string") {
+      super(codeOrDetails, message, 400, true, details);
+    } else {
+      super(ERROR_CODES.BAD_REQUEST, message, 400, true, codeOrDetails);
+    }
   }
 }
 

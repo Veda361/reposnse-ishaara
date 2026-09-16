@@ -97,6 +97,28 @@ export const errorHandler = (
     });
   }
 
+  // 5. Multer Upload Errors (Audio size & format constraints)
+  if ((err as { name?: string })?.name === "MulterError") {
+    const multerErr = err as { code?: string; message?: string };
+    if (multerErr.code === "LIMIT_FILE_SIZE") {
+      logger.warn("Audio file upload exceeded size limit");
+      return sendError({
+        res,
+        statusCode: HTTP_STATUS.BAD_REQUEST,
+        code: ERROR_CODES.VOICE_AUDIO_TOO_LARGE,
+        message: "Audio upload exceeds the maximum allowed file size limit.",
+      });
+    }
+
+    logger.warn(`Multer upload error: ${multerErr.code} - ${multerErr.message}`);
+    return sendError({
+      res,
+      statusCode: HTTP_STATUS.BAD_REQUEST,
+      code: ERROR_CODES.VOICE_AUDIO_INVALID,
+      message: multerErr.message || "Invalid file upload payload.",
+    });
+  }
+
   // 5. Unhandled / Unexpected Errors
   const isError = err instanceof Error;
   const message = isError ? err.message : "An unexpected internal server error occurred";
