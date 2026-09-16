@@ -1,8 +1,11 @@
 import { Router } from "express";
 import { userController } from "./user.controller";
+import { rideRequestController } from "../ride-requests/ride-request.controller";
 import { requireAuth } from "../../middleware/auth";
-import { validateBody } from "../../middleware/validation";
+import { requireUser } from "../../middleware/authorization";
+import { validateBody, validateQuery } from "../../middleware/validation";
 import { onboardingSchema, updateProfileSchema } from "./user.schema";
+import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
 import { asyncHandler } from "../../shared/utils/async-handler";
 
 const router = Router();
@@ -39,6 +42,18 @@ router.patch(
   requireAuth,
   validateBody(updateProfileSchema),
   asyncHandler((req, res) => userController.updateMe(req, res))
+);
+
+/**
+ * GET /api/v1/users/me/ride-requests
+ * Lists ride requests created by the authenticated passenger.
+ */
+router.get(
+  "/me/ride-requests",
+  requireAuth,
+  requireUser,
+  validateQuery(listRideRequestsQuerySchema),
+  asyncHandler((req, res) => rideRequestController.listUserRequests(req, res))
 );
 
 export default router;

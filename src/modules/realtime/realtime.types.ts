@@ -26,7 +26,12 @@ export type ServerMessageType =
   | "TRIP_REMOVED"
   | "DISCOVERY_REFRESH_REQUIRED"
   | "DISCOVERY_EXPIRED"
-  | "DISCOVERY_ERROR";
+  | "DISCOVERY_ERROR"
+  | "RIDE_REQUEST_CREATED"
+  | "RIDE_REQUEST_ACCEPTED"
+  | "RIDE_REQUEST_REJECTED"
+  | "RIDE_REQUEST_CANCELLED"
+  | "RIDE_REQUEST_EXPIRED";
 
 export interface RealtimeEnvelope<T = any> {
   type: ClientMessageType | ServerMessageType;
@@ -105,4 +110,24 @@ export interface DiscoveryRefreshRequiredPayload {
 
 export interface DiscoveryExpiredPayload {
   discoverySessionId: string;
+}
+
+export interface RideRequestEventPayload {
+  requestId: string;
+  tripId: string;
+  driverId: string;
+  userId: string;
+  status: string;
+  pickup: {
+    formattedAddress: string;
+    coordinates: [number, number];
+  };
+  destination: {
+    formattedAddress: string;
+    coordinates: [number, number];
+  };
+  expiresAt: string;
+  respondedAt?: string | null;
+  reason?: string | null;
+  timestamp: string;
 }

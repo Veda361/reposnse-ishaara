@@ -94,6 +94,11 @@ const envSchema = z.object({
   MATCHING_DETOUR_WEIGHT: z.coerce.number().positive().default(0.10),
   MATCHING_FRESHNESS_WEIGHT: z.coerce.number().positive().default(0.05),
 
+  // Phase 8: Ride Requests Configuration
+  RIDE_REQUEST_EXPIRATION_SECONDS: z.coerce.number().int().positive().default(120),
+  RIDE_REQUEST_MAX_RESULTS: z.coerce.number().int().positive().default(20),
+  RIDE_REQUEST_CLEANUP_TTL_DAYS: z.coerce.number().int().positive().default(30),
+
   // Legacy / Future phase environment variables
   REDIS_URL: z.string().optional(),
   MAPS_API_KEY: z.string().optional(),

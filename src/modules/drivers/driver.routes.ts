@@ -9,6 +9,8 @@ import {
   updateDriverLocationSchema,
 } from "./driver.schema";
 import { listDriverTripsQuerySchema } from "../trips/trip.schema";
+import { rideRequestController } from "../ride-requests/ride-request.controller";
+import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
 import { asyncHandler } from "../../shared/utils/async-handler";
 
 const router = Router();
@@ -38,6 +40,17 @@ router.get(
   validateQuery(listDriverTripsQuerySchema),
   asyncHandler((req, res) => tripController.listDriverTrips(req, res))
 );
+
+/**
+ * GET /api/v1/drivers/me/ride-requests
+ * Retrieves paginated list of ride requests targeting the authenticated driver's trips.
+ */
+router.get(
+  "/me/ride-requests",
+  validateQuery(listRideRequestsQuerySchema),
+  asyncHandler((req, res) => rideRequestController.listDriverRequests(req, res))
+);
+
 
 /**
  * POST /api/v1/drivers/me/profile

@@ -24,6 +24,9 @@ import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
 
+import { randomUUID } from "crypto";
+import { IDriverProfileDocument } from "../drivers/driver.types";
+
 interface ActiveSessionContext {
   transport: WebSocketTransport;
   auth: AuthenticatedDriverContext;
@@ -41,6 +44,8 @@ export class RealtimeGateway {
   private speechOrchestrator: RealtimeSpeechOrchestrator;
   private voiceSvc: VoiceService;
   private activeSessions: Map<string, ActiveSessionContext> = new Map();
+  private rideRequestUserSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
+  private rideRequestDriverSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
 
   constructor(
     authService?: RealtimeAuthService,
@@ -111,10 +116,33 @@ export class RealtimeGateway {
           );
           socket.destroy();
         }
+      } else if (pathname === "/api/v1/ride-requests/realtime") {
+        try {
+          const authResult = await this.authService.authenticateRideRequestUpgrade(req);
+
+          this.wss.handleUpgrade(req, socket, head, (ws) => {
+            this.handleRideRequestConnection(ws, req, authResult);
+          });
+        } catch (err: any) {
+          logger.warn("RideRequest WebSocket upgrade authentication rejected", {
+            error: err.message,
+            code: err.code || err.errorCode,
+          });
+
+          const statusCode = err.statusCode || 401;
+          const statusMessage = err.message || "Unauthorized";
+          socket.write(
+            `HTTP/1.1 ${statusCode} ${statusMessage}\r\n` +
+            `Connection: close\r\n` +
+            `Content-Type: application/json\r\n\r\n` +
+            JSON.stringify({ error: err.message, code: err.code || err.errorCode })
+          );
+          socket.destroy();
+        }
       }
     });
 
-    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime and /api/v1/discovery/realtime");
+    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime, /api/v1/discovery/realtime, and /api/v1/ride-requests/realtime");
   }
 
   private setupConnectionHandling(): void {
@@ -684,6 +712,122 @@ export class RealtimeGateway {
       });
       cleanup("Socket error");
     });
+  }
+
+  private handleRideRequestConnection(
+    ws: WebSocket,
+    _req: IncomingMessage,
+    authContext: { user: IUserDocument; driverProfile?: IDriverProfileDocument | null }
+  ): void {
+    const userId = authContext.user._id.toString();
+    const driverProfileId = authContext.driverProfile?._id?.toString();
+    const connectionId = `rreq_${randomUUID().replace(/-/g, "")}`;
+    const transport = new WebSocketTransport(ws, connectionId);
+
+    // Register user subscription
+    let userTransports = this.rideRequestUserSubscribers.get(userId);
+    if (!userTransports) {
+      userTransports = new Set();
+      this.rideRequestUserSubscribers.set(userId, userTransports);
+    }
+    userTransports.add(transport);
+
+    // Register driver subscription if applicable
+    if (driverProfileId) {
+      let driverTransports = this.rideRequestDriverSubscribers.get(driverProfileId);
+      if (!driverTransports) {
+        driverTransports = new Set();
+        this.rideRequestDriverSubscribers.set(driverProfileId, driverTransports);
+      }
+      driverTransports.add(transport);
+    }
+
+    logger.info("RideRequest WebSocket client connected", {
+      userId,
+      driverProfileId: driverProfileId ?? null,
+      connectionId,
+    });
+
+    let pingTimer: NodeJS.Timeout | undefined = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.ping();
+      }
+    }, 30000);
+
+    const cleanup = () => {
+      if (pingTimer) {
+        clearInterval(pingTimer);
+        pingTimer = undefined;
+      }
+
+      const currentUsers = this.rideRequestUserSubscribers.get(userId);
+      if (currentUsers) {
+        currentUsers.delete(transport);
+        if (currentUsers.size === 0) {
+          this.rideRequestUserSubscribers.delete(userId);
+        }
+      }
+
+      if (driverProfileId) {
+        const currentDrivers = this.rideRequestDriverSubscribers.get(driverProfileId);
+        if (currentDrivers) {
+          currentDrivers.delete(transport);
+          if (currentDrivers.size === 0) {
+            this.rideRequestDriverSubscribers.delete(driverProfileId);
+          }
+        }
+      }
+
+      logger.info("RideRequest WebSocket client disconnected", {
+        userId,
+        driverProfileId: driverProfileId ?? null,
+        connectionId,
+      });
+    };
+
+    ws.on("message", (data: any, isBinary: boolean) => {
+      if (isBinary) return;
+
+      try {
+        const parsed = JSON.parse(data.toString());
+        if (parsed?.type === "PING") {
+          transport.send("PONG", { pongAt: new Date().toISOString() });
+        }
+      } catch {
+        // ignore malformed client control frame
+      }
+    });
+
+    ws.on("close", cleanup);
+    ws.on("error", cleanup);
+  }
+
+  /**
+   * Dispatches a typed realtime event to an active passenger session.
+   */
+  sendToRideRequestUser(userId: string, type: ServerMessageType, payload: any): void {
+    const transports = this.rideRequestUserSubscribers.get(userId);
+    if (!transports || transports.size === 0) return;
+
+    for (const transport of transports) {
+      if (transport.isOpen()) {
+        transport.send(type, payload);
+      }
+    }
+  }
+
+  /**
+   * Dispatches a typed realtime event to an active driver session.
+   */
+  sendToRideRequestDriver(driverProfileId: string, type: ServerMessageType, payload: any): void {
+    const transports = this.rideRequestDriverSubscribers.get(driverProfileId);
+    if (!transports || transports.size === 0) return;
+
+    for (const transport of transports) {
+      if (transport.isOpen()) {
+        transport.send(type, payload);
+      }
+    }
   }
 
   getWebSocketServer(): WebSocketServer {

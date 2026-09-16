@@ -121,6 +121,60 @@ export class RealtimeAuthService {
 
     return applicationUser;
   }
+
+  /**
+   * Validates Better Auth session for Ride Requests WebSocket upgrade.
+   * Can be connected by both USER and DRIVER_CONDUCTOR.
+   */
+  async authenticateRideRequestUpgrade(
+    req: IncomingMessage
+  ): Promise<{
+    user: IUserDocument;
+    driverProfile?: IDriverProfileDocument | null;
+  }> {
+    const urlObj = parseUrl(req.url || "", true);
+    if (!req.headers.authorization && urlObj.query.token) {
+      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    }
+
+    const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
+
+    if (!sessionResult || !sessionResult.user) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Authentication required. No valid session found.",
+        401
+      );
+    }
+
+    const applicationUser = await userService.findOrCreateUserFromAuth(
+      sessionResult.user
+    );
+
+    if (applicationUser.isActive === false) {
+      throw new AppError(
+        ERROR_CODES.USER_INACTIVE,
+        "User account is deactivated.",
+        403
+      );
+    }
+
+    let driverProfile: IDriverProfileDocument | null = null;
+    if (applicationUser.role === ROLES.DRIVER_CONDUCTOR) {
+      try {
+        driverProfile = await driverService.getDriverProfileByUserId(
+          applicationUser._id.toString()
+        );
+      } catch {
+        // Driver profile might not exist yet
+      }
+    }
+
+    return {
+      user: applicationUser,
+      driverProfile,
+    };
+  }
 }
 
 export const realtimeAuthService = new RealtimeAuthService();

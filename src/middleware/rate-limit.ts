@@ -84,4 +84,11 @@ export const discoveryRateLimiter = createRateLimiter({
   message: "Trip discovery rate limit exceeded. Please wait a moment before searching again.",
 });
 
-
+/**
+ * Ride request rate limiter to prevent request flooding and rapid mutation spam.
+ */
+export const rideRequestRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 40, // 40 requests per minute
+  message: "Ride request rate limit exceeded. Please slow down and try again in a moment.",
+});
