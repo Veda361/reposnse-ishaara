@@ -6,6 +6,8 @@ import { requireUser } from "../../middleware/authorization";
 import { validateBody, validateQuery } from "../../middleware/validation";
 import { onboardingSchema, updateProfileSchema } from "./user.schema";
 import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
+import { rideController } from "../rides/ride.controller";
+import { listRidesQuerySchema } from "../rides/ride.schema";
 import { asyncHandler } from "../../shared/utils/async-handler";
 
 const router = Router();
@@ -54,6 +56,18 @@ router.get(
   requireUser,
   validateQuery(listRideRequestsQuerySchema),
   asyncHandler((req, res) => rideRequestController.listUserRequests(req, res))
+);
+
+/**
+ * GET /api/v1/users/me/rides
+ * Lists rides taken by the authenticated passenger.
+ */
+router.get(
+  "/me/rides",
+  requireAuth,
+  requireUser,
+  validateQuery(listRidesQuerySchema),
+  asyncHandler((req, res) => rideController.listUserRides(req, res))
 );
 
 export default router;

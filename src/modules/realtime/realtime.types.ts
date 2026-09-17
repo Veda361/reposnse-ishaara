@@ -31,7 +31,13 @@ export type ServerMessageType =
   | "RIDE_REQUEST_ACCEPTED"
   | "RIDE_REQUEST_REJECTED"
   | "RIDE_REQUEST_CANCELLED"
-  | "RIDE_REQUEST_EXPIRED";
+  | "RIDE_REQUEST_EXPIRED"
+  | "RIDE_CREATED"
+  | "RIDE_DRIVER_ARRIVING"
+  | "RIDE_PICKED_UP"
+  | "RIDE_STARTED"
+  | "RIDE_COMPLETED"
+  | "RIDE_CANCELLED";
 
 export interface RealtimeEnvelope<T = any> {
   type: ClientMessageType | ServerMessageType;
@@ -131,3 +137,30 @@ export interface RideRequestEventPayload {
   reason?: string | null;
   timestamp: string;
 }
+
+export interface RideEventPayload {
+  rideId: string;
+  rideRequestId: string;
+  tripId: string;
+  driverId: string;
+  userId: string;
+  status: string;
+  pickup?: {
+    formattedAddress: string;
+    coordinates: [number, number];
+  };
+  destination?: {
+    formattedAddress: string;
+    coordinates: [number, number];
+  };
+  acceptedAt?: string;
+  arrivedAt?: string | null;
+  pickedUpAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: string | null;
+  reason?: string | null;
+  timestamp: string;
+}
+

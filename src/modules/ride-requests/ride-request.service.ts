@@ -1,4 +1,4 @@
-import { Types } from "mongoose";
+import mongoose, { Types, ClientSession } from "mongoose";
 import { RideRequestModel, toRideRequestResponse } from "./ride-request.model";
 import {
   RideRequestResponse,
@@ -13,6 +13,7 @@ import { DriverProfileModel } from "../drivers/driver.model";
 import { DriverStatus, VerificationStatus } from "../drivers/driver.types";
 import { UserModel } from "../users/user.model";
 import { driverService } from "../drivers/driver.service";
+import { rideService } from "../rides/ride.service";
 import {
   RideRequestEventPublisher,
   rideRequestEventPublisher,
@@ -346,8 +347,8 @@ export class RideRequestService {
   }
 
   /**
-   * Atomically transitions a request from PENDING -> ACCEPTED.
-   * Enforces driver ownership, trip eligibility, and expiration validity.
+   * Atomically transitions a request from PENDING -> ACCEPTED and creates the authoritative Ride.
+   * Enforces driver ownership, trip eligibility, expiration validity, and transactional consistency.
    */
   async acceptRideRequest(
     requestId: string,
@@ -357,91 +358,146 @@ export class RideRequestService {
       throw new BadRequestError("Invalid requestId format.", ERROR_CODES.INVALID_ID);
     }
 
-    // 1. Pre-flight check: verify document existence and driver ownership
-    const existing = await RideRequestModel.findById(requestId);
-    if (!existing) {
-      throw new NotFoundError(
-        "Ride request not found.",
-        ERROR_CODES.RIDE_REQUEST_NOT_FOUND
-      );
+    // 1. Initialize session for multi-document transaction where supported
+    let session: ClientSession | undefined;
+    let useTransaction = false;
+
+    try {
+      session = await mongoose.startSession();
+      session.startTransaction();
+      useTransaction = true;
+    } catch {
+      if (session) {
+        await session.endSession();
+        session = undefined;
+      }
+      useTransaction = false;
     }
 
-    if (existing.driverId.toString() !== driverProfileId) {
-      throw new ForbiddenError(
-        "You do not have permission to accept this ride request.",
-        ERROR_CODES.REQUEST_NOT_OWNED
-      );
-    }
-
-    // 2. Validate Trip is still ACTIVE
-    const trip = await TripModel.findById(existing.tripId);
-    if (!trip || trip.status !== TripStatus.ACTIVE) {
-      throw new ConflictError(
-        `Trip is no longer active (current status: ${trip?.status || "UNKNOWN"}). Cannot accept ride requests.`,
-        ERROR_CODES.TRIP_NOT_ELIGIBLE
-      );
-    }
-
-    // 3. Database-Atomic Conditional Update
-    const now = new Date();
-    const updated = await RideRequestModel.findOneAndUpdate(
-      {
-        _id: new Types.ObjectId(requestId),
-        driverId: new Types.ObjectId(driverProfileId),
-        status: RideRequestStatus.PENDING,
-        expiresAt: { $gt: now },
-      },
-      {
-        $set: {
-          status: RideRequestStatus.ACCEPTED,
-          respondedAt: now,
-        },
-      },
-      { new: true }
-    );
-
-    // 4. Handle transition failure deterministically
-    if (!updated) {
-      const current = await RideRequestModel.findById(requestId);
-      if (!current) {
+    try {
+      // 2. Pre-flight check: verify document existence and driver ownership
+      const existing = await RideRequestModel.findById(requestId).session(session || null);
+      if (!existing) {
         throw new NotFoundError(
           "Ride request not found.",
           ERROR_CODES.RIDE_REQUEST_NOT_FOUND
         );
       }
 
-      if (current.expiresAt <= now || current.status === RideRequestStatus.EXPIRED) {
-        throw new ConflictError(
-          "Ride request has expired and cannot be accepted.",
-          ERROR_CODES.RIDE_REQUEST_EXPIRED
+      if (existing.driverId.toString() !== driverProfileId) {
+        throw new ForbiddenError(
+          "You do not have permission to accept this ride request.",
+          ERROR_CODES.REQUEST_NOT_OWNED
         );
       }
 
-      if (current.status === RideRequestStatus.ACCEPTED) {
+      // 3. Validate Trip is still ACTIVE
+      const trip = await TripModel.findById(existing.tripId).session(session || null);
+      if (!trip || trip.status !== TripStatus.ACTIVE) {
         throw new ConflictError(
-          "Ride request has already been accepted.",
-          ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+          `Trip is no longer active (current status: ${trip?.status || "UNKNOWN"}). Cannot accept ride requests.`,
+          ERROR_CODES.TRIP_NOT_ELIGIBLE
         );
       }
 
-      throw new ConflictError(
-        `Ride request is no longer pending (current status: ${current.status}).`,
-        ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+      // 4. Database-Atomic Conditional Update
+      const now = new Date();
+      const updated = await RideRequestModel.findOneAndUpdate(
+        {
+          _id: new Types.ObjectId(requestId),
+          driverId: new Types.ObjectId(driverProfileId),
+          status: RideRequestStatus.PENDING,
+          expiresAt: { $gt: now },
+        },
+        {
+          $set: {
+            status: RideRequestStatus.ACCEPTED,
+            respondedAt: now,
+          },
+        },
+        { new: true, session: session || undefined }
       );
+
+      // 5. Handle transition failure deterministically
+      if (!updated) {
+        const current = await RideRequestModel.findById(requestId).session(session || null);
+        if (!current) {
+          throw new NotFoundError(
+            "Ride request not found.",
+            ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+          );
+        }
+
+        if (current.expiresAt <= now || current.status === RideRequestStatus.EXPIRED) {
+          throw new ConflictError(
+            "Ride request has expired and cannot be accepted.",
+            ERROR_CODES.RIDE_REQUEST_EXPIRED
+          );
+        }
+
+        if (current.status === RideRequestStatus.ACCEPTED) {
+          throw new ConflictError(
+            "Ride request has already been accepted.",
+            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+          );
+        }
+
+        throw new ConflictError(
+          `Ride request is no longer pending (current status: ${current.status}).`,
+          ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+        );
+      }
+
+      // 6. Authoritative Ride Creation coupled to acceptance
+      await rideService.createRideFromAcceptedRequest(updated, session);
+
+      // 7. Commit transaction
+      if (useTransaction && session) {
+        await session.commitTransaction();
+      }
+
+      const response = toRideRequestResponse(updated);
+
+      // 8. Emit realtime synchronization event strictly after atomic DB commit
+      this.eventPublisher.publishRequestAccepted(response);
+
+      logger.info("RideRequest accepted and Ride created atomically", {
+        requestId,
+        driverProfileId,
+        status: updated.status,
+      });
+
+      return response;
+    } catch (err: any) {
+      if (useTransaction && session) {
+        try {
+          await session.abortTransaction();
+        } catch {
+          // ignore abort errors if already completed or aborted
+        }
+      }
+
+      // Handle concurrent transaction collision (MongoDB WriteConflict code 112)
+      if (err.code === 112 || err.hasErrorLabel?.("TransientTransactionError")) {
+        const current = await RideRequestModel.findById(requestId);
+        if (current?.status === RideRequestStatus.ACCEPTED) {
+          throw new ConflictError(
+            "Ride request has already been accepted.",
+            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+          );
+        }
+        throw new ConflictError(
+          `Ride request is no longer pending (current status: ${current?.status || "CONFLICT"}).`,
+          ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+        );
+      }
+
+      throw err;
+    } finally {
+      if (session) {
+        await session.endSession();
+      }
     }
-
-    const response = toRideRequestResponse(updated);
-
-    // 5. Emit realtime synchronization event strictly after atomic DB mutation
-    this.eventPublisher.publishRequestAccepted(response);
-
-    logger.info("RideRequest accepted atomically", {
-      requestId,
-      driverProfileId,
-      status: updated.status,
-    });
-
-    return response;
   }
 
   /**

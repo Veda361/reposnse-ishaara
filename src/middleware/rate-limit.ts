@@ -92,3 +92,13 @@ export const rideRequestRateLimiter = createRateLimiter({
   max: 40, // 40 requests per minute
   message: "Ride request rate limit exceeded. Please slow down and try again in a moment.",
 });
+
+/**
+ * Ride lifecycle mutation rate limiter to prevent rapid state mutation spam.
+ */
+export const rideRateLimiter = createRateLimiter({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // 60 requests per minute
+  message: "Ride mutation rate limit exceeded. Please slow down and try again in a moment.",
+});
+

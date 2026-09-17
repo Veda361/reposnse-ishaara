@@ -116,7 +116,7 @@ export class RealtimeGateway {
           );
           socket.destroy();
         }
-      } else if (pathname === "/api/v1/ride-requests/realtime") {
+      } else if (pathname === "/api/v1/ride-requests/realtime" || pathname === "/api/v1/rides/realtime") {
         try {
           const authResult = await this.authService.authenticateRideRequestUpgrade(req);
 
@@ -124,7 +124,7 @@ export class RealtimeGateway {
             this.handleRideRequestConnection(ws, req, authResult);
           });
         } catch (err: any) {
-          logger.warn("RideRequest WebSocket upgrade authentication rejected", {
+          logger.warn("Ride WebSocket upgrade authentication rejected", {
             error: err.message,
             code: err.code || err.errorCode,
           });
@@ -142,7 +142,7 @@ export class RealtimeGateway {
       }
     });
 
-    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime, /api/v1/discovery/realtime, and /api/v1/ride-requests/realtime");
+    logger.info("RealtimeGateway mounted at /api/v1/voice/realtime, /api/v1/discovery/realtime, /api/v1/ride-requests/realtime, and /api/v1/rides/realtime");
   }
 
   private setupConnectionHandling(): void {
@@ -828,6 +828,20 @@ export class RealtimeGateway {
         transport.send(type, payload);
       }
     }
+  }
+
+  /**
+   * Dispatches a typed realtime event to an active passenger session for ride lifecycle.
+   */
+  sendToRideUser(userId: string, type: ServerMessageType, payload: any): void {
+    this.sendToRideRequestUser(userId, type, payload);
+  }
+
+  /**
+   * Dispatches a typed realtime event to an active driver session for ride lifecycle.
+   */
+  sendToRideDriver(driverProfileId: string, type: ServerMessageType, payload: any): void {
+    this.sendToRideRequestDriver(driverProfileId, type, payload);
   }
 
   getWebSocketServer(): WebSocketServer {
