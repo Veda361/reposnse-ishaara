@@ -10,6 +10,10 @@ import {
   UpdateDriverLocationInput,
 } from "./driver.schema";
 import { UnauthorizedError } from "../../shared/errors/app-error";
+import { driverLocationService } from "./driver-location.service";
+import { driverOperationsService } from "./driver-operations.service";
+import { driverEarningsService } from "./driver-earnings.service";
+import { DriverEarningsQueryInput } from "./driver-operations.schema";
 
 export class DriverController {
   /**
@@ -137,7 +141,7 @@ export class DriverController {
 
   /**
    * PATCH /api/v1/drivers/me/location
-   * Updates driver's latest geographic coordinates.
+   * Updates driver's latest geographic coordinates with monotonic freshness and telemetry.
    */
   updateMeLocation = async (
     req: AuthenticatedRequest,
@@ -148,18 +152,116 @@ export class DriverController {
     }
 
     const input = req.body as UpdateDriverLocationInput;
-    const profile = await driverService.updateCurrentLocation(
+    const profile = await driverLocationService.updateDriverLocation(
       req.auth.applicationUserId,
       input
+    );
+
+    const cleanProfile = toCleanDriverProfileResponse(profile);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: {
+        ...cleanProfile,
+        location: cleanProfile.currentLocation
+          ? {
+              latitude: cleanProfile.currentLocation.coordinates[1],
+              longitude: cleanProfile.currentLocation.coordinates[0],
+            }
+          : null,
+        accuracyMeters: cleanProfile.currentLocation?.accuracyMeters ?? null,
+        headingDegrees: cleanProfile.currentLocation?.headingDegrees ?? null,
+        speedMps: cleanProfile.currentLocation?.speedMps ?? null,
+        altitudeMeters: cleanProfile.currentLocation?.altitudeMeters ?? null,
+        recordedAt: cleanProfile.currentLocation?.recordedAt ?? null,
+        receivedAt: cleanProfile.currentLocation?.receivedAt ?? null,
+      },
+      message: "Driver location updated successfully.",
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/location
+   * Retrieves authenticated driver's latest recorded location with staleness metadata.
+   */
+  getMeLocation = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    if (!req.auth?.applicationUserId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const locationData = await driverLocationService.getDriverCurrentLocation(
+      req.auth.applicationUserId
     );
 
     return sendSuccess({
       res,
       statusCode: HTTP_STATUS.OK,
-      data: toCleanDriverProfileResponse(profile),
-      message: "Driver location updated successfully.",
+      data: locationData,
+      message: "Driver location retrieved successfully.",
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/operations/context
+   * Retrieves comprehensive operational status, active vehicle, active trip,
+   * active in-flight rides, and today's summary stats.
+   */
+  getOperationalContext = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const profile = await driverService.getDriverProfileByUserId(userId);
+    const timezone = (req.query?.timezone as string) || "Asia/Kolkata";
+
+    const context = await driverOperationsService.getDriverOperationalContext(
+      profile._id,
+      timezone
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: context,
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/earnings
+   * Retrieves bounded driver earnings read model consuming Phase 13 authoritative financial records.
+   */
+  getEarnings = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const profile = await driverService.getDriverProfileByUserId(userId);
+    const query = req.query as unknown as DriverEarningsQueryInput;
+
+    const earnings = await driverEarningsService.getDriverEarnings(
+      profile._id,
+      query
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: earnings,
     });
   };
 }
 
 export const driverController = new DriverController();
+

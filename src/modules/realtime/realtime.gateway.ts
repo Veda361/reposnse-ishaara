@@ -1,6 +1,5 @@
 import { Server as HttpServer, IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { parse as parseUrl } from "url";
 import { RealtimeAuthService, realtimeAuthService, AuthenticatedDriverContext } from "./realtime.auth";
 import { RealtimeSessionService, realtimeSessionService } from "./realtime.session.service";
 import { RealtimeSpeechOrchestrator, realtimeSpeechOrchestrator } from "../voice/realtime-speech.orchestrator";
@@ -26,6 +25,15 @@ import { ERROR_CODES } from "../../shared/errors/error-codes";
 
 import { randomUUID } from "crypto";
 import { IDriverProfileDocument } from "../drivers/driver.types";
+import { RideModel } from "../rides/ride.model";
+import { RideStatus } from "../rides/ride.constants";
+import {
+  DriverLocationUpdatedPayload,
+  RideTrackingUpdatedPayload,
+  RideTrackingEndedPayload,
+} from "./realtime.types";
+import { trackingService } from "../tracking/tracking.service";
+import { ROLES } from "../../shared/constants/roles.constants";
 
 interface ActiveSessionContext {
   transport: WebSocketTransport;
@@ -46,6 +54,8 @@ export class RealtimeGateway {
   private activeSessions: Map<string, ActiveSessionContext> = new Map();
   private rideRequestUserSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
   private rideRequestDriverSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
+  private rideLocationSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
+  private rideTrackingSubscribers: Map<string, Set<WebSocketTransport>> = new Map();
 
   constructor(
     authService?: RealtimeAuthService,
@@ -68,7 +78,7 @@ export class RealtimeGateway {
    */
   attach(server: HttpServer): void {
     server.on("upgrade", async (req: IncomingMessage, socket, head) => {
-      const pathname = parseUrl(req.url || "").pathname;
+      const pathname = new URL(req.url || "", "http://localhost").pathname;
 
       if (pathname === "/api/v1/voice/realtime") {
         try {
@@ -149,8 +159,8 @@ export class RealtimeGateway {
     this.wss.on(
       "connection",
       async (ws: WebSocket, req: IncomingMessage, authContext: AuthenticatedDriverContext) => {
-        const urlObj = parseUrl(req.url || "", true);
-        const querySessionId = urlObj.query.sessionId as string | undefined;
+        const urlObj = new URL(req.url || "", "http://localhost");
+        const querySessionId = urlObj.searchParams.get("sessionId") || undefined;
 
         let activeContext: ActiveSessionContext | undefined;
 
@@ -502,8 +512,8 @@ export class RealtimeGateway {
     req: IncomingMessage,
     user: IUserDocument
   ): void {
-    const urlObj = parseUrl(req.url || "", true);
-    const initialSessionId = urlObj.query.discoverySessionId as string | undefined;
+    const urlObj = new URL(req.url || "", "http://localhost");
+    const initialSessionId = urlObj.searchParams.get("discoverySessionId") || undefined;
 
     let activeSessionId: string | undefined;
     let transport: WebSocketTransport | undefined;
@@ -754,6 +764,9 @@ export class RealtimeGateway {
       }
     }, 30000);
 
+    const subscribedRideIds = new Set<string>();
+    const subscribedTrackingRideIds = new Set<string>();
+
     const cleanup = () => {
       if (pingTimer) {
         clearInterval(pingTimer);
@@ -778,6 +791,30 @@ export class RealtimeGateway {
         }
       }
 
+      // Cleanup ride location subscriptions
+      for (const rideId of subscribedRideIds) {
+        const subscribers = this.rideLocationSubscribers.get(rideId);
+        if (subscribers) {
+          subscribers.delete(transport);
+          if (subscribers.size === 0) {
+            this.rideLocationSubscribers.delete(rideId);
+          }
+        }
+      }
+      subscribedRideIds.clear();
+
+      // Cleanup ride tracking subscriptions (Phase 11)
+      for (const rideId of subscribedTrackingRideIds) {
+        const subscribers = this.rideTrackingSubscribers.get(rideId);
+        if (subscribers) {
+          subscribers.delete(transport);
+          if (subscribers.size === 0) {
+            this.rideTrackingSubscribers.delete(rideId);
+          }
+        }
+      }
+      subscribedTrackingRideIds.clear();
+
       logger.info("RideRequest WebSocket client disconnected", {
         userId,
         driverProfileId: driverProfileId ?? null,
@@ -785,13 +822,239 @@ export class RealtimeGateway {
       });
     };
 
-    ws.on("message", (data: any, isBinary: boolean) => {
+    const handleRideLocationSubscribe = async (message: any) => {
+      const payload = message.payload || {};
+      const rideId = payload.rideId || message.rideId;
+
+      if (!rideId || typeof rideId !== "string") {
+        transport.send("RIDE_LOCATION_ERROR", {
+          code: ERROR_CODES.VALIDATION_ERROR,
+          message: "rideId is required to subscribe to ride location",
+          rideId: rideId || "unknown",
+        });
+        return;
+      }
+
+      try {
+        const ride = await RideModel.findById(rideId).exec();
+        if (!ride) {
+          transport.send("RIDE_LOCATION_ERROR", {
+            code: ERROR_CODES.RIDE_NOT_FOUND,
+            message: "Ride not found",
+            rideId,
+          });
+          return;
+        }
+
+        // Authorization: caller must be the passenger or driver
+        const isPassenger = ride.userId.toString() === userId;
+        const isDriver = driverProfileId && ride.driverId.toString() === driverProfileId;
+
+        if (!isPassenger && !isDriver) {
+          transport.send("RIDE_LOCATION_ERROR", {
+            code: ERROR_CODES.RIDE_NOT_AUTHORIZED,
+            message: "You are not authorized to track location for this ride",
+            rideId,
+          });
+          return;
+        }
+
+        // State check: cannot subscribe to terminal rides
+        const activeRideStatuses: string[] = [
+          RideStatus.CREATED,
+          RideStatus.DRIVER_ARRIVING,
+          RideStatus.PICKED_UP,
+          RideStatus.IN_PROGRESS,
+        ];
+        if (!activeRideStatuses.includes(ride.status)) {
+          transport.send("RIDE_LOCATION_ERROR", {
+            code: ERROR_CODES.RIDE_INVALID_STATE,
+            message: `Cannot track ride in terminal state ${ride.status}`,
+            rideId,
+          });
+          return;
+        }
+
+        let subscribers = this.rideLocationSubscribers.get(rideId);
+        if (!subscribers) {
+          subscribers = new Set();
+          this.rideLocationSubscribers.set(rideId, subscribers);
+        }
+        subscribers.add(transport);
+        subscribedRideIds.add(rideId);
+
+        logger.info("Client subscribed to ride location", {
+          userId,
+          driverProfileId: driverProfileId ?? null,
+          rideId,
+        });
+
+        transport.send("RIDE_LOCATION_SUBSCRIBED", {
+          rideId,
+          driverId: ride.driverId.toString(),
+          timestamp: new Date().toISOString(),
+        });
+      } catch (err: any) {
+        logger.error("Error subscribing to ride location", { rideId, err });
+        transport.send("RIDE_LOCATION_ERROR", {
+          code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: "Failed to subscribe to ride location",
+          rideId,
+        });
+      }
+    };
+
+    const handleRideLocationUnsubscribe = (message: any) => {
+      const payload = message.payload || {};
+      const rideId = payload.rideId || message.rideId;
+      if (!rideId) return;
+
+      const subscribers = this.rideLocationSubscribers.get(rideId);
+      if (subscribers) {
+        subscribers.delete(transport);
+        if (subscribers.size === 0) {
+          this.rideLocationSubscribers.delete(rideId);
+        }
+      }
+      subscribedRideIds.delete(rideId);
+
+      logger.info("Client unsubscribed from ride location", {
+        userId,
+        rideId,
+      });
+    };
+
+    const handleRideTrackingSubscribe = async (message: any) => {
+      const payload = message.payload || {};
+      const rideId = payload.rideId || message.rideId;
+
+      if (!rideId || typeof rideId !== "string") {
+        transport.send("RIDE_TRACKING_ERROR", {
+          code: ERROR_CODES.VALIDATION_ERROR,
+          message: "rideId is required to subscribe to ride tracking",
+          rideId: rideId || "unknown",
+        });
+        return;
+      }
+
+      try {
+        const ride = await RideModel.findById(rideId).exec();
+        if (!ride) {
+          transport.send("RIDE_TRACKING_ERROR", {
+            code: ERROR_CODES.RIDE_NOT_FOUND,
+            message: "Ride not found",
+            rideId,
+          });
+          return;
+        }
+
+        // Authorization: caller must be the passenger or driver
+        const isPassenger = ride.userId.toString() === userId;
+        const isDriver = Boolean(
+          driverProfileId && ride.driverId.toString() === driverProfileId
+        );
+
+        if (!isPassenger && !isDriver) {
+          transport.send("RIDE_TRACKING_ERROR", {
+            code: ERROR_CODES.RIDE_NOT_AUTHORIZED,
+            message: "You are not authorized to track this ride",
+            rideId,
+          });
+          return;
+        }
+
+        // State check: cannot subscribe to terminal rides
+        const activeRideStatuses: string[] = [
+          RideStatus.CREATED,
+          RideStatus.DRIVER_ARRIVING,
+          RideStatus.PICKED_UP,
+          RideStatus.IN_PROGRESS,
+        ];
+        if (!activeRideStatuses.includes(ride.status)) {
+          transport.send("RIDE_TRACKING_ERROR", {
+            code: ERROR_CODES.RIDE_INVALID_STATE,
+            message: `Cannot track ride in terminal state ${ride.status}`,
+            rideId,
+          });
+          return;
+        }
+
+        let subscribers = this.rideTrackingSubscribers.get(rideId);
+        if (!subscribers) {
+          subscribers = new Set();
+          this.rideTrackingSubscribers.set(rideId, subscribers);
+        }
+        subscribers.add(transport);
+        subscribedTrackingRideIds.add(rideId);
+
+        logger.info("Client subscribed to ride tracking", {
+          userId,
+          driverProfileId: driverProfileId ?? null,
+          rideId,
+        });
+
+        // 1. Send subscription confirmation
+        transport.send("RIDE_TRACKING_SUBSCRIBED", {
+          rideId,
+          driverId: ride.driverId.toString(),
+          timestamp: new Date().toISOString(),
+        });
+
+        // 2. Initial Snapshot: compute and send immediate tracking snapshot
+        const snapshot = await trackingService.getRideTracking(
+          {
+            userId,
+            role: isPassenger ? ROLES.USER : ROLES.DRIVER_CONDUCTOR,
+            driverProfileId: isDriver ? driverProfileId : undefined,
+          },
+          rideId
+        );
+        transport.send("TRACKING_SNAPSHOT", snapshot);
+      } catch (err: any) {
+        logger.error("Error subscribing to ride tracking", { rideId, err });
+        transport.send("RIDE_TRACKING_ERROR", {
+          code: ERROR_CODES.INTERNAL_SERVER_ERROR,
+          message: "Failed to subscribe to ride tracking",
+          rideId,
+        });
+      }
+    };
+
+    const handleRideTrackingUnsubscribe = (message: any) => {
+      const payload = message.payload || {};
+      const rideId = payload.rideId || message.rideId;
+      if (!rideId) return;
+
+      const subscribers = this.rideTrackingSubscribers.get(rideId);
+      if (subscribers) {
+        subscribers.delete(transport);
+        if (subscribers.size === 0) {
+          this.rideTrackingSubscribers.delete(rideId);
+        }
+      }
+      subscribedTrackingRideIds.delete(rideId);
+
+      logger.info("Client unsubscribed from ride tracking", {
+        userId,
+        rideId,
+      });
+    };
+
+    ws.on("message", async (data: any, isBinary: boolean) => {
       if (isBinary) return;
 
       try {
         const parsed = JSON.parse(data.toString());
         if (parsed?.type === "PING") {
           transport.send("PONG", { pongAt: new Date().toISOString() });
+        } else if (parsed?.type === "RIDE_LOCATION_SUBSCRIBE") {
+          await handleRideLocationSubscribe(parsed);
+        } else if (parsed?.type === "RIDE_LOCATION_UNSUBSCRIBE") {
+          handleRideLocationUnsubscribe(parsed);
+        } else if (parsed?.type === "RIDE_TRACKING_SUBSCRIBE") {
+          await handleRideTrackingSubscribe(parsed);
+        } else if (parsed?.type === "RIDE_TRACKING_UNSUBSCRIBE") {
+          handleRideTrackingUnsubscribe(parsed);
         }
       } catch {
         // ignore malformed client control frame
@@ -842,6 +1105,75 @@ export class RealtimeGateway {
    */
   sendToRideDriver(driverProfileId: string, type: ServerMessageType, payload: any): void {
     this.sendToRideRequestDriver(driverProfileId, type, payload);
+  }
+
+  /**
+   * Phase 10: Dispatches targeted live driver GPS updates strictly to authorized subscribers of a specific Ride.
+   */
+  sendToRideLocationSubscribers(rideId: string, payload: DriverLocationUpdatedPayload): void {
+    const transports = this.rideLocationSubscribers.get(rideId);
+    if (!transports || transports.size === 0) return;
+
+    for (const transport of transports) {
+      if (transport.isOpen()) {
+        transport.send("DRIVER_LOCATION_UPDATED", payload);
+      }
+    }
+  }
+
+  /**
+   * Phase 11: Dispatches authoritative live ride tracking updates to subscribers of a specific Ride.
+   */
+  sendToRideTrackingSubscribers(rideId: string, payload: any): void {
+    const transports = this.rideTrackingSubscribers.get(rideId);
+    if (!transports || transports.size === 0) return;
+
+    for (const transport of transports) {
+      if (transport.isOpen()) {
+        transport.send("RIDE_TRACKING_UPDATED", payload);
+      }
+    }
+  }
+
+  /**
+   * Phase 11: Ends live tracking for a ride (e.g. COMPLETED or CANCELLED) and notifies subscribers.
+   */
+  notifyRideTrackingEnded(rideId: string, status: string, reason?: string): void {
+    const transports = this.rideTrackingSubscribers.get(rideId);
+    if (!transports || transports.size === 0) return;
+
+    const payload: RideTrackingEndedPayload = {
+      rideId,
+      status,
+      reason,
+      timestamp: new Date().toISOString(),
+    };
+
+    for (const transport of transports) {
+      if (transport.isOpen()) {
+        transport.send("RIDE_TRACKING_ENDED", payload);
+      }
+    }
+
+    this.rideTrackingSubscribers.delete(rideId);
+  }
+
+  /**
+   * Phase 17: Dispatches authoritative payment confirmation to the driver/conductor realtime channel.
+   * Realtime is purely an asynchronous synchronization notification.
+   */
+  emitDriverPaymentConfirmed(
+    driverProfileId: string,
+    payload: {
+      rideId: string;
+      paymentId: string;
+      grossAmountMinor: number;
+      currency: string;
+      capturedAt: string;
+      providerPaymentId?: string | null;
+    }
+  ): void {
+    this.sendToRideDriver(driverProfileId, "driver:payment_confirmed", payload);
   }
 
   getWebSocketServer(): WebSocketServer {

@@ -8,12 +8,18 @@ import {
   updateDriverProfileSchema,
   updateDriverLocationSchema,
 } from "./driver.schema";
+import {
+  driverOperationalContextQuerySchema,
+  driverEarningsQuerySchema,
+} from "./driver-operations.schema";
 import { listDriverTripsQuerySchema } from "../trips/trip.schema";
 import { rideRequestController } from "../ride-requests/ride-request.controller";
 import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
 import { rideController } from "../rides/ride.controller";
 import { listRidesQuerySchema } from "../rides/ride.schema";
+import { ratingController } from "../ratings/rating.controller";
 import { asyncHandler } from "../../shared/utils/async-handler";
+import { gpsLocationRateLimiter } from "../../middleware/rate-limit";
 
 const router = Router();
 
@@ -31,6 +37,27 @@ router.use(requireAuth, requireDriverConductor);
 router.get(
   "/me/profile",
   asyncHandler((req, res) => driverController.getMeProfile(req, res))
+);
+
+/**
+ * GET /api/v1/drivers/me/operations/context
+ * Phase 16: Retrieves comprehensive operational snapshot (status, active vehicle,
+ * active trip, in-flight rides, today's summary stats).
+ */
+router.get(
+  "/me/operations/context",
+  validateQuery(driverOperationalContextQuerySchema),
+  asyncHandler((req, res) => driverController.getOperationalContext(req, res))
+);
+
+/**
+ * GET /api/v1/drivers/me/earnings
+ * Phase 16: Retrieves bounded driver earnings read model consuming Phase 13 authoritative records.
+ */
+router.get(
+  "/me/earnings",
+  validateQuery(driverEarningsQuerySchema),
+  asyncHandler((req, res) => driverController.getEarnings(req, res))
 );
 
 /**
@@ -63,7 +90,16 @@ router.get(
   asyncHandler((req, res) => rideController.listDriverRides(req, res))
 );
 
-
+/**
+ * GET /api/v1/drivers/me/rating-summary
+ * Phase 14: Retrieves the authenticated driver's aggregate rating summary.
+ * { driverId, averageScore: number|null, ratingCount: number }
+ * averageScore is null for drivers with no ratings.
+ */
+router.get(
+  "/me/rating-summary",
+  asyncHandler((req, res) => ratingController.getMyRatingSummary(req, res))
+);
 
 /**
  * POST /api/v1/drivers/me/profile
@@ -106,11 +142,22 @@ router.post(
 );
 
 /**
+ * GET /api/v1/drivers/me/location
+ * Retrieves driver's own latest recorded GPS location and freshness status.
+ */
+router.get(
+  "/me/location",
+  asyncHandler((req, res) => driverController.getMeLocation(req, res))
+);
+
+/**
  * PATCH /api/v1/drivers/me/location
  * Updates driver's latest geographic coordinates (GeoJSON Point).
+ * Protected by strict input validation, GPS write frequency rate limiter, and monotonic ordering.
  */
 router.patch(
   "/me/location",
+  gpsLocationRateLimiter,
   validateBody(updateDriverLocationSchema),
   asyncHandler((req, res) => driverController.updateMeLocation(req, res))
 );

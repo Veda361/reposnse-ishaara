@@ -47,6 +47,7 @@ export interface TripRoute {
 export interface ITrip {
   driverId: Types.ObjectId;
   vehicleId: Types.ObjectId;
+  operatorId?: Types.ObjectId | null;
   origin: TripLocation;
   destination: TripLocation;
   route?: TripRoute | null;
@@ -67,6 +68,7 @@ export interface CleanTripResponse {
   id: string;
   driverId: string;
   vehicleId: string;
+  operatorId?: string | null;
   origin: TripLocation;
   destination: TripLocation;
   route?: TripRoute | null;

@@ -1,15 +1,13 @@
 import { IncomingMessage } from "http";
 import { authService } from "../auth/auth.service";
 import { userService } from "../users/user.service";
-import { driverService } from "../drivers/driver.service";
+import { DriverProfileModel } from "../drivers/driver.model";
 import { ROLES } from "../../shared/constants/roles.constants";
 import { AppError } from "../../shared/errors/app-error";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
 import { logger } from "../../config/logger";
 import { IUserDocument } from "../users/user.types";
 import { IDriverProfileDocument } from "../drivers/driver.types";
-
-import { parse as parseUrl } from "url";
 
 export interface AuthenticatedDriverContext {
   user: IUserDocument;
@@ -23,9 +21,10 @@ export class RealtimeAuthService {
   async authenticateUpgradeRequest(
     req: IncomingMessage
   ): Promise<AuthenticatedDriverContext> {
-    const urlObj = parseUrl(req.url || "", true);
-    if (!req.headers.authorization && urlObj.query.token) {
-      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    const urlObj = new URL(req.url || "", "http://localhost");
+    const token = urlObj.searchParams.get("token");
+    if (!req.headers.authorization && token) {
+      req.headers.authorization = `Bearer ${token}`;
     }
 
     const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
@@ -58,9 +57,9 @@ export class RealtimeAuthService {
       );
     }
 
-    const driverProfile = await driverService.getDriverProfileByUserId(
-      applicationUser._id.toString()
-    );
+    const driverProfile = await DriverProfileModel.findOne({
+      userId: applicationUser._id,
+    });
 
     if (!driverProfile) {
       throw new AppError(
@@ -87,9 +86,10 @@ export class RealtimeAuthService {
   async authenticateDiscoveryUpgradeRequest(
     req: IncomingMessage
   ): Promise<IUserDocument> {
-    const urlObj = parseUrl(req.url || "", true);
-    if (!req.headers.authorization && urlObj.query.token) {
-      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    const urlObj = new URL(req.url || "", "http://localhost");
+    const token = urlObj.searchParams.get("token");
+    if (!req.headers.authorization && token) {
+      req.headers.authorization = `Bearer ${token}`;
     }
 
     const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
@@ -132,9 +132,10 @@ export class RealtimeAuthService {
     user: IUserDocument;
     driverProfile?: IDriverProfileDocument | null;
   }> {
-    const urlObj = parseUrl(req.url || "", true);
-    if (!req.headers.authorization && urlObj.query.token) {
-      req.headers.authorization = `Bearer ${urlObj.query.token}`;
+    const urlObj = new URL(req.url || "", "http://localhost");
+    const token = urlObj.searchParams.get("token");
+    if (!req.headers.authorization && token) {
+      req.headers.authorization = `Bearer ${token}`;
     }
 
     const sessionResult = await authService.getSessionFromHeaders(req.headers as any);
@@ -162,9 +163,9 @@ export class RealtimeAuthService {
     let driverProfile: IDriverProfileDocument | null = null;
     if (applicationUser.role === ROLES.DRIVER_CONDUCTOR) {
       try {
-        driverProfile = await driverService.getDriverProfileByUserId(
-          applicationUser._id.toString()
-        );
+        driverProfile = await DriverProfileModel.findOne({
+          userId: applicationUser._id,
+        });
       } catch {
         // Driver profile might not exist yet
       }

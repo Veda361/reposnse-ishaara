@@ -10,6 +10,7 @@ import { errorHandler } from "./middleware/error";
 import { sendError } from "./shared/responses/api-response";
 import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants";
 import { ERROR_CODES } from "./shared/errors/error-codes";
+import { apiRateLimiter } from "./middleware/rate-limit";
 
 export interface CreateAppOptions {
   preRouterMiddleware?: express.RequestHandler;
@@ -65,21 +66,30 @@ export const createApp = (options?: CreateAppOptions): Express => {
     })
   );
 
-  // Mount Better Auth endpoints BEFORE body parsers
+  // Mount Better Auth endpoints BEFORE body parsers with global API rate limiting
+  app.use("/api/auth", apiRateLimiter);
   app.all("/api/auth", toNodeHandler(auth));
   app.all("/api/auth/*", toNodeHandler(auth));
 
   // Body parsers with sensible limits to prevent payload exhaustion attacks
-  app.use(express.json({ limit: "50kb" }));
-  app.use(express.urlencoded({ extended: true, limit: "50kb" }));
+  // Preserves rawBuffer for payment gateway webhook HMAC-SHA256 signature verification
+  app.use(
+    express.json({
+      limit: "100kb",
+      verify: (req: any, _res: any, buf: Buffer) => {
+        req.rawBody = buf;
+      },
+    })
+  );
+  app.use(express.urlencoded({ extended: true, limit: "100kb" }));
 
   // Optional pre-router middleware (for testing harness authentication)
   if (options?.preRouterMiddleware) {
     app.use(options.preRouterMiddleware);
   }
 
-  // Mount central versioned API routes
-  app.use(API_PREFIX, apiV1Router);
+  // Mount central versioned API routes with global API rate limiting
+  app.use(API_PREFIX, apiRateLimiter, apiV1Router);
 
   // 404 Route Handler for undefined endpoints
   app.use((req: Request, res: Response) => {

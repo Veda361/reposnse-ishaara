@@ -8,8 +8,30 @@ import { HTTP_STATUS } from "../shared/constants/api.constants";
 import { ERROR_CODES } from "../shared/errors/error-codes";
 import { requireAuth } from "./auth";
 
+import { timingSafeEqual, createHash } from "crypto";
+
 // Re-export requireAuth for convenience
 export { requireAuth };
+
+/**
+ * Constant-time string comparison using SHA-256 fixed-size digests and crypto.timingSafeEqual.
+ * Prevents timing side-channel attacks and handles arbitrary/different length inputs safely.
+ */
+export function timingSafeCompare(a: string | undefined, b: string): boolean {
+  if (!a || typeof a !== "string" || !b || typeof b !== "string") {
+    return false;
+  }
+  const hashA = createHash("sha256").update(a).digest();
+  const hashB = createHash("sha256").update(b).digest();
+  return timingSafeEqual(hashA, hashB);
+}
+
+/**
+ * Validates whether a provided admin secret key matches the configured ADMIN_SECRET_KEY.
+ */
+export function verifyAdminKey(providedKey?: string): boolean {
+  return timingSafeCompare(providedKey, env.ADMIN_SECRET_KEY);
+}
 
 /**
  * Restricts access to specific application roles.
@@ -59,9 +81,9 @@ export const requireUser = requireRole(ROLES.USER);
 export const requireDriverConductor = requireRole(ROLES.DRIVER_CONDUCTOR);
 
 /**
- * Admin Secret Key Guard for Survey & Analytics Research Endpoints.
+ * Admin Secret Key Guard for Survey, Settlement & Administrative Endpoints.
  * 
- * Preserves the working admin authentication used in the existing survey platform:
+ * Preserves the working admin authentication:
  * - Header: `x-admin-key: <ADMIN_SECRET_KEY>`
  * - Header: `Authorization: Bearer <ADMIN_SECRET_KEY>`
  * - Query: `?adminKey=<ADMIN_SECRET_KEY>`
@@ -71,8 +93,8 @@ export const requireAdminKey = (
   res: Response,
   next: NextFunction
 ): Response | void => {
-  const headerKey = req.headers["x-admin-key"];
-  const authHeader = req.headers["authorization"];
+  const headerKey = req.headers["x-admin-key"] as string | undefined;
+  const authHeader = req.headers["authorization"] as string | undefined;
   const bearerKey = authHeader?.startsWith("Bearer ")
     ? authHeader.slice(7).trim()
     : undefined;
@@ -80,7 +102,7 @@ export const requireAdminKey = (
 
   const providedKey = headerKey || bearerKey || queryKey;
 
-  if (!providedKey || providedKey !== env.ADMIN_SECRET_KEY) {
+  if (!providedKey || !verifyAdminKey(providedKey)) {
     return sendError({
       res,
       statusCode: HTTP_STATUS.UNAUTHORIZED,

@@ -16,6 +16,8 @@ import {
   RideEventPublisher,
   rideEventPublisher,
 } from "./ride-event.publisher";
+import { OutboxService, outboxService } from "../events/outbox.service";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
 import {
   NotFoundError,
   ConflictError,
@@ -25,12 +27,21 @@ import {
 import { ERROR_CODES } from "../../shared/errors/error-codes";
 import { Role, ROLES } from "../../shared/constants/roles.constants";
 import { logger } from "../../config/logger";
+import { RatingModel } from "../ratings/rating.model";
+import { PaymentModel } from "../payments/payment.model";
+import { SettlementModel } from "../payments/settlement.model";
+import { resolveEarningsPeriodBounds } from "../drivers/driver-earnings.service";
 
 export class RideService {
   private eventPublisher: RideEventPublisher;
+  private outboxService: OutboxService;
 
-  constructor(eventPublisher?: RideEventPublisher) {
+  constructor(
+    eventPublisher?: RideEventPublisher,
+    outbox?: OutboxService
+  ) {
     this.eventPublisher = eventPublisher ?? rideEventPublisher;
+    this.outboxService = outbox ?? outboxService;
   }
 
   /**
@@ -102,7 +113,9 @@ export class RideService {
         userId: request.userId,
         driverId: request.driverId,
         tripId: request.tripId,
+        operatorId: (trip as any).operatorId ?? null,
         rideRequestId: request._id,
+        paymentStatus: "UNPAID",
         pickup: {
           name: request.pickup.name,
           formattedAddress: request.pickup.formattedAddress,
@@ -135,6 +148,28 @@ export class RideService {
 
       const saved = await rideDoc.save({ session });
       const response = toRideResponse(saved);
+
+      // Persist RIDE_CREATED domain event in the same transaction
+      await this.outboxService.createEvent(
+        {
+          type: DOMAIN_EVENT_TYPES.RIDE_CREATED,
+          aggregateType: "Ride",
+          aggregateId: response.id,
+          actorUserId: request.userId.toString(),
+          payload: {
+            rideId: response.id,
+            rideRequestId: response.rideRequestId,
+            tripId: response.tripId,
+            driverId: response.driverId,
+            userId: response.userId,
+            status: response.status,
+            pickup: response.pickup,
+            destination: response.destination,
+            acceptedAt: response.acceptedAt,
+          },
+        },
+        session
+      );
 
       logger.info("Ride created successfully from accepted request", {
         rideId: response.id,
@@ -219,6 +254,25 @@ export class RideService {
     }
 
     const response = toRideResponse(updated);
+
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_DRIVER_ARRIVING,
+      aggregateType: "Ride",
+      aggregateId: response.id,
+      actorUserId: driverProfileId,
+      payload: {
+        rideId: response.id,
+        rideRequestId: response.rideRequestId,
+        tripId: response.tripId,
+        driverId: response.driverId,
+        userId: response.userId,
+        status: response.status,
+        pickup: response.pickup,
+        destination: response.destination,
+        arrivedAt: response.arrivedAt,
+      },
+    });
+
     this.eventPublisher.publishDriverArriving(response);
 
     logger.info("Ride driver arriving state recorded", {
@@ -289,6 +343,25 @@ export class RideService {
     }
 
     const response = toRideResponse(updated);
+
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_PICKED_UP,
+      aggregateType: "Ride",
+      aggregateId: response.id,
+      actorUserId: driverProfileId,
+      payload: {
+        rideId: response.id,
+        rideRequestId: response.rideRequestId,
+        tripId: response.tripId,
+        driverId: response.driverId,
+        userId: response.userId,
+        status: response.status,
+        pickup: response.pickup,
+        destination: response.destination,
+        pickedUpAt: response.pickedUpAt,
+      },
+    });
+
     this.eventPublisher.publishPickedUp(response);
 
     logger.info("Ride passenger picked up state recorded", {
@@ -359,6 +432,25 @@ export class RideService {
     }
 
     const response = toRideResponse(updated);
+
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_STARTED,
+      aggregateType: "Ride",
+      aggregateId: response.id,
+      actorUserId: driverProfileId,
+      payload: {
+        rideId: response.id,
+        rideRequestId: response.rideRequestId,
+        tripId: response.tripId,
+        driverId: response.driverId,
+        userId: response.userId,
+        status: response.status,
+        pickup: response.pickup,
+        destination: response.destination,
+        startedAt: response.startedAt,
+      },
+    });
+
     this.eventPublisher.publishRideStarted(response);
 
     logger.info("Ride started in progress state recorded", {
@@ -423,6 +515,25 @@ export class RideService {
     }
 
     const response = toRideResponse(updated);
+
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_COMPLETED,
+      aggregateType: "Ride",
+      aggregateId: response.id,
+      actorUserId: driverProfileId,
+      payload: {
+        rideId: response.id,
+        rideRequestId: response.rideRequestId,
+        tripId: response.tripId,
+        driverId: response.driverId,
+        userId: response.userId,
+        status: response.status,
+        pickup: response.pickup,
+        destination: response.destination,
+        completedAt: response.completedAt,
+      },
+    });
+
     this.eventPublisher.publishRideCompleted(response);
 
     logger.info("Ride completed state recorded", {
@@ -519,6 +630,27 @@ export class RideService {
     }
 
     const response = toRideResponse(updated);
+
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_CANCELLED,
+      aggregateType: "Ride",
+      aggregateId: response.id,
+      actorUserId: caller.userId,
+      payload: {
+        rideId: response.id,
+        rideRequestId: response.rideRequestId,
+        tripId: response.tripId,
+        driverId: response.driverId,
+        userId: response.userId,
+        status: response.status,
+        pickup: response.pickup,
+        destination: response.destination,
+        cancelledAt: response.cancelledAt,
+        cancelledBy: response.cancelledBy,
+        reason: reason || null,
+      },
+    });
+
     this.eventPublisher.publishRideCancelled(response, reason);
 
     logger.info("Ride cancelled atomically", {
@@ -568,6 +700,7 @@ export class RideService {
 
   /**
    * Lists rides for the authenticated passenger with bounded pagination.
+   * Phase 14: Optionally enriches each ride with rating status (no N+1).
    */
   async listUserRides(
     userId: string,
@@ -597,18 +730,20 @@ export class RideService {
     ]);
 
     const hasMore = skip + docs.length < total;
+    const items: RideResponse[] = docs.map(toRideResponse);
 
-    return {
-      items: docs.map(toRideResponse),
-      total,
-      page,
-      limit,
-      hasMore,
-    };
+    // Phase 14: Bulk rating status enrichment — single query for entire page
+    if (query.withRatingStatus && items.length > 0) {
+      await this._enrichWithRatingStatus(items, userId);
+    }
+
+    return { items, total, page, limit, hasMore };
   }
 
   /**
    * Lists rides for the authenticated driver with bounded pagination.
+   * Phase 14: Optionally enriches each ride with rating status (no N+1).
+   * Phase 16: Optionally filters by date range and enriches with financial breakdown (no N+1).
    */
   async listDriverRides(
     driverProfileId: string,
@@ -625,27 +760,161 @@ export class RideService {
       filter.tripId = new Types.ObjectId(query.tripId);
     }
 
+    // Phase 16: Bounded date filtering
+    const dateField =
+      query.status === RideStatus.COMPLETED ? "completedAt" : "createdAt";
+
+    if (query.from || query.to) {
+      filter[dateField] = {};
+      if (query.from) filter[dateField].$gte = new Date(query.from);
+      if (query.to) filter[dateField].$lte = new Date(query.to);
+    } else if (query.period) {
+      const bounds = resolveEarningsPeriodBounds(
+        query.period,
+        undefined,
+        undefined,
+        query.timezone
+      );
+      filter[dateField] = { $gte: bounds.from, $lte: bounds.to };
+    }
+
     const limit = Math.min(query.limit || 20, 50);
     const page = Math.max(1, query.page || 1);
     const skip = (page - 1) * limit;
 
     const [docs, total] = await Promise.all([
       RideModel.find(filter)
-        .sort({ createdAt: -1, _id: -1 })
+        .sort({ [dateField]: -1, _id: -1 })
         .skip(skip)
         .limit(limit),
       RideModel.countDocuments(filter),
     ]);
 
     const hasMore = skip + docs.length < total;
+    const items: RideResponse[] = docs.map(toRideResponse);
 
-    return {
-      items: docs.map(toRideResponse),
-      total,
-      page,
-      limit,
-      hasMore,
-    };
+    if (query.withFinancials) {
+      await this._enrichWithFinancialStatus(items, driverProfileId);
+    }
+
+    return { items, total, page, limit, hasMore };
+  }
+
+  /**
+   * Phase 14: Enriches a page of RideResponse items with per-ride rating status.
+   *
+   * ANTI-N+1 STRATEGY:
+   * Issues ONE bulk RatingModel.find() for all rideIds on the page.
+   * Maps results into a Set<rideId> for O(1) lookup per ride item.
+   *
+   * Eligibility rule: a COMPLETED ride where the reviewer has NOT yet submitted
+   * a rating is eligible. Only applicable for USER callers in Phase 14.
+   *
+   * @param items - The serialized RideResponse list (mutated in-place)
+   * @param reviewerUserId - The authenticated user's User._id
+   */
+  private async _enrichWithRatingStatus(
+    items: RideResponse[],
+    reviewerUserId: string
+  ): Promise<void> {
+    const rideIds = items.map(r => r.id);
+    const validOids = rideIds
+      .filter(id => Types.ObjectId.isValid(id))
+      .map(id => new Types.ObjectId(id));
+
+    if (!validOids.length) return;
+
+    // Single bulk query — no N+1
+    const existingRatings = await RatingModel.find(
+      {
+        rideId: { $in: validOids },
+        reviewerUserId: new Types.ObjectId(reviewerUserId),
+      },
+      { rideId: 1 } // projection
+    );
+
+    const ratedSet = new Set(existingRatings.map(r => r.rideId.toString()));
+
+    for (const item of items) {
+      const isCompleted = item.status === RideStatus.COMPLETED;
+      const alreadyRated = ratedSet.has(item.id);
+      item.ratingStatus = {
+        eligible: isCompleted && !alreadyRated,
+        submitted: alreadyRated,
+      };
+    }
+  }
+
+  /**
+   * Phase 16: Enriches a page of RideResponse items with authoritative financial status.
+   *
+   * ANTI-N+1 STRATEGY:
+   * Issues ONE bulk PaymentModel.find() and ONE bulk SettlementModel.find()
+   * for all rideIds on the page.
+   * Maps results into Map<rideId, Payment> and Map<rideId, Settlement> for O(1) lookup.
+   */
+  private async _enrichWithFinancialStatus(
+    items: RideResponse[],
+    driverProfileId: string
+  ): Promise<void> {
+    const rideIds = items.map((r) => r.id);
+    const validOids = rideIds
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    if (!validOids.length) return;
+
+    const driverId = new Types.ObjectId(driverProfileId);
+
+    const [payments, settlements] = await Promise.all([
+      PaymentModel.find(
+        {
+          driverId,
+          rideId: { $in: validOids },
+        },
+        {
+          rideId: 1,
+          grossAmountMinor: 1,
+          platformFeeMinor: 1,
+          providerAmountMinor: 1,
+          currency: 1,
+          status: 1,
+        }
+      ).lean(),
+      SettlementModel.find(
+        {
+          driverId,
+          rideId: { $in: validOids },
+        },
+        {
+          rideId: 1,
+          status: 1,
+        }
+      ).lean(),
+    ]);
+
+    const paymentMap = new Map<string, any>();
+    for (const p of payments) {
+      paymentMap.set(p.rideId.toString(), p);
+    }
+
+    const settlementMap = new Map<string, any>();
+    for (const s of settlements) {
+      settlementMap.set(s.rideId.toString(), s);
+    }
+
+    for (const item of items) {
+      const p = paymentMap.get(item.id);
+      const s = settlementMap.get(item.id);
+      item.financialStatus = {
+        grossAmountMinor: p?.grossAmountMinor ?? 0,
+        platformFeeMinor: p?.platformFeeMinor ?? 0,
+        netAmountMinor: p?.providerAmountMinor ?? 0,
+        currency: p?.currency ?? "INR",
+        paymentStatus: p?.status ?? "PENDING",
+        settlementStatus: s?.status ?? "UNSETTLED",
+      };
+    }
   }
 }
 

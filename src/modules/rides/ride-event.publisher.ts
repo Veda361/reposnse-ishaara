@@ -127,6 +127,7 @@ export class RideEventPublisher {
     try {
       const payload = this.buildPayload(ride);
       this.gateway.sendToRideUser(ride.userId, "RIDE_COMPLETED", payload);
+      this.gateway.notifyRideTrackingEnded(ride.id, ride.status);
       logger.info("Realtime event published: RIDE_COMPLETED", {
         rideId: ride.id,
         userId: ride.userId,
@@ -152,6 +153,7 @@ export class RideEventPublisher {
         // Cancelled by driver -> notify passenger
         this.gateway.sendToRideUser(ride.userId, "RIDE_CANCELLED", payload);
       }
+      this.gateway.notifyRideTrackingEnded(ride.id, ride.status, reason);
       logger.info("Realtime event published: RIDE_CANCELLED", {
         rideId: ride.id,
         cancelledBy: ride.cancelledBy,

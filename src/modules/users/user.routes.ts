@@ -9,6 +9,9 @@ import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schem
 import { rideController } from "../rides/ride.controller";
 import { listRidesQuerySchema } from "../rides/ride.schema";
 import { asyncHandler } from "../../shared/utils/async-handler";
+import { emergencyContactController } from "../safety/emergency-contact.controller";
+import { createEmergencyContactSchema, updateEmergencyContactSchema } from "../safety/safety.schema";
+import { emergencyContactRateLimiter } from "../../middleware/rate-limit";
 
 const router = Router();
 
@@ -68,6 +71,55 @@ router.get(
   requireUser,
   validateQuery(listRidesQuerySchema),
   asyncHandler((req, res) => rideController.listUserRides(req, res))
+);
+
+/**
+ * GET /api/v1/users/me/emergency-contacts
+ * Phase 15: Lists all active emergency contacts for the authenticated passenger.
+ */
+router.get(
+  "/me/emergency-contacts",
+  requireAuth,
+  requireUser,
+  asyncHandler((req, res) => emergencyContactController.listContacts(req as any, res))
+);
+
+/**
+ * POST /api/v1/users/me/emergency-contacts
+ * Phase 15: Creates a new emergency contact.
+ * Enforces max 5 active contacts. Sets isVerified: false always.
+ */
+router.post(
+  "/me/emergency-contacts",
+  requireAuth,
+  requireUser,
+  emergencyContactRateLimiter,
+  validateBody(createEmergencyContactSchema),
+  asyncHandler((req, res) => emergencyContactController.createContact(req as any, res))
+);
+
+/**
+ * PATCH /api/v1/users/me/emergency-contacts/:contactId
+ * Phase 15: Updates an emergency contact. Strict ownership enforced.
+ */
+router.patch(
+  "/me/emergency-contacts/:contactId",
+  requireAuth,
+  requireUser,
+  emergencyContactRateLimiter,
+  validateBody(updateEmergencyContactSchema),
+  asyncHandler((req, res) => emergencyContactController.updateContact(req as any, res))
+);
+
+/**
+ * DELETE /api/v1/users/me/emergency-contacts/:contactId
+ * Phase 15: Soft-deletes an emergency contact. Strict ownership enforced.
+ */
+router.delete(
+  "/me/emergency-contacts/:contactId",
+  requireAuth,
+  requireUser,
+  asyncHandler((req, res) => emergencyContactController.deleteContact(req as any, res))
 );
 
 export default router;

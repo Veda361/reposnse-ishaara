@@ -104,6 +104,7 @@ export class TripService {
     const trip = await TripModel.create({
       driverId,
       vehicleId: vehicle._id,
+      operatorId: vehicle.operatorId ?? null,
       origin: {
         name: input.origin.name,
         formattedAddress: input.origin.formattedAddress,

@@ -20,6 +20,8 @@ import {
   UpdateDriverProfileInput,
   UpdateDriverLocationInput,
 } from "./driver.schema";
+import { driverLocationService } from "./driver-location.service";
+
 
 export class DriverService {
   /**
@@ -198,22 +200,14 @@ export class DriverService {
 
   /**
    * Updates driver's latest known geographic location.
-   * Stores GeoJSON Point [longitude, latitude].
+   * Stores GeoJSON Point [longitude, latitude] with monotonic freshness semantics.
    * Does NOT record or append to GPS history.
    */
   async updateCurrentLocation(
     userId: string,
     coords: UpdateDriverLocationInput
   ): Promise<IDriverProfileDocument> {
-    const profile = await this.getDriverProfileByUserId(userId);
-
-    profile.currentLocation = {
-      type: "Point",
-      coordinates: [coords.longitude, coords.latitude], // GeoJSON order: [lon, lat]
-    };
-
-    await profile.save();
-    return profile;
+    return driverLocationService.updateDriverLocation(userId, coords);
   }
 }
 

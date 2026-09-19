@@ -62,6 +62,12 @@ const rideSchema = new Schema<IRideDocument>(
       ref: "Trip",
       required: [true, "tripId reference to Trip is required"],
     },
+    operatorId: {
+      type: Schema.Types.ObjectId,
+      ref: "BusOperator",
+      default: null,
+      index: true,
+    },
     rideRequestId: {
       type: Schema.Types.ObjectId,
       ref: "RideRequest",
@@ -80,6 +86,13 @@ const rideSchema = new Schema<IRideDocument>(
       enum: Object.values(RideStatus),
       default: RideStatus.CREATED,
       required: true,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["UNPAID", "PENDING", "PAID", "REFUNDED"],
+      default: "UNPAID",
+      required: true,
+      index: true,
     },
     acceptedAt: {
       type: Date,
@@ -151,6 +164,18 @@ rideSchema.index(
   { name: "idx_rides_status" }
 );
 
+// 6. Driver completed rides time-window query index (Phase 16)
+rideSchema.index(
+  { driverId: 1, completedAt: -1 },
+  { name: "idx_rides_driver_completedAt", sparse: true }
+);
+
+// 7. Bus Operator rides index (Phase 17)
+rideSchema.index(
+  { operatorId: 1, createdAt: -1 },
+  { name: "idx_rides_operator_createdAt", sparse: true }
+);
+
 /**
  * Transforms an internal Mongoose Ride document into a clean, sanitized response.
  */
@@ -160,6 +185,7 @@ export const toRideResponse = (doc: IRideDocument): RideResponse => {
     userId: doc.userId.toString(),
     driverId: doc.driverId.toString(),
     tripId: doc.tripId.toString(),
+    operatorId: doc.operatorId ? doc.operatorId.toString() : null,
     rideRequestId: doc.rideRequestId.toString(),
     pickup: {
       name: doc.pickup.name,
@@ -188,6 +214,7 @@ export const toRideResponse = (doc: IRideDocument): RideResponse => {
       serpApiDataId: doc.destination.serpApiDataId,
     },
     status: doc.status,
+    paymentStatus: doc.paymentStatus || "UNPAID",
     acceptedAt: doc.acceptedAt.toISOString(),
     arrivedAt: doc.arrivedAt ? doc.arrivedAt.toISOString() : null,
     pickedUpAt: doc.pickedUpAt ? doc.pickedUpAt.toISOString() : null,

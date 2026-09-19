@@ -22,6 +22,12 @@ const vehicleSchema = new Schema<IVehicleDocument>(
       required: [true, "driverId reference to DriverProfile is required"],
       index: true,
     },
+    operatorId: {
+      type: Schema.Types.ObjectId,
+      ref: "BusOperator",
+      default: null,
+      index: true,
+    },
     registrationNumber: {
       type: String,
       required: [true, "registrationNumber is required"],
@@ -66,6 +72,7 @@ vehicleSchema.index({ registrationNumber: 1 }, { unique: true });
 
 // Compound index for querying a driver's active vehicles efficiently
 vehicleSchema.index({ driverId: 1, isActive: 1 });
+vehicleSchema.index({ operatorId: 1, isActive: 1 }, { sparse: true });
 
 /**
  * Transforms an internal Mongoose Vehicle document into a clean, sanitized public contract.
@@ -76,6 +83,7 @@ export const toCleanVehicleResponse = (
 ): CleanVehicleResponse => {
   return {
     id: vehicle._id.toString(),
+    operatorId: vehicle.operatorId ? vehicle.operatorId.toString() : null,
     registrationNumber: vehicle.registrationNumber,
     vehicleType: vehicle.vehicleType,
     make: vehicle.make,

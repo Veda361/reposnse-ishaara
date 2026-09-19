@@ -19,7 +19,7 @@ export const maskLicenseNumber = (
   return `****${trimmed.slice(-4)}`;
 };
 
-const pointSchema = new Schema(
+const driverCurrentLocationSchema = new Schema(
   {
     type: {
       type: String,
@@ -31,6 +31,12 @@ const pointSchema = new Schema(
       type: [Number], // [longitude, latitude]
       required: true,
     },
+    accuracyMeters: { type: Number, default: null },
+    headingDegrees: { type: Number, default: null },
+    speedMps: { type: Number, default: null },
+    altitudeMeters: { type: Number, default: null },
+    recordedAt: { type: Date, default: null },
+    receivedAt: { type: Date, default: null },
   },
   { _id: false }
 );
@@ -66,7 +72,7 @@ const driverProfileSchema = new Schema<IDriverProfileDocument>(
       index: true,
     },
     currentLocation: {
-      type: pointSchema,
+      type: driverCurrentLocationSchema,
       default: null,
     },
   },
@@ -98,6 +104,16 @@ export const toCleanDriverProfileResponse = (
             profile.currentLocation.coordinates[0],
             profile.currentLocation.coordinates[1],
           ],
+          accuracyMeters: profile.currentLocation.accuracyMeters ?? null,
+          headingDegrees: profile.currentLocation.headingDegrees ?? null,
+          speedMps: profile.currentLocation.speedMps ?? null,
+          altitudeMeters: profile.currentLocation.altitudeMeters ?? null,
+          recordedAt: profile.currentLocation.recordedAt
+            ? profile.currentLocation.recordedAt.toISOString()
+            : null,
+          receivedAt: profile.currentLocation.receivedAt
+            ? profile.currentLocation.receivedAt.toISOString()
+            : null,
         }
       : null,
     licenseNumberMasked: maskLicenseNumber(profile.licenseNumber),

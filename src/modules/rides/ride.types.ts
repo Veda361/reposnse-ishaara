@@ -20,10 +20,12 @@ export interface IRide {
   userId: Types.ObjectId;
   driverId: Types.ObjectId;
   tripId: Types.ObjectId;
+  operatorId?: Types.ObjectId | null;
   rideRequestId: Types.ObjectId;
   pickup: RideLocation;
   destination: RideLocation;
   status: RideStatus;
+  paymentStatus?: string;
   acceptedAt: Date;
   arrivedAt?: Date | null;
   pickedUpAt?: Date | null;
@@ -46,6 +48,7 @@ export interface RideResponse {
   userId: string;
   driverId: string;
   tripId: string;
+  operatorId?: string | null;
   rideRequestId: string;
   pickup: {
     name?: string;
@@ -68,6 +71,7 @@ export interface RideResponse {
     serpApiDataId?: string;
   };
   status: RideStatus;
+  paymentStatus?: string;
   acceptedAt: string;
   arrivedAt: string | null;
   pickedUpAt: string | null;
@@ -78,6 +82,28 @@ export interface RideResponse {
   cancellationReason: string | null;
   createdAt: string;
   updatedAt: string;
+  /**
+   * Phase 14: Optional rating status for history list responses.
+   * Only present when explicitly requested (withRatingStatus=true in query).
+   * Populated via bulk lookup — no N+1 query.
+   */
+  ratingStatus?: {
+    eligible: boolean;
+    submitted: boolean;
+  };
+  /**
+   * Phase 16: Optional financial status for ride history.
+   * Present when requested (withFinancials=true in query).
+   * Populated via bulk lookup — no N+1 query.
+   */
+  financialStatus?: {
+    grossAmountMinor: number;
+    platformFeeMinor: number;
+    netAmountMinor: number;
+    currency: string;
+    paymentStatus: string;
+    settlementStatus: string;
+  };
 }
 
 /**
@@ -88,6 +114,15 @@ export interface ListRidesQuery {
   tripId?: string;
   limit?: number;
   page?: number;
+  /** Phase 14: Include rating eligibility + submission status in each ride item. */
+  withRatingStatus?: boolean;
+  /** Phase 16: Include financial breakdown in each ride item. */
+  withFinancials?: boolean;
+  /** Phase 16: Bounded date filtering. */
+  period?: "today" | "week" | "month";
+  from?: string;
+  to?: string;
+  timezone?: string;
 }
 
 export interface PaginatedRidesResponse {

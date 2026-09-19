@@ -9,7 +9,11 @@ export type ClientMessageType =
   | "SESSION_CANCEL"
   | "PING"
   | "DISCOVERY_SUBSCRIBE"
-  | "DISCOVERY_UNSUBSCRIBE";
+  | "DISCOVERY_UNSUBSCRIBE"
+  | "RIDE_LOCATION_SUBSCRIBE"
+  | "RIDE_LOCATION_UNSUBSCRIBE"
+  | "RIDE_TRACKING_SUBSCRIBE"
+  | "RIDE_TRACKING_UNSUBSCRIBE";
 
 export type ServerMessageType =
   | "SESSION_STARTED"
@@ -37,7 +41,17 @@ export type ServerMessageType =
   | "RIDE_PICKED_UP"
   | "RIDE_STARTED"
   | "RIDE_COMPLETED"
-  | "RIDE_CANCELLED";
+  | "RIDE_CANCELLED"
+  | "RIDE_LOCATION_SUBSCRIBED"
+  | "DRIVER_LOCATION_UPDATED"
+  | "RIDE_LOCATION_ERROR"
+  | "RIDE_TRACKING_SUBSCRIBED"
+  | "TRACKING_SNAPSHOT"
+  | "RIDE_TRACKING_UPDATED"
+  | "RIDE_TRACKING_ENDED"
+  | "RIDE_TRACKING_ERROR"
+  | "DRIVER_PAYMENT_CONFIRMED"
+  | "driver:payment_confirmed";
 
 export interface RealtimeEnvelope<T = any> {
   type: ClientMessageType | ServerMessageType;
@@ -163,4 +177,50 @@ export interface RideEventPayload {
   reason?: string | null;
   timestamp: string;
 }
+
+export interface RideLocationSubscribePayload {
+  rideId: string;
+}
+
+export interface RideLocationSubscribedPayload {
+  rideId: string;
+  driverId: string;
+  timestamp: string;
+}
+
+export interface DriverLocationUpdatedPayload {
+  event: "DRIVER_LOCATION_UPDATED";
+  driverId: string;
+  tripId?: string | null;
+  rideId?: string | null;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  accuracyMeters?: number | null;
+  headingDegrees?: number | null;
+  speedMps?: number | null;
+  altitudeMeters?: number | null;
+  recordedAt: string;
+  receivedAt: string;
+}
+
+export interface RideTrackingSubscribePayload {
+  rideId: string;
+}
+
+export interface RideTrackingSubscribedPayload {
+  rideId: string;
+  driverId: string;
+  timestamp: string;
+}
+
+export interface RideTrackingEndedPayload {
+  rideId: string;
+  status: string;
+  reason?: string;
+  timestamp: string;
+}
+
+export { RideTrackingUpdatedPayload } from "../tracking/tracking.types";
 

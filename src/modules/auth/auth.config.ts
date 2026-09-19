@@ -23,6 +23,32 @@ const trustedOrigins: string[] = [
     : []),
 ].filter((origin, index, self) => Boolean(origin) && self.indexOf(origin) === index);
 
+// Resolve allowed Google Client IDs / Audiences:
+// Index 0 represents the primary Web Client ID paired with clientSecret for Web OAuth
+// Index 1 (and subsequent) are added to the allowed audience list for native Android ID token verification
+const googleClientIds: string[] = [];
+
+const webClientId = env.GOOGLE_WEB_CLIENT_ID || env.GOOGLE_CLIENT_ID;
+if (webClientId) {
+  googleClientIds.push(webClientId);
+}
+
+if (env.GOOGLE_ANDROID_CLIENT_ID && !googleClientIds.includes(env.GOOGLE_ANDROID_CLIENT_ID)) {
+  googleClientIds.push(env.GOOGLE_ANDROID_CLIENT_ID);
+}
+
+// Development fallback if no credentials supplied in non-production
+if (googleClientIds.length === 0 && env.NODE_ENV !== "production") {
+  googleClientIds.push("dev-google-web-client-id", "dev-google-android-client-id");
+}
+
+const isGoogleAuthEnabled = Boolean(
+  googleClientIds.length > 0 &&
+    (env.GOOGLE_CLIENT_SECRET || env.NODE_ENV !== "production")
+);
+
+export const configuredGoogleAudiences = Object.freeze([...googleClientIds]);
+
 /**
  * Better Auth configuration instance.
  * Handles Google OAuth, session management, and authentication storage in MongoDB.
@@ -39,13 +65,11 @@ export const auth = betterAuth({
   plugins: [bearer()],
   socialProviders: {
     google: {
-      clientId:
-        env.GOOGLE_CLIENT_ID ||
-        (env.NODE_ENV === "production" ? "" : "dev-google-client-id"),
+      clientId: googleClientIds.length === 1 ? googleClientIds[0] : googleClientIds,
       clientSecret:
         env.GOOGLE_CLIENT_SECRET ||
         (env.NODE_ENV === "production" ? "" : "dev-google-client-secret"),
-      enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+      enabled: isGoogleAuthEnabled,
     },
   },
   advanced: {

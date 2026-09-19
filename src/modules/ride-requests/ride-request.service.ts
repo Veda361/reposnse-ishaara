@@ -18,6 +18,8 @@ import {
   RideRequestEventPublisher,
   rideRequestEventPublisher,
 } from "./ride-request-event.publisher";
+import { OutboxService, outboxService } from "../events/outbox.service";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
 import {
   NotFoundError,
   ConflictError,
@@ -51,9 +53,14 @@ const calculateSeparationMeters = (
 
 export class RideRequestService {
   private eventPublisher: RideRequestEventPublisher;
+  private outboxService: OutboxService;
 
-  constructor(eventPublisher?: RideRequestEventPublisher) {
+  constructor(
+    eventPublisher?: RideRequestEventPublisher,
+    outbox?: OutboxService
+  ) {
     this.eventPublisher = eventPublisher ?? rideRequestEventPublisher;
+    this.outboxService = outbox ?? outboxService;
   }
 
   /**
@@ -183,7 +190,31 @@ export class RideRequestService {
 
       const response = toRideRequestResponse(doc);
 
-      // 9. Dispatch Realtime Event strictly AFTER database persistence
+      // 9. Persist durable domain event to outbox
+      await this.outboxService.createEvent({
+        type: DOMAIN_EVENT_TYPES.RIDE_REQUEST_CREATED,
+        aggregateType: "RideRequest",
+        aggregateId: doc._id.toString(),
+        actorUserId: userId,
+        payload: {
+          requestId: doc._id.toString(),
+          tripId: trip._id.toString(),
+          driverId: trip.driverId.toString(),
+          userId,
+          status: doc.status,
+          pickup: {
+            formattedAddress: input.pickup.formattedAddress,
+            coordinates: [input.pickup.longitude, input.pickup.latitude],
+          },
+          destination: {
+            formattedAddress: input.destination.formattedAddress,
+            coordinates: [input.destination.longitude, input.destination.latitude],
+          },
+          expiresAt,
+        },
+      });
+
+      // 10. Dispatch Realtime Event strictly AFTER database persistence
       this.eventPublisher.publishRequestCreated(response);
 
       logger.info("RideRequest created successfully", {
@@ -451,14 +482,41 @@ export class RideRequestService {
       // 6. Authoritative Ride Creation coupled to acceptance
       await rideService.createRideFromAcceptedRequest(updated, session);
 
-      // 7. Commit transaction
+      // 7. Persist RIDE_REQUEST_ACCEPTED event within the same database transaction
+      await this.outboxService.createEvent(
+        {
+          type: DOMAIN_EVENT_TYPES.RIDE_REQUEST_ACCEPTED,
+          aggregateType: "RideRequest",
+          aggregateId: updated._id.toString(),
+          actorUserId: driverProfileId,
+          payload: {
+            requestId: updated._id.toString(),
+            tripId: updated.tripId.toString(),
+            driverId: updated.driverId.toString(),
+            userId: updated.userId.toString(),
+            status: updated.status,
+            pickup: {
+              formattedAddress: updated.pickup.formattedAddress,
+              coordinates: updated.pickup.coordinates.coordinates,
+            },
+            destination: {
+              formattedAddress: updated.destination.formattedAddress,
+              coordinates: updated.destination.coordinates.coordinates,
+            },
+            respondedAt: updated.respondedAt,
+          },
+        },
+        session
+      );
+
+      // 8. Commit transaction
       if (useTransaction && session) {
         await session.commitTransaction();
       }
 
       const response = toRideRequestResponse(updated);
 
-      // 8. Emit realtime synchronization event strictly after atomic DB commit
+      // 9. Emit realtime synchronization event strictly after atomic DB commit
       this.eventPublisher.publishRequestAccepted(response);
 
       logger.info("RideRequest accepted and Ride created atomically", {
@@ -577,6 +635,30 @@ export class RideRequestService {
 
     const response = toRideRequestResponse(updated);
 
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_REQUEST_REJECTED,
+      aggregateType: "RideRequest",
+      aggregateId: updated._id.toString(),
+      actorUserId: driverProfileId,
+      payload: {
+        requestId: updated._id.toString(),
+        tripId: updated.tripId.toString(),
+        driverId: updated.driverId.toString(),
+        userId: updated.userId.toString(),
+        status: updated.status,
+        pickup: {
+          formattedAddress: updated.pickup.formattedAddress,
+          coordinates: updated.pickup.coordinates.coordinates,
+        },
+        destination: {
+          formattedAddress: updated.destination.formattedAddress,
+          coordinates: updated.destination.coordinates.coordinates,
+        },
+        reason: reason || null,
+        respondedAt: updated.respondedAt,
+      },
+    });
+
     this.eventPublisher.publishRequestRejected(response, reason);
 
     logger.info("RideRequest rejected atomically", {
@@ -665,6 +747,30 @@ export class RideRequestService {
 
     const response = toRideRequestResponse(updated);
 
+    await this.outboxService.createEvent({
+      type: DOMAIN_EVENT_TYPES.RIDE_REQUEST_CANCELLED,
+      aggregateType: "RideRequest",
+      aggregateId: updated._id.toString(),
+      actorUserId: userId,
+      payload: {
+        requestId: updated._id.toString(),
+        tripId: updated.tripId.toString(),
+        driverId: updated.driverId.toString(),
+        userId: updated.userId.toString(),
+        status: updated.status,
+        pickup: {
+          formattedAddress: updated.pickup.formattedAddress,
+          coordinates: updated.pickup.coordinates.coordinates,
+        },
+        destination: {
+          formattedAddress: updated.destination.formattedAddress,
+          coordinates: updated.destination.coordinates.coordinates,
+        },
+        reason: reason || null,
+        respondedAt: updated.respondedAt,
+      },
+    });
+
     this.eventPublisher.publishRequestCancelled(response, reason);
 
     logger.info("RideRequest cancelled atomically by passenger", {
@@ -706,6 +812,26 @@ export class RideRequestService {
 
       if (updated) {
         const response = toRideRequestResponse(updated);
+        await this.outboxService.createEvent({
+          type: DOMAIN_EVENT_TYPES.RIDE_REQUEST_EXPIRED,
+          aggregateType: "RideRequest",
+          aggregateId: updated._id.toString(),
+          payload: {
+            requestId: updated._id.toString(),
+            tripId: updated.tripId.toString(),
+            driverId: updated.driverId.toString(),
+            userId: updated.userId.toString(),
+            status: updated.status,
+            pickup: {
+              formattedAddress: updated.pickup.formattedAddress,
+              coordinates: updated.pickup.coordinates.coordinates,
+            },
+            destination: {
+              formattedAddress: updated.destination.formattedAddress,
+              coordinates: updated.destination.coordinates.coordinates,
+            },
+          },
+        });
         this.eventPublisher.publishRequestExpired(response);
         results.push(response);
       }

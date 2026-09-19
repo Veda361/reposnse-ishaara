@@ -8,6 +8,8 @@ import { UnauthorizedError } from "../../shared/errors/app-error";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
 import { Role, ROLES } from "../../shared/constants/roles.constants";
 import { CancelRideInput } from "./ride.schema";
+import { driverLocationService } from "../drivers/driver-location.service";
+
 
 export class RideController {
   private service: RideService;
@@ -212,6 +214,31 @@ export class RideController {
       res,
       statusCode: HTTP_STATUS.OK,
       data: result,
+    });
+  };
+
+  /**
+   * GET /api/v1/rides/:rideId/driver-location
+   * Retrieves the current GPS location and freshness status of the driver assigned to this ride.
+   * Strictly authorized to the owning passenger.
+   */
+  getDriverLocation = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = this.resolveUserId(req);
+    const { rideId } = req.params;
+
+    const locationData = await driverLocationService.getRideDriverLocation(
+      userId,
+      rideId
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: locationData,
+      message: "Driver location retrieved successfully.",
     });
   };
 }

@@ -9,6 +9,7 @@ export { VehicleType };
  */
 export interface IVehicle {
   driverId: Types.ObjectId;
+  operatorId?: Types.ObjectId | null;
   registrationNumber: string;
   vehicleType: VehicleType;
   make: string;
@@ -32,6 +33,7 @@ export interface IVehicleDocument
  */
 export interface CleanVehicleResponse {
   id: string;
+  operatorId?: string | null;
   registrationNumber: string;
   vehicleType: VehicleType;
   make: string;

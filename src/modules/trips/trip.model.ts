@@ -99,6 +99,12 @@ const tripSchema = new Schema<ITripDocument>(
       ref: "Vehicle",
       required: [true, "vehicleId reference to Vehicle is required"],
     },
+    operatorId: {
+      type: Schema.Types.ObjectId,
+      ref: "BusOperator",
+      default: null,
+      index: true,
+    },
     origin: {
       type: tripLocationSchema,
       required: [true, "origin is required"],
@@ -170,6 +176,7 @@ export const toCleanTripResponse = (trip: ITripDocument): CleanTripResponse => {
     id: trip._id.toString(),
     driverId: trip.driverId.toString(),
     vehicleId: trip.vehicleId.toString(),
+    operatorId: trip.operatorId ? trip.operatorId.toString() : null,
     origin: {
       name: trip.origin.name,
       formattedAddress: trip.origin.formattedAddress,

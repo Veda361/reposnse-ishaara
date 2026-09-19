@@ -4,14 +4,36 @@ This document describes how the native **Android application** (Kotlin / Jetpack
 
 ---
 
-## 1. Architecture Overview
+## 1. Google OAuth Client Configuration & Credentials
+
+Google Cloud Console separates OAuth clients by platform. The backend and mobile application maintain a strict distinction between Android and Web OAuth credentials:
+
+| Credential Name | Environment Variable | Usage | Secret Required? |
+| :--- | :--- | :--- | :--- |
+| **Android OAuth Client ID** | `GOOGLE_ANDROID_CLIENT_ID` | Configured in Android APK for Google Credential Manager | **NO** (Never supply a secret) |
+| **Web OAuth Client ID** | `GOOGLE_WEB_CLIENT_ID` | Backend Better Auth server-side Google provider | **YES** |
+| **Web OAuth Client Secret** | `GOOGLE_CLIENT_SECRET` | Backend server-side only (`.env` / Secret Manager) | **YES** (Server-side ONLY) |
+
+> [!IMPORTANT]
+> **Android Client Security Boundary**:
+> - The Android application must **NEVER** receive or bundle `GOOGLE_CLIENT_SECRET`.
+> - The native Android app is registered in Google Cloud Console with:
+>   - **Package Name**: `com.ishara.app`
+>   - **SHA-1 Fingerprint**: Certificate fingerprint matching your keystore (debug/release signing key).
+> - The backend accepts Google ID tokens signed with audience matching **either** `GOOGLE_ANDROID_CLIENT_ID` or `GOOGLE_WEB_CLIENT_ID`. Unknown audiences are strictly rejected with `401 Unauthorized`.
+
+---
+
+## 2. Architecture Overview
 
 ```text
 Native Android App (OkHttp / Retrofit)
           │
           ├── 1. Obtains Google ID Token (Android Credential Manager)
+          │      └── Using GOOGLE_ANDROID_CLIENT_ID or serverClientId
           │
           ├── 2. POST /api/auth/sign-in/social (Exchanges ID Token for Session)
+          │      └── Server validates token audience against allowed clients
           │      └── Server returns session token & user info
           │
           ├── 3. Stores session token in EncryptedSharedPreferences
@@ -24,14 +46,16 @@ Native Android App (OkHttp / Retrofit)
 
 ---
 
-## 2. Authentication Flow
+## 3. Authentication Flow
 
 ### Step 1: Native Google Sign-In on Android
 Use the Android **Credential Manager API** (`GetCredentialRequest` with `GetGoogleIdOption`):
 ```kotlin
+// Package: com.ishara.app
+// Configured with serverClientId (Web Client ID or Android Client ID)
 val googleIdOption = GetGoogleIdOption.Builder()
     .setFilterByAuthorizedAccounts(false)
-    .setServerClientId(context.getString(R.string.google_web_client_id))
+    .setServerClientId(context.getString(R.string.google_server_client_id))
     .setAutoSelectEnabled(false)
     .build()
 

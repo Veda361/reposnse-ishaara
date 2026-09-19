@@ -48,6 +48,7 @@ export type UpdateDriverProfileInput = z.infer<
 /**
  * Validation schema for PATCH /api/v1/drivers/me/location.
  * Validates spherical latitude and longitude bounds and rejects NaN / Infinity.
+ * Supports optional mobile GPS telemetry: accuracy, heading, speed, altitude, and recordedAt.
  */
 export const updateDriverLocationSchema = z
   .object({
@@ -67,11 +68,46 @@ export const updateDriverLocationSchema = z
       .finite("longitude must be a valid finite number")
       .min(-180, "Longitude must be between -180 and 180 degrees")
       .max(180, "Longitude must be between -180 and 180 degrees"),
+    accuracyMeters: z
+      .number({
+        invalid_type_error: "accuracyMeters must be a valid finite number",
+      })
+      .finite("accuracyMeters must be a valid finite number")
+      .min(0, "accuracyMeters must be greater than or equal to 0")
+      .optional(),
+    headingDegrees: z
+      .number({
+        invalid_type_error: "headingDegrees must be a valid finite number",
+      })
+      .finite("headingDegrees must be a valid finite number")
+      .min(0, "headingDegrees must be greater than or equal to 0")
+      .lt(360, "headingDegrees must be less than 360 degrees")
+      .optional(),
+    speedMps: z
+      .number({
+        invalid_type_error: "speedMps must be a valid finite number",
+      })
+      .finite("speedMps must be a valid finite number")
+      .min(0, "speedMps must be greater than or equal to 0")
+      .optional(),
+    altitudeMeters: z
+      .number({
+        invalid_type_error: "altitudeMeters must be a valid finite number",
+      })
+      .finite("altitudeMeters must be a valid finite number")
+      .optional(),
+    recordedAt: z
+      .string({
+        invalid_type_error: "recordedAt must be a valid ISO-8601 string",
+      })
+      .datetime({ message: "recordedAt must be a valid ISO-8601 timestamp" })
+      .optional(),
   })
   .strict({
-    message: "Only latitude and longitude are permitted in location update payload",
+    message: "Unrecognized fields are not permitted in driver location update payload",
   });
 
 export type UpdateDriverLocationInput = z.infer<
   typeof updateDriverLocationSchema
 >;
+
