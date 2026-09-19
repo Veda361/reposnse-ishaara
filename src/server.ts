@@ -4,6 +4,7 @@ import { env } from "./config/env";
 import { logger } from "./config/logger";
 import { mongoAuthClient } from "./modules/auth/auth.config";
 import { realtimeGateway } from "./modules/realtime/realtime.gateway";
+import { outboxWorker } from "./modules/events/outbox.worker";
 import { Server } from "http";
 
 const PORT = Number(process.env.PORT) || env.PORT || 5000;
@@ -27,7 +28,10 @@ const gracefulShutdown = async (signal: string) => {
   forceExitTimeout.unref();
 
   try {
-    // 1. Stop accepting new HTTP requests
+    // 1. Stop background workers
+    await outboxWorker.stop();
+
+    // 2. Stop accepting new HTTP requests
     if (server && server.listening) {
       await new Promise<void>((resolve, reject) => {
         server!.close((err) => {
@@ -41,7 +45,7 @@ const gracefulShutdown = async (signal: string) => {
       });
     }
 
-    // 2. Close MongoDB connections
+    // 3. Close MongoDB connections
     await disconnectDatabase();
     try {
       await mongoAuthClient.close();
@@ -82,9 +86,14 @@ const startServer = async () => {
 🎙️ Voice RT:     ws://localhost:${PORT}/api/v1/voice/realtime
 =====================================================
       `);
+      logger.info(`Speech primary provider: ${env.SPEECH_PRIMARY_PROVIDER}`);
+      logger.info(`Speech fallback provider: ${env.SPEECH_FALLBACK_PROVIDER}`);
     });
 
     realtimeGateway.attach(server);
+
+    // Start background outbox worker
+    outboxWorker.start();
 
     // Signal listeners for graceful shutdown
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));

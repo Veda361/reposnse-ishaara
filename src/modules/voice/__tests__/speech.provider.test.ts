@@ -12,6 +12,7 @@ import {
 } from "../voice.types";
 import { ERROR_CODES } from "../../../shared/errors/error-codes";
 import { AppError } from "../../../shared/errors/app-error";
+import { validateEnv } from "../../../config/env";
 
 describe("Speech Provider Layer Unit Tests", () => {
   const dummyAudio: AudioInput = {
@@ -194,6 +195,63 @@ describe("Speech Provider Layer Unit Tests", () => {
         globalThis.fetch = originalFetch;
       }
     });
+
+    it("should transcribe audio successfully via Whisper API", async () => {
+      const originalFetch = globalThis.fetch;
+      try {
+        globalThis.fetch = async () =>
+          new Response(
+            JSON.stringify({
+              text: "Lanka se BHU jaana hai",
+              language: "hi",
+              duration: 2.5,
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+
+        const provider = new WhisperSpeechProvider("http://inference:8000", "test_key", "base");
+        const result = await provider.transcribe(dummyAudio, { languageHint: "hi" });
+
+        assert.equal(result.provider, SpeechProviderName.WHISPER);
+        assert.equal(result.text, "Lanka se BHU jaana hai");
+        assert.equal(result.language, "hi");
+        assert.equal(result.audioDurationMs, 2500);
+        assert.equal(result.metadata?.model, "base");
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    it("should reject when baseUrl is unconfigured (Test F direct)", async () => {
+      const provider = new WhisperSpeechProvider("");
+      await assert.rejects(
+        async () => provider.transcribe(dummyAudio),
+        (err: any) => {
+          assert.equal(err.code, ERROR_CODES.VOICE_PROVIDER_UNAVAILABLE);
+          assert.equal(err.statusCode, 503);
+          return true;
+        }
+      );
+    });
+
+    it("should not expose secret API key in error messages (Test G)", async () => {
+      const originalFetch = globalThis.fetch;
+      const secretKey = "super_secret_whisper_token_xyz_987";
+      try {
+        globalThis.fetch = async () => new Response("Internal Server Error", { status: 500 });
+
+        const provider = new WhisperSpeechProvider("http://inference:8000", secretKey, "base");
+        await assert.rejects(
+          async () => provider.transcribe(dummyAudio),
+          (err: any) => {
+            assert.equal(err.message.includes(secretKey), false);
+            return true;
+          }
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
   });
 
   describe("DeviceSpeechProvider", () => {
@@ -312,6 +370,266 @@ describe("Speech Provider Layer Unit Tests", () => {
       );
 
       assert.equal(openaiCalled, false);
+    });
+
+    it("Test A: should select Whisper when configured as primary provider", async () => {
+      let whisperCalled = false;
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => true,
+        transcribe: async () => {
+          whisperCalled = true;
+          return { text: "Driver prompt", provider: SpeechProviderName.WHISPER };
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([[SpeechProviderName.WHISPER, mockWhisper]]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: "none",
+        }
+      );
+
+      const res = await orchestrator.transcribe(dummyAudio);
+      assert.equal(whisperCalled, true);
+      assert.equal(res.provider, SpeechProviderName.WHISPER);
+    });
+
+    it("Test B: should return Whisper transcription upon success without invoking fallback", async () => {
+      let openaiCalled = false;
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => true,
+        transcribe: async () => ({
+          text: "Chitaipur se BHU",
+          provider: SpeechProviderName.WHISPER,
+          durationMs: 120,
+        }),
+      };
+      const mockOpenAI: any = {
+        name: SpeechProviderName.OPENAI,
+        isAvailable: () => true,
+        transcribe: async () => {
+          openaiCalled = true;
+          return { text: "Fallback text", provider: SpeechProviderName.OPENAI };
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([
+          [SpeechProviderName.WHISPER, mockWhisper],
+          [SpeechProviderName.OPENAI, mockOpenAI],
+        ]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: SpeechProviderName.OPENAI,
+          maxRetries: 0,
+        }
+      );
+
+      const res = await orchestrator.transcribe(dummyAudio);
+      assert.equal(res.provider, SpeechProviderName.WHISPER);
+      assert.equal(res.text, "Chitaipur se BHU");
+      assert.equal(openaiCalled, false);
+    });
+
+    it("Test C: should fall back to OpenAI when Whisper fails with retryable error", async () => {
+      let whisperCalled = false;
+      let openaiCalled = false;
+
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => true,
+        transcribe: async () => {
+          whisperCalled = true;
+          const err = new AppError(
+            ERROR_CODES.VOICE_TRANSCRIPTION_TIMEOUT,
+            "Whisper timeout",
+            504,
+            true
+          );
+          (err as any).isRetryable = true;
+          throw err;
+        },
+      };
+
+      const mockOpenAI: any = {
+        name: SpeechProviderName.OPENAI,
+        isAvailable: () => true,
+        transcribe: async () => {
+          openaiCalled = true;
+          return {
+            text: "Fallback transcription from OpenAI",
+            provider: SpeechProviderName.OPENAI,
+            durationMs: 200,
+          };
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([
+          [SpeechProviderName.WHISPER, mockWhisper],
+          [SpeechProviderName.OPENAI, mockOpenAI],
+        ]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: SpeechProviderName.OPENAI,
+          maxRetries: 0,
+        }
+      );
+
+      const res = await orchestrator.transcribe(dummyAudio);
+      assert.equal(whisperCalled, true);
+      assert.equal(openaiCalled, true);
+      assert.equal(res.provider, SpeechProviderName.OPENAI);
+      assert.equal(res.text, "Fallback transcription from OpenAI");
+      assert.equal(res.metadata?.fallbackFrom, SpeechProviderName.WHISPER);
+    });
+
+    it("Test D: should return normalized error when both Whisper and fallback fail", async () => {
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => true,
+        transcribe: async () => {
+          const err = new AppError(
+            ERROR_CODES.VOICE_TRANSCRIPTION_FAILED,
+            "Whisper network down",
+            502,
+            true
+          );
+          (err as any).isRetryable = true;
+          throw err;
+        },
+      };
+
+      const mockOpenAI: any = {
+        name: SpeechProviderName.OPENAI,
+        isAvailable: () => true,
+        transcribe: async () => {
+          throw new AppError(
+            ERROR_CODES.VOICE_TRANSCRIPTION_FAILED,
+            "OpenAI rate limited",
+            502,
+            true
+          );
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([
+          [SpeechProviderName.WHISPER, mockWhisper],
+          [SpeechProviderName.OPENAI, mockOpenAI],
+        ]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: SpeechProviderName.OPENAI,
+          maxRetries: 0,
+        }
+      );
+
+      await assert.rejects(
+        async () => orchestrator.transcribe(dummyAudio),
+        (err: any) => {
+          assert.equal(err.code, ERROR_CODES.VOICE_TRANSCRIPTION_FAILED);
+          assert.equal(err.statusCode, 502);
+          return true;
+        }
+      );
+    });
+
+    it("Test E: should reject unknown provider in environment validation", () => {
+      assert.throws(
+        () => validateEnv({ ...process.env, SPEECH_PRIMARY_PROVIDER: "unknown_asr" }),
+        /Invalid environment configuration/
+      );
+    });
+
+    it("Test F: should immediately invoke fallback when Whisper is unconfigured", async () => {
+      let openaiCalled = false;
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => false, // missing baseUrl
+        transcribe: async () => {
+          throw new Error("Should not be called");
+        },
+      };
+
+      const mockOpenAI: any = {
+        name: SpeechProviderName.OPENAI,
+        isAvailable: () => true,
+        transcribe: async () => {
+          openaiCalled = true;
+          return { text: "Resolved via fallback", provider: SpeechProviderName.OPENAI };
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([
+          [SpeechProviderName.WHISPER, mockWhisper],
+          [SpeechProviderName.OPENAI, mockOpenAI],
+        ]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: SpeechProviderName.OPENAI,
+          maxRetries: 0,
+        }
+      );
+
+      const res = await orchestrator.transcribe(dummyAudio);
+      assert.equal(openaiCalled, true);
+      assert.equal(res.text, "Resolved via fallback");
+    });
+
+    it("Test G: should not include secret keys in failure messages or errors", async () => {
+      const secretKey = "sk-secret-whisper-mock-key-12345";
+      const mockWhisper: any = {
+        name: SpeechProviderName.WHISPER,
+        isAvailable: () => true,
+        transcribe: async () => {
+          const err = new AppError(
+            ERROR_CODES.VOICE_TRANSCRIPTION_FAILED,
+            "Whisper connection error",
+            502,
+            true
+          );
+          (err as any).isRetryable = true;
+          throw err;
+        },
+      };
+
+      const mockOpenAI: any = {
+        name: SpeechProviderName.OPENAI,
+        isAvailable: () => true,
+        transcribe: async () => {
+          throw new AppError(
+            ERROR_CODES.VOICE_TRANSCRIPTION_FAILED,
+            "OpenAI authentication failed",
+            502,
+            true
+          );
+        },
+      };
+
+      const orchestrator = new SpeechOrchestrator(
+        new Map([
+          [SpeechProviderName.WHISPER, mockWhisper],
+          [SpeechProviderName.OPENAI, mockOpenAI],
+        ]),
+        {
+          primaryProvider: SpeechProviderName.WHISPER,
+          fallbackProvider: SpeechProviderName.OPENAI,
+          maxRetries: 0,
+        }
+      );
+
+      await assert.rejects(
+        async () => orchestrator.transcribe(dummyAudio),
+        (err: any) => {
+          assert.equal(err.message.includes(secretKey), false);
+          return true;
+        }
+      );
     });
   });
 });
