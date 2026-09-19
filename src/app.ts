@@ -6,6 +6,7 @@ import { logger } from "./config/logger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config";
 import apiV1Router from "./routes";
+import healthRoutes from "./modules/health/health.routes";
 import { errorHandler } from "./middleware/error";
 import { sendError } from "./shared/responses/api-response";
 import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants";
@@ -87,6 +88,17 @@ export const createApp = (options?: CreateAppOptions): Express => {
   if (options?.preRouterMiddleware) {
     app.use(options.preRouterMiddleware);
   }
+
+  // Root-level platform health probe endpoints (unthrottled for cloud orchestrators like Render/AWS/k8s)
+  app.use("/health", healthRoutes);
+  app.use("/healthz", healthRoutes);
+  app.get("/", (_req: Request, res: Response) => {
+    res.status(HTTP_STATUS.OK).json({
+      status: "ok",
+      name: "isahara-backend",
+      health: "/api/v1/health",
+    });
+  });
 
   // Mount central versioned API routes with global API rate limiting
   app.use(API_PREFIX, apiRateLimiter, apiV1Router);

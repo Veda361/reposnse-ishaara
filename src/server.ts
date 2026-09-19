@@ -7,7 +7,7 @@ import { realtimeGateway } from "./modules/realtime/realtime.gateway";
 import { outboxWorker } from "./modules/events/outbox.worker";
 import { Server } from "http";
 
-const PORT = Number(process.env.PORT) || env.PORT || 5000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : (env.PORT || 5000);
 const HOST = "0.0.0.0";
 
 let server: Server | null = null;
@@ -66,34 +66,53 @@ const startServer = async () => {
   try {
     logger.info("Starting Isahara Backend Server initialization...");
 
-    // Connect to database before starting HTTP listener
-    await connectDatabase();
-
+    // 1. Initialize Express application with all routes and middleware
+    logger.info("Initializing application services and routes...");
     const app = createApp();
 
-    server = app.listen(PORT, HOST, () => {
-      logger.info(`
+    // 2. Start HTTP server binding immediately to 0.0.0.0:PORT for Render port scan
+    logger.info(`Starting HTTP server on ${HOST}:${PORT}...`);
+    server = await new Promise<Server>((resolve, reject) => {
+      const s = app.listen(PORT, HOST, () => {
+        logger.info(`Server listening on ${HOST}:${PORT}`);
+        resolve(s);
+      });
+      s.on("error", (err) => {
+        logger.error(`HTTP server failed to bind on ${HOST}:${PORT}:`, err);
+        reject(err);
+      });
+    });
+
+    // 3. Attach realtime WebSocket gateway to HTTP server
+    logger.info("Attaching Realtime WebSocket Gateway...");
+    realtimeGateway.attach(server);
+
+    // 4. Connect to database with bounded timeout (enforces requirement that MongoDB is required)
+    logger.info("Starting MongoDB connection...");
+    await connectDatabase();
+    logger.info("MongoDB connection established.");
+
+    // 5. Start background outbox worker
+    logger.info("Starting background Outbox Worker...");
+    outboxWorker.start();
+    logger.info("Outbox worker running.");
+
+    logger.info(`
 =====================================================
 🚀 Isahara Backend Server running!
 📍 Host & Port:  ${HOST}:${PORT}
 🌍 Environment:  ${env.NODE_ENV}
-📡 Health:       http://localhost:${PORT}/api/v1/health
-🔐 Auth API:     http://localhost:${PORT}/api/auth
-👤 User API:     http://localhost:${PORT}/api/v1/users/me
-📝 Survey API:   http://localhost:${PORT}/api/v1/survey
-📊 Admin API:    http://localhost:${PORT}/api/v1/admin/surveys
-📈 Analytics:    http://localhost:${PORT}/api/v1/admin/analytics/overview
-🎙️ Voice RT:     ws://localhost:${PORT}/api/v1/voice/realtime
+📡 Health:       http://${HOST}:${PORT}/api/v1/health
+🔐 Auth API:     http://${HOST}:${PORT}/api/auth
+👤 User API:     http://${HOST}:${PORT}/api/v1/users/me
+📝 Survey API:   http://${HOST}:${PORT}/api/v1/survey
+📊 Admin API:    http://${HOST}:${PORT}/api/v1/admin/surveys
+📈 Analytics:    http://${HOST}:${PORT}/api/v1/admin/analytics/overview
+🎙️ Voice RT:     ws://${HOST}:${PORT}/api/v1/voice/realtime
 =====================================================
-      `);
-      logger.info(`Speech primary provider: ${env.SPEECH_PRIMARY_PROVIDER}`);
-      logger.info(`Speech fallback provider: ${env.SPEECH_FALLBACK_PROVIDER}`);
-    });
-
-    realtimeGateway.attach(server);
-
-    // Start background outbox worker
-    outboxWorker.start();
+    `);
+    logger.info(`Speech primary provider: ${env.SPEECH_PRIMARY_PROVIDER}`);
+    logger.info(`Speech fallback provider: ${env.SPEECH_FALLBACK_PROVIDER}`);
 
     // Signal listeners for graceful shutdown
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
@@ -112,7 +131,7 @@ const startServer = async () => {
 
     return server;
   } catch (error) {
-    logger.error("Failed to start server:", error);
+    logger.error("Failed to start server during initialization:", error);
     process.exit(1);
   }
 };

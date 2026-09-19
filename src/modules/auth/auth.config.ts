@@ -5,8 +5,12 @@ import { MongoClient } from "mongodb";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 
-// Native MongoDB client for Better Auth adapter, sharing the configured database
-export const mongoAuthClient = new MongoClient(env.MONGODB_URI);
+// Native MongoDB client for Better Auth adapter, sharing the configured database with bounded timeouts
+export const mongoAuthClient = new MongoClient(env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 15000,
+  connectTimeoutMS: 15000,
+  socketTimeoutMS: 45000,
+});
 const authDb = mongoAuthClient.db();
 
 // Origins allowed to interact with authentication endpoints & cookies
@@ -54,6 +58,8 @@ export const configuredGoogleAudiences = Object.freeze([...googleClientIds]);
  * Handles Google OAuth, session management, and authentication storage in MongoDB.
  * Equipped with the bearer() plugin to natively support Android / mobile client Bearer token authorization.
  */
+logger.info("Initializing Better Auth configuration...");
+
 export const auth = betterAuth({
   database: mongodbAdapter(authDb, {
     client: mongoAuthClient,
