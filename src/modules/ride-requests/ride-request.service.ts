@@ -11,6 +11,7 @@ import { TripModel } from "../trips/trip.model";
 import { TripStatus } from "../trips/trip.types";
 import { DriverProfileModel } from "../drivers/driver.model";
 import { DriverStatus, VerificationStatus } from "../drivers/driver.types";
+import { VehicleModel } from "../vehicles/vehicle.model";
 import { UserModel } from "../users/user.model";
 import { driverService } from "../drivers/driver.service";
 import { rideService } from "../rides/ride.service";
@@ -20,6 +21,7 @@ import {
 } from "./ride-request-event.publisher";
 import { OutboxService, outboxService } from "../events/outbox.service";
 import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
+import { DiscoverySessionModel } from "../matching/discovery-session.model";
 import {
   NotFoundError,
   ConflictError,
@@ -150,6 +152,46 @@ export class RideRequestService {
       );
     }
 
+    // 6b. Phase 10: Validate discoverySessionId (optional — if supplied, must belong to this user and not be expired)
+    if (input.discoverySessionId) {
+      const session = await DiscoverySessionModel.findOne({
+        sessionId: input.discoverySessionId,
+        expiresAt: { $gt: new Date() },
+      });
+      if (!session) {
+        throw new NotFoundError(
+          "Discovery session not found or has expired. Start a new trip discovery.",
+          ERROR_CODES.DISCOVERY_SESSION_NOT_FOUND
+        );
+      }
+      if (session.userId.toString() !== userId) {
+        throw new ForbiddenError(
+          "Discovery session belongs to a different user.",
+          ERROR_CODES.DISCOVERY_SESSION_MISMATCH
+        );
+      }
+    }
+
+    // 6c. Phase 10: Trip capacity enforcement
+    // Read-then-write: subject to a race window. Two passengers may both pass this check
+    // and both create PENDING requests before either is accepted. The capacity is re-evaluated
+    // at acceptance time and is bounded by the unique-pending-per-user-trip index which
+    // prevents any single passenger from holding multiple PENDING slots on the same trip.
+    // Atomic seat reservation (via $inc counter on Trip) is deferred to Phase 11+.
+    const vehicle = await VehicleModel.findById(trip.vehicleId);
+    if (vehicle && typeof vehicle.capacity === "number" && vehicle.capacity > 0) {
+      const acceptedCount = await RideRequestModel.countDocuments({
+        tripId: trip._id,
+        status: RideRequestStatus.ACCEPTED,
+      });
+      if (acceptedCount >= vehicle.capacity) {
+        throw new ConflictError(
+          `This trip has no available seats (capacity: ${vehicle.capacity}, accepted: ${acceptedCount}).`,
+          ERROR_CODES.TRIP_FULL_CAPACITY
+        );
+      }
+    }
+
     // 7. Calculate Server-Controlled Timestamps & Expiration
     const requestedAt = new Date();
     const expiresAt = new Date(
@@ -186,6 +228,7 @@ export class RideRequestService {
         requestedAt,
         expiresAt,
         idempotencyKey: idempotencyKey || null,
+        discoverySessionId: input.discoverySessionId || null,
       });
 
       const response = toRideRequestResponse(doc);

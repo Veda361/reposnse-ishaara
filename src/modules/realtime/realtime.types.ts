@@ -51,7 +51,11 @@ export type ServerMessageType =
   | "RIDE_TRACKING_ENDED"
   | "RIDE_TRACKING_ERROR"
   | "DRIVER_PAYMENT_CONFIRMED"
-  | "driver:payment_confirmed";
+  | "driver:payment_confirmed"
+  | "DRIVER_VERIFIED"
+  | "DRIVER_REJECTED"
+  | "DRIVER_VEHICLE_ASSIGNED"
+  | "DRIVER_VEHICLE_UNASSIGNED";
 
 export interface RealtimeEnvelope<T = any> {
   type: ClientMessageType | ServerMessageType;

@@ -104,6 +104,7 @@ settlementSchema.index({ paymentId: 1 }, { name: "idx_settlement_paymentId", uni
 settlementSchema.index({ driverId: 1, createdAt: -1 }, { name: "idx_settlement_driverId" });
 settlementSchema.index({ operatorId: 1, createdAt: -1 }, { name: "idx_settlement_operatorId", sparse: true });
 settlementSchema.index({ status: 1, lockedAt: 1 }, { name: "idx_settlement_status_lockedAt" });
+settlementSchema.index({ status: 1, createdAt: -1 }, { name: "idx_settlement_status_createdAt" });
 settlementSchema.index(
   { providerTransferId: 1 },
   { name: "idx_settlement_providerTransferId", sparse: true }
@@ -111,22 +112,29 @@ settlementSchema.index(
 
 export const toSettlementResponse = (
   doc: ISettlementDocument
-): SettlementRecord => ({
-  id: doc._id.toString(),
-  paymentId: doc.paymentId.toString(),
-  rideId: doc.rideId.toString(),
-  driverId: doc.driverId.toString(),
-  operatorId: doc.operatorId ? doc.operatorId.toString() : null,
-  recipientAccountId: doc.recipientAccountId ?? null,
-  amountMinor: doc.amountMinor,
-  currency: doc.currency,
-  status: doc.status,
-  providerTransferId: doc.providerTransferId ?? null,
-  failureReason: doc.failureReason ?? null,
-  retryCount: doc.retryCount ?? 0,
-  createdAt: doc.createdAt.toISOString(),
-  processedAt: doc.processedAt ? doc.processedAt.toISOString() : null,
-});
+): SettlementRecord => {
+  let recipient = doc.recipientAccountId ?? null;
+  if (recipient && !recipient.startsWith("acc_") && recipient.length > 4) {
+    recipient = `****${recipient.slice(-4)}`;
+  }
+
+  return {
+    id: doc._id.toString(),
+    paymentId: doc.paymentId.toString(),
+    rideId: doc.rideId.toString(),
+    driverId: doc.driverId.toString(),
+    operatorId: doc.operatorId ? doc.operatorId.toString() : null,
+    recipientAccountId: recipient,
+    amountMinor: doc.amountMinor,
+    currency: doc.currency,
+    status: doc.status,
+    providerTransferId: doc.providerTransferId ?? null,
+    failureReason: doc.failureReason ?? null,
+    retryCount: doc.retryCount ?? 0,
+    createdAt: doc.createdAt.toISOString(),
+    processedAt: doc.processedAt ? doc.processedAt.toISOString() : null,
+  };
+};
 
 export const SettlementModel: Model<ISettlementDocument> =
   mongoose.models.Settlement ||

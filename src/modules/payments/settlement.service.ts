@@ -1,15 +1,19 @@
 import mongoose, { Types } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
 import { SettlementModel, ISettlementDocument, toSettlementResponse } from "./settlement.model";
-import { IPaymentDocument } from "./payment.model";
+import { IPaymentDocument, PaymentModel } from "./payment.model";
 import { RideModel } from "../rides/ride.model";
 import { TripModel } from "../trips/trip.model";
 import { VehicleModel } from "../vehicles/vehicle.model";
 import { BusOperatorModel } from "../operators/operator.model";
 import { DriverProfileModel } from "../drivers/driver.model";
-import { SETTLEMENT_STATUS, SettlementStatus } from "./payment.constants";
+import { SETTLEMENT_STATUS, SettlementStatus, PAYMENT_STATUS } from "./payment.constants";
 import { SettlementRecord } from "./payment.types";
 import { ledgerService } from "./ledger.service";
+import { LedgerTransactionModel } from "./ledger.model";
 import { paymentProvider } from "./payment-provider/razorpay.provider";
+import { outboxService } from "../events/outbox.service";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
 import { AppError } from "../../shared/errors/app-error";
 import { HTTP_STATUS } from "../../shared/constants/api.constants";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
@@ -18,14 +22,58 @@ import { logger } from "../../config/logger";
 export const SETTLEMENT_MAX_RETRY_ATTEMPTS = 3;
 export const SETTLEMENT_LEASE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
 
+export interface ListSettlementsFilter {
+  status?: SettlementStatus;
+  operatorId?: string;
+  driverId?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+export interface PaginationOptions {
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedSettlementsResponse {
+  settlements: SettlementRecord[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface OperatorSettlementSummary {
+  operatorId: string;
+  settledAmountMinor: number;
+  pendingAmountMinor: number;
+  unreadyAmountMinor: number;
+  failedAmountMinor: number;
+  totalSettlementCount: number;
+}
+
 export class SettlementService {
   /**
-   * Initializes or updates the settlement record for a captured payment.
+   * Initializes or updates the settlement record for an eligible payment.
    * Resolves the authoritative BusOperator beneficiary (Option A).
+   * Enforces that payment must be CAPTURED or PARTIALLY_REFUNDED.
    */
   async initiateSettlementRecord(
     payment: IPaymentDocument
   ): Promise<ISettlementDocument> {
+    if (
+      payment.status !== PAYMENT_STATUS.CAPTURED &&
+      payment.status !== PAYMENT_STATUS.PARTIALLY_REFUNDED
+    ) {
+      throw new AppError(
+        ERROR_CODES.PAYMENT_INVALID_STATE,
+        `Payment in status ${payment.status} is not eligible for settlement initiation`,
+        HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
     const existingSettlement = await SettlementModel.findOne({
       paymentId: payment._id,
     });
@@ -78,6 +126,10 @@ export class SettlementService {
       ? SETTLEMENT_STATUS.PENDING
       : SETTLEMENT_STATUS.NOT_READY;
 
+    const failureReason = isBeneficiaryVerified
+      ? null
+      : "Bus operator payout beneficiary is not verified";
+
     const settlement = await SettlementModel.create({
       paymentId: payment._id,
       rideId: payment.rideId,
@@ -87,6 +139,7 @@ export class SettlementService {
       amountMinor: payment.providerAmountMinor, // Authoritative 90% operator share
       currency: payment.currency,
       status,
+      failureReason,
       retryCount: 0,
       lockedAt: null,
     });
@@ -106,10 +159,12 @@ export class SettlementService {
    * Authoritatively executes real-money payout settlement to the Bus Operator.
    * Enforces all 11 financial controls:
    * - Atomic lease locking against duplicate workers
+   * - Pre-settlement refund verification
    * - Beneficiary KYC/account verification
-   * - Idempotency key
+   * - Idempotency key passed to provider
    * - Timeout / network failure reconciliation state
    * - Double-entry ledger debit only after verified provider confirmation
+   * - Outbox domain event emission
    */
   async processSettlement(settlementId: string): Promise<SettlementRecord> {
     if (!Types.ObjectId.isValid(settlementId)) {
@@ -157,7 +212,20 @@ export class SettlementService {
       );
     }
 
-    // 2. Pre-execution Invariant Checks
+    // 2. Pre-execution Invariant Checks: Check if payment was refunded
+    const payment = await PaymentModel.findById(settlement.paymentId);
+    if (payment && payment.status === PAYMENT_STATUS.REFUNDED) {
+      settlement.status = SETTLEMENT_STATUS.FAILED;
+      settlement.failureReason = "Payment was refunded prior to settlement execution";
+      settlement.lockedAt = null;
+      await settlement.save();
+      logger.warn("Settlement rejected: underlying payment already refunded", {
+        settlementId,
+        paymentId: settlement.paymentId.toString(),
+      });
+      return toSettlementResponse(settlement);
+    }
+
     if (settlement.retryCount > SETTLEMENT_MAX_RETRY_ATTEMPTS) {
       settlement.status = SETTLEMENT_STATUS.FAILED;
       settlement.failureReason = `Max retry attempts (${SETTLEMENT_MAX_RETRY_ATTEMPTS}) exceeded`;
@@ -207,6 +275,7 @@ export class SettlementService {
         recipientAccountId: settlement.recipientAccountId,
         amountMinor: settlement.amountMinor,
         currency: settlement.currency,
+        idempotencyKey: settlement._id.toString(),
         notes: {
           settlementId: settlement._id.toString(),
           rideId: settlement.rideId.toString(),
@@ -228,6 +297,27 @@ export class SettlementService {
         settlementId: settlement._id.toString(),
         amountMinor: settlement.amountMinor,
         currency: settlement.currency,
+      });
+
+      // 6. Outbox Domain Event
+      await outboxService.createEvent({
+        eventId: uuidv4(),
+        type: DOMAIN_EVENT_TYPES.SETTLEMENT_PROCESSED,
+        aggregateType: "Settlement",
+        aggregateId: settlement._id.toString(),
+        occurredAt: new Date(),
+        version: 1,
+        payload: {
+          settlementId: settlement._id.toString(),
+          paymentId: settlement.paymentId.toString(),
+          rideId: settlement.rideId.toString(),
+          driverId: settlement.driverId.toString(),
+          operatorId: settlement.operatorId?.toString() ?? null,
+          amountMinor: settlement.amountMinor,
+          currency: settlement.currency,
+          providerTransferId: settlement.providerTransferId,
+          processedAt: settlement.processedAt,
+        },
       });
 
       logger.info("Settlement processed and ledger posted successfully", {
@@ -287,26 +377,132 @@ export class SettlementService {
       return toSettlementResponse(settlement);
     }
 
-    // In mock or production, if transfer ID exists or simulated success:
-    if (settlement.providerTransferId) {
-      settlement.status = SETTLEMENT_STATUS.PROCESSED;
-      settlement.processedAt = settlement.processedAt || new Date();
-      settlement.lockedAt = null;
-      await settlement.save();
+    // 1. If providerTransferId is already recorded:
+    if (settlement.providerTransferId && paymentProvider.fetchTransfer) {
+      try {
+        const transfer = await paymentProvider.fetchTransfer(
+          settlement.providerTransferId
+        );
+        if (transfer && transfer.status === "processed") {
+          settlement.status = SETTLEMENT_STATUS.PROCESSED;
+          settlement.processedAt = settlement.processedAt || new Date();
+          settlement.lockedAt = null;
+          settlement.failureReason = null;
+          await settlement.save();
 
-      await ledgerService.recordSettlement({
-        settlementId: settlement._id.toString(),
-        amountMinor: settlement.amountMinor,
-        currency: settlement.currency,
-      });
-    } else {
-      // Reset to PENDING for safe retry
-      settlement.status = SETTLEMENT_STATUS.PENDING;
-      settlement.lockedAt = null;
-      await settlement.save();
+          // Idempotent ledger entry check
+          const existingLedger = await LedgerTransactionModel.findOne({
+            referenceId: settlement._id.toString(),
+            type: "SETTLEMENT",
+          });
+          if (!existingLedger) {
+            await ledgerService.recordSettlement({
+              settlementId: settlement._id.toString(),
+              amountMinor: settlement.amountMinor,
+              currency: settlement.currency,
+            });
+          }
+          return toSettlementResponse(settlement);
+        } else if (transfer && transfer.status === "failed") {
+          settlement.status = SETTLEMENT_STATUS.FAILED;
+          settlement.failureReason = "Provider confirmed transfer failed";
+          settlement.lockedAt = null;
+          await settlement.save();
+          return toSettlementResponse(settlement);
+        }
+      } catch (err: any) {
+        logger.warn("Reconcile fetch transfer error", {
+          settlementId,
+          error: err.message,
+        });
+      }
     }
 
+    // 2. Query provider by notes / settlementId
+    if (paymentProvider.fetchTransferByNotes) {
+      try {
+        const found = await paymentProvider.fetchTransferByNotes({
+          settlementId: settlement._id.toString(),
+        });
+        if (found && found.status === "processed") {
+          settlement.status = SETTLEMENT_STATUS.PROCESSED;
+          settlement.providerTransferId = found.id;
+          settlement.processedAt = settlement.processedAt || new Date();
+          settlement.lockedAt = null;
+          settlement.failureReason = null;
+          await settlement.save();
+
+          const existingLedger = await LedgerTransactionModel.findOne({
+            referenceId: settlement._id.toString(),
+            type: "SETTLEMENT",
+          });
+          if (!existingLedger) {
+            await ledgerService.recordSettlement({
+              settlementId: settlement._id.toString(),
+              amountMinor: settlement.amountMinor,
+              currency: settlement.currency,
+            });
+          }
+          return toSettlementResponse(settlement);
+        }
+      } catch (err: any) {
+        logger.warn("Reconcile fetchTransferByNotes error", {
+          settlementId,
+          error: err.message,
+        });
+      }
+    }
+
+    // 3. Fallback: Reset to PENDING for safe retry
+    settlement.status = SETTLEMENT_STATUS.PENDING;
+    settlement.lockedAt = null;
+    await settlement.save();
+
     return toSettlementResponse(settlement);
+  }
+
+  /**
+   * Retries a FAILED or NOT_READY settlement after beneficiary verification or admin fix.
+   */
+  async retrySettlement(settlementId: string): Promise<SettlementRecord> {
+    const settlement = await SettlementModel.findById(settlementId);
+    if (!settlement) {
+      throw new AppError(
+        ERROR_CODES.NOT_FOUND,
+        "Settlement not found",
+        HTTP_STATUS.NOT_FOUND
+      );
+    }
+
+    if (settlement.status === SETTLEMENT_STATUS.PROCESSED) {
+      return toSettlementResponse(settlement);
+    }
+
+    // If operator beneficiary is present, re-verify status
+    if (settlement.operatorId) {
+      const operator = await BusOperatorModel.findById(settlement.operatorId);
+      if (
+        !operator ||
+        !operator.isActive ||
+        !operator.payoutAccount.isVerified ||
+        !operator.payoutAccount.razorpayAccountId
+      ) {
+        throw new AppError(
+          ERROR_CODES.VALIDATION_ERROR,
+          "Cannot retry settlement: BusOperator payout account is still unverified",
+          HTTP_STATUS.BAD_REQUEST
+        );
+      }
+      settlement.recipientAccountId = operator.payoutAccount.razorpayAccountId;
+    }
+
+    settlement.status = SETTLEMENT_STATUS.PENDING;
+    settlement.retryCount = 0;
+    settlement.failureReason = null;
+    settlement.lockedAt = null;
+    await settlement.save();
+
+    return this.processSettlement(settlementId);
   }
 
   /**
@@ -336,6 +532,150 @@ export class SettlementService {
     }
 
     return results;
+  }
+
+  /**
+   * Queries paginated settlements with filtering for administration.
+   */
+  async listSettlements(
+    filter: ListSettlementsFilter = {},
+    pagination: PaginationOptions = {}
+  ): Promise<PaginatedSettlementsResponse> {
+    const page = Math.max(1, pagination.page || 1);
+    const limit = Math.min(50, Math.max(1, pagination.limit || 20));
+    const skip = (page - 1) * limit;
+
+    const query: any = {};
+    if (filter.status) {
+      query.status = filter.status;
+    }
+    if (filter.operatorId && Types.ObjectId.isValid(filter.operatorId)) {
+      query.operatorId = new Types.ObjectId(filter.operatorId);
+    }
+    if (filter.driverId && Types.ObjectId.isValid(filter.driverId)) {
+      query.driverId = new Types.ObjectId(filter.driverId);
+    }
+    if (filter.startDate || filter.endDate) {
+      query.createdAt = {};
+      if (filter.startDate) {
+        query.createdAt.$gte = new Date(filter.startDate);
+      }
+      if (filter.endDate) {
+        query.createdAt.$lte = new Date(filter.endDate);
+      }
+    }
+
+    const [total, docs] = await Promise.all([
+      SettlementModel.countDocuments(query),
+      SettlementModel.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+    ]);
+
+    return {
+      settlements: docs.map(toSettlementResponse),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit) || 1,
+      },
+    };
+  }
+
+  /**
+   * Returns a single settlement by ID.
+   */
+  async getSettlementById(settlementId: string): Promise<SettlementRecord> {
+    if (!Types.ObjectId.isValid(settlementId)) {
+      throw new AppError(
+        ERROR_CODES.INVALID_ID,
+        "Invalid settlement ID format",
+        HTTP_STATUS.BAD_REQUEST
+      );
+    }
+    const doc = await SettlementModel.findById(settlementId);
+    if (!doc) {
+      throw new AppError(
+        ERROR_CODES.NOT_FOUND,
+        "Settlement not found",
+        HTTP_STATUS.NOT_FOUND
+      );
+    }
+    return toSettlementResponse(doc);
+  }
+
+  /**
+   * Lists settlements belonging to a specific bus operator.
+   */
+  async listOperatorSettlements(
+    operatorId: string,
+    pagination: PaginationOptions = {}
+  ): Promise<PaginatedSettlementsResponse> {
+    return this.listSettlements({ operatorId }, pagination);
+  }
+
+  /**
+   * Lists settlements associated with a specific driver.
+   */
+  async listDriverSettlements(
+    driverId: string,
+    pagination: PaginationOptions = {}
+  ): Promise<PaginatedSettlementsResponse> {
+    return this.listSettlements({ driverId }, pagination);
+  }
+
+  /**
+   * Computes authoritative settlement summary for a BusOperator.
+   */
+  async getOperatorSettlementSummary(
+    operatorId: string
+  ): Promise<OperatorSettlementSummary> {
+    if (!Types.ObjectId.isValid(operatorId)) {
+      throw new AppError(
+        ERROR_CODES.INVALID_ID,
+        "Invalid operator ID format",
+        HTTP_STATUS.BAD_REQUEST
+      );
+    }
+
+    const opObjId = new Types.ObjectId(operatorId);
+    const agg = await SettlementModel.aggregate([
+      { $match: { operatorId: opObjId } },
+      {
+        $group: {
+          _id: "$status",
+          totalMinor: { $sum: "$amountMinor" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    let settledAmountMinor = 0;
+    let pendingAmountMinor = 0;
+    let unreadyAmountMinor = 0;
+    let failedAmountMinor = 0;
+    let totalSettlementCount = 0;
+
+    for (const group of agg) {
+      totalSettlementCount += group.count;
+      if (group._id === SETTLEMENT_STATUS.PROCESSED) {
+        settledAmountMinor += group.totalMinor;
+      } else if (group._id === SETTLEMENT_STATUS.PENDING) {
+        pendingAmountMinor += group.totalMinor;
+      } else if (group._id === SETTLEMENT_STATUS.NOT_READY) {
+        unreadyAmountMinor += group.totalMinor;
+      } else if (group._id === SETTLEMENT_STATUS.FAILED) {
+        failedAmountMinor += group.totalMinor;
+      }
+    }
+
+    return {
+      operatorId,
+      settledAmountMinor,
+      pendingAmountMinor,
+      unreadyAmountMinor,
+      failedAmountMinor,
+      totalSettlementCount,
+    };
   }
 }
 

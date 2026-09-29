@@ -34,7 +34,38 @@ import { HTTP_STATUS } from "../../../shared/constants/api.constants";
 
 describe("Rating HTTP API Integration Tests", () => {
   const TEST_PREFIX = `rating_api_${Date.now()}_`;
-  const app = createApp();
+  const app = createApp({
+    preRouterMiddleware: async (req: any, _res: any, next: any) => {
+      const userId = req.headers["x-test-user-id"];
+      const role = req.headers["x-test-user-role"];
+      if (userId) {
+        let userDoc: any = null;
+        try {
+          if (mongoose.Types.ObjectId.isValid(userId)) {
+            userDoc = await UserModel.findById(userId).lean();
+          }
+        } catch {
+          // ignore
+        }
+        if (!userDoc) {
+          userDoc = { _id: userId, role, name: "Test User", email: `${userId}@test.com` };
+        }
+        req.auth = {
+          authUserId: userDoc.betterAuthUserId || userId.toString(),
+          applicationUserId: userId.toString(),
+          user: userDoc,
+          session: { id: "test_session_rating" },
+        };
+        req.user = {
+          id: userId.toString(),
+          email: userDoc.email,
+          role: role || userDoc.role,
+          name: userDoc.name,
+        };
+      }
+      next();
+    },
+  });
 
   const userIds: mongoose.Types.ObjectId[] = [];
   const driverIds: mongoose.Types.ObjectId[] = [];

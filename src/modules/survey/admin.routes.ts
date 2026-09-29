@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { adminController } from "./admin.controller";
+import adminDriverRoutes from "../drivers/admin-driver.routes";
 import { requireAdminKey } from "../../middleware/authorization";
 import { asyncHandler } from "../../shared/utils/async-handler";
 
@@ -7,6 +8,9 @@ const router = Router();
 
 // Enforce secret key guard across all /api/v1/admin/* routes
 router.use(requireAdminKey);
+
+// Mount platform driver verification & vehicle assignment endpoints
+router.use("/drivers", adminDriverRoutes);
 
 // GET /api/v1/admin/analytics/overview
 router.get(

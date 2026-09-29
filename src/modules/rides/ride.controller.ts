@@ -241,6 +241,38 @@ export class RideController {
       message: "Driver location retrieved successfully.",
     });
   };
+
+  /**
+   * GET /api/v1/rides/:rideId/fare
+   * Phase 12: Retrieves authoritative fare breakdown and billing snapshot for a ride.
+   * Accessible to authorized passenger or assigned driver.
+   */
+  getFare = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = this.resolveUserId(req);
+    const role = (req.auth?.user?.role || req.user?.role) as Role;
+    const { rideId } = req.params;
+
+    let driverProfileId: string | undefined;
+    if (role === ROLES.DRIVER_CONDUCTOR) {
+      driverProfileId = await this.resolveDriverProfileId(req);
+    }
+
+    const fare = await this.service.getRideFare(rideId, {
+      userId,
+      role,
+      driverProfileId,
+    });
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: fare,
+      message: "Ride fare retrieved successfully.",
+    });
+  };
 }
 
 export const rideController = new RideController();

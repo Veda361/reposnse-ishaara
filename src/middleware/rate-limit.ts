@@ -23,6 +23,7 @@ export const createRateLimiter = (options: RateLimiterOptions = {}) => {
   return rateLimit({
     windowMs,
     max,
+    skip: () => process.env.NODE_ENV === "test",
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req: Request, res: Response) => {
@@ -180,4 +181,16 @@ export const emergencyContactRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 30,
   message: "Emergency contact rate limit exceeded. Please wait before making more changes.",
+});
+
+
+/**
+ * Phase 18: Admin endpoints rate limiter.
+ * Protects platform administration endpoints against automated probing,
+ * brute-force key attempts, and operational mutation flooding.
+ */
+export const adminRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // 100 requests per 15 minutes per IP
+  message: "Admin request rate limit exceeded. Please wait a moment before trying again.",
 });

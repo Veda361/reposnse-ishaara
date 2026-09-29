@@ -16,6 +16,7 @@ import deviceRoutes from "../modules/notifications/device.routes";
 import paymentRoutes from "../modules/payments/payment.routes";
 import safetyRoutes from "../modules/safety/safety.routes";
 import operatorRoutes from "../modules/operators/operator.routes";
+import agencyRoutes from "../modules/agencies/agency.routes";
 
 const apiV1Router = Router();
 
@@ -25,6 +26,7 @@ apiV1Router.use("/users", userRoutes);
 apiV1Router.use("/drivers", driverRoutes);
 apiV1Router.use("/vehicles", vehicleRoutes);
 apiV1Router.use("/operators", operatorRoutes);
+apiV1Router.use("/agencies", agencyRoutes);
 apiV1Router.use("/locations", locationRoutes);
 apiV1Router.use("/trips", tripRoutes);
 apiV1Router.use("/voice", voiceRoutes);

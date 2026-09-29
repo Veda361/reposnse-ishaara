@@ -94,6 +94,14 @@ const rideSchema = new Schema<IRideDocument>(
       required: true,
       index: true,
     },
+    fareEstimate: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
+    fareSnapshot: {
+      type: Schema.Types.Mixed,
+      default: null,
+    },
     acceptedAt: {
       type: Date,
       required: [true, "acceptedAt timestamp is required"],
@@ -215,6 +223,8 @@ export const toRideResponse = (doc: IRideDocument): RideResponse => {
     },
     status: doc.status,
     paymentStatus: doc.paymentStatus || "UNPAID",
+    fareEstimate: doc.fareEstimate ?? null,
+    fareSnapshot: doc.fareSnapshot ?? null,
     acceptedAt: doc.acceptedAt.toISOString(),
     arrivedAt: doc.arrivedAt ? doc.arrivedAt.toISOString() : null,
     pickedUpAt: doc.pickedUpAt ? doc.pickedUpAt.toISOString() : null,

@@ -17,6 +17,18 @@ export const createRideRequestSchema = z
       .regex(objectIdRegex, "Invalid tripId format: must be a 24-character hexadecimal ObjectId"),
     pickup: locationInputSchema,
     destination: locationInputSchema,
+    /**
+     * Phase 10: Optional discovery session correlation.
+     * When provided, the service validates that the session exists, has not expired,
+     * and belongs to the authenticated passenger.
+     */
+    discoverySessionId: z
+      .string()
+      .regex(
+        /^dses_[a-f0-9]{32}$/,
+        "Invalid discoverySessionId format: expected dses_ prefix followed by 32 lowercase hex characters"
+      )
+      .optional(),
   })
   .strict({
     message: "Unrecognized fields in ride request payload are not permitted",

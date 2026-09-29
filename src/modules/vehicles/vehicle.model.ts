@@ -19,12 +19,24 @@ const vehicleSchema = new Schema<IVehicleDocument>(
     driverId: {
       type: Schema.Types.ObjectId,
       ref: "DriverProfile",
-      required: [true, "driverId reference to DriverProfile is required"],
+      default: null,
+      index: true,
+    },
+    agencyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Agency",
+      default: null,
       index: true,
     },
     operatorId: {
       type: Schema.Types.ObjectId,
       ref: "BusOperator",
+      default: null,
+      index: true,
+    },
+    ownerUserId: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       default: null,
       index: true,
     },
@@ -49,6 +61,17 @@ const vehicleSchema = new Schema<IVehicleDocument>(
       required: [true, "model is required"],
       trim: true,
     },
+    capacity: {
+      type: Number,
+      default: null,
+    },
+    ownershipType: {
+      type: String,
+      enum: ["INDIVIDUAL", "AGENCY", "OPERATOR"],
+      default: "INDIVIDUAL",
+      required: true,
+      index: true,
+    },
     isVerified: {
       type: Boolean,
       default: false,
@@ -70,24 +93,29 @@ const vehicleSchema = new Schema<IVehicleDocument>(
 // Enforce unique registration number across all vehicles in the platform
 vehicleSchema.index({ registrationNumber: 1 }, { unique: true });
 
-// Compound index for querying a driver's active vehicles efficiently
+// Compound indexes for querying active vehicles efficiently
 vehicleSchema.index({ driverId: 1, isActive: 1 });
+vehicleSchema.index({ agencyId: 1, isActive: 1 }, { sparse: true });
 vehicleSchema.index({ operatorId: 1, isActive: 1 }, { sparse: true });
 
 /**
  * Transforms an internal Mongoose Vehicle document into a clean, sanitized public contract.
- * Omits internal driverId and MongoDB internals (_id, __v).
+ * Omits internal credentials, sensitive driver details, and MongoDB internals (_id, __v).
  */
 export const toCleanVehicleResponse = (
   vehicle: IVehicleDocument
 ): CleanVehicleResponse => {
   return {
     id: vehicle._id.toString(),
+    agencyId: vehicle.agencyId ? vehicle.agencyId.toString() : null,
     operatorId: vehicle.operatorId ? vehicle.operatorId.toString() : null,
+    assignedDriverId: vehicle.driverId ? vehicle.driverId.toString() : null,
     registrationNumber: vehicle.registrationNumber,
     vehicleType: vehicle.vehicleType,
     make: vehicle.make,
     model: vehicle.model,
+    capacity: vehicle.capacity ?? null,
+    ownershipType: vehicle.ownershipType || "INDIVIDUAL",
     isVerified: vehicle.isVerified,
     isActive: vehicle.isActive,
     createdAt: vehicle.createdAt.toISOString(),

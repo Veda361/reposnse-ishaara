@@ -13,6 +13,14 @@ router.get("/:id", requireAuth, (req, res, next) =>
   busOperatorController.getOperator(req, res, next)
 );
 
+router.get("/:id/settlements", requireAuth, (req, res, next) =>
+  busOperatorController.listSettlements(req, res, next)
+);
+
+router.get("/:id/settlements/summary", requireAuth, (req, res, next) =>
+  busOperatorController.getSettlementSummary(req, res, next)
+);
+
 router.patch("/:id/verify-payout", requireAdminKey, (req, res, next) =>
   busOperatorController.verifyPayoutAccount(req, res, next)
 );

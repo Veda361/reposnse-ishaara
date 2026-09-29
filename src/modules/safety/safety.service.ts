@@ -282,7 +282,7 @@ export class SafetyService {
         emergencyType,
         status: EmergencyStatus.ACTIVE,
         locationSnapshot,
-        idempotencyKey: idempotencyKey ?? null,
+        ...(idempotencyKey ? { idempotencyKey } : {}),
         triggeredAt: now,
       });
     } catch (err: any) {

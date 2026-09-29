@@ -16,7 +16,6 @@ const paymentWebhookEventSchema = new Schema<IPaymentWebhookEventDocument>(
     providerEventId: {
       type: String,
       required: true,
-      unique: true,
       trim: true,
     },
     provider: {
@@ -60,7 +59,7 @@ const paymentWebhookEventSchema = new Schema<IPaymentWebhookEventDocument>(
 // Compound / Unique index for duplicate prevention
 paymentWebhookEventSchema.index(
   { providerEventId: 1 },
-  { name: "idx_webhook_providerEventId", unique: true }
+  { unique: true }
 );
 
 paymentWebhookEventSchema.index(

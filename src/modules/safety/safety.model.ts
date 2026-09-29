@@ -96,7 +96,7 @@ const emergencyEventSchema = new Schema<IEmergencyEventDocument>(
     },
     idempotencyKey: {
       type: String,
-      default: null,
+      default: undefined,
     },
     triggeredAt: {
       type: Date,
@@ -169,17 +169,16 @@ emergencyEventSchema.index(
 );
 
 /**
- * Unique sparse index on (idempotencyKey, triggeredByUserId).
- * Prevents concurrent duplicate inserts with the same idempotency key
- * from the same user — guarantees exactly-once semantics at DB level.
- * Sparse: does not index documents where idempotencyKey is null.
+ * Unique partial index on (idempotencyKey, triggeredByUserId).
+ * Only indexes documents where idempotencyKey is an actual string (non-null, non-undefined).
+ * Prevents concurrent duplicate inserts with the same idempotency key from the same user.
  */
 emergencyEventSchema.index(
   { idempotencyKey: 1, triggeredByUserId: 1 },
   {
     unique: true,
-    sparse: true,
-    name: "unique_idempotency_key_per_user",
+    partialFilterExpression: { idempotencyKey: { $type: "string" } },
+    name: "unique_idempotency_key_per_user_v2",
   }
 );
 

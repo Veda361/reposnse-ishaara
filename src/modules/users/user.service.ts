@@ -25,13 +25,15 @@ export class UserService {
       throw new BadRequestError("Invalid authentication user payload");
     }
 
-    // 1. Try finding existing Isahara application user
+    const normalizedEmail = authUser.email.toLowerCase().trim();
+
+    // 1. Try finding existing Isahara application user by Better Auth User ID
     const existingUser = await UserModel.findOne({
       betterAuthUserId: authUser.id,
     });
 
     if (existingUser) {
-      // Synchronize safe profile metadata from OAuth provider if needed
+      // Synchronize safe profile metadata from auth provider if needed
       let hasUpdates = false;
 
       if (authUser.name && authUser.name.trim() && existingUser.name !== authUser.name.trim()) {
@@ -59,12 +61,33 @@ export class UserService {
       return existingUser;
     }
 
-    // 2. Provision new Isahara Application User
+    // 2. Check if user already exists by verified email (e.g. pre-existing account or different provider)
+    const userByEmail = await UserModel.findOne({ email: normalizedEmail });
+    if (userByEmail) {
+      userByEmail.betterAuthUserId = authUser.id;
+      if (authUser.emailVerified === true && !userByEmail.isVerified) {
+        userByEmail.isVerified = true;
+      }
+      if (authUser.image && !userByEmail.image) {
+        userByEmail.image = authUser.image;
+      }
+      if (authUser.name && (!userByEmail.name || userByEmail.name === normalizedEmail.split("@")[0])) {
+        userByEmail.name = authUser.name.trim();
+      }
+      await userByEmail.save();
+      logger.info("Linked existing application user to Better Auth user ID by email:", {
+        applicationUserId: userByEmail._id.toString(),
+        betterAuthUserId: authUser.id,
+      });
+      return userByEmail;
+    }
+
+    // 3. Provision new Isahara Application User
     try {
       const newUser = await UserModel.create({
         betterAuthUserId: authUser.id,
-        email: authUser.email.toLowerCase().trim(),
-        name: authUser.name?.trim() || authUser.email.split("@")[0],
+        email: normalizedEmail,
+        name: authUser.name?.trim() || normalizedEmail.split("@")[0],
         image: authUser.image ?? null,
         role: null, // role is chosen during onboarding
         phoneNumber: null,
@@ -75,7 +98,7 @@ export class UserService {
 
       logger.info("Provisioned new Isahara application user:", {
         applicationUserId: newUser._id.toString(),
-        provider: "google/better-auth",
+        provider: "better-auth",
       });
 
       return newUser;
@@ -88,9 +111,11 @@ export class UserService {
         (error as { code: number }).code === 11000
       ) {
         logger.warn(
-          "Concurrent user creation detected for betterAuthUserId. Re-fetching existing record."
+          "Concurrent user creation detected. Re-fetching existing record."
         );
-        const user = await UserModel.findOne({ betterAuthUserId: authUser.id });
+        const user =
+          (await UserModel.findOne({ betterAuthUserId: authUser.id })) ||
+          (await UserModel.findOne({ email: normalizedEmail }));
         if (user) {
           return user;
         }

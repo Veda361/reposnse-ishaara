@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { paymentService } from "./payment.service";
 import { settlementService } from "./settlement.service";
+import { settlementReconciliationService } from "./settlement-reconciliation.service";
 import { sendSuccess } from "../../shared/responses/api-response";
 import { HTTP_STATUS } from "../../shared/constants/api.constants";
 import { verifyAdminKey } from "../../middleware/authorization";
@@ -13,14 +14,15 @@ export class PaymentController {
   async createPaymentOrder(req: Request, res: Response): Promise<Response> {
     const userId = (req as any).user?.id || (req as any).user?._id?.toString();
     const rideId = req.params.rideId as string;
-    const idempotencyKey = (req.headers["idempotency-key"] as string) || undefined;
-    const { fareOverrideMinor } = req.body || {};
+    const idempotencyKey =
+      (req.headers["idempotency-key"] as string) ||
+      (req.body?.idempotencyKey as string) ||
+      undefined;
 
     const session = await paymentService.createPaymentOrder({
       userId,
       rideId,
       idempotencyKey,
-      fareOverrideMinor,
     });
 
     return sendSuccess({
@@ -109,6 +111,48 @@ export class PaymentController {
   }
 
   /**
+   * GET /api/v1/payments/settlements
+   * Lists settlements with administrative filtering and pagination.
+   */
+  async listSettlements(req: Request, res: Response): Promise<Response> {
+    const query = req.query as any;
+    const result = await settlementService.listSettlements(
+      {
+        status: query.status,
+        operatorId: query.operatorId,
+        driverId: query.driverId,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      },
+      {
+        page: query.page ? Number(query.page) : 1,
+        limit: query.limit ? Number(query.limit) : 20,
+      }
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: result,
+    });
+  }
+
+  /**
+   * GET /api/v1/payments/settlements/:settlementId
+   * Retrieves single settlement record by ID.
+   */
+  async getSettlementById(req: Request, res: Response): Promise<Response> {
+    const settlementId = req.params.settlementId as string;
+    const result = await settlementService.getSettlementById(settlementId);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: result,
+    });
+  }
+
+  /**
    * POST /api/v1/payments/settlements/:settlementId/process
    * Triggers real-money settlement payout.
    */
@@ -125,6 +169,38 @@ export class PaymentController {
   }
 
   /**
+   * POST /api/v1/payments/settlements/:settlementId/retry
+   * Retries an unverified or failed settlement after KYC / account resolution.
+   */
+  async retrySettlement(req: Request, res: Response): Promise<Response> {
+    const settlementId = req.params.settlementId as string;
+    const result = await settlementService.retrySettlement(settlementId);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      message: "Settlement retried",
+      data: result,
+    });
+  }
+
+  /**
+   * POST /api/v1/payments/settlements/batch/process
+   * Executes batch worker on pending settlements for verified operators.
+   */
+  async processBatchSettlements(req: Request, res: Response): Promise<Response> {
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+    const results = await settlementService.processPendingSettlements(limit);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      message: `Processed ${results.length} settlements in batch sweep`,
+      data: results,
+    });
+  }
+
+  /**
    * POST /api/v1/payments/settlements/:settlementId/reconcile
    * Reconciles a pending or hung settlement against gateway.
    */
@@ -137,6 +213,44 @@ export class PaymentController {
       statusCode: HTTP_STATUS.OK,
       message: "Settlement reconciled",
       data: result,
+    });
+  }
+
+  /**
+   * GET /api/v1/payments/settlements/reconciliation/audit
+   * Audits settlement database records against payments for financial integrity.
+   */
+  async auditSettlementIntegrity(req: Request, res: Response): Promise<Response> {
+    const discrepancies =
+      await settlementReconciliationService.auditSettlementIntegrity();
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: {
+        discrepanciesCount: discrepancies.length,
+        discrepancies,
+      },
+    });
+  }
+
+  /**
+   * POST /api/v1/payments/settlements/reconciliation/sweep
+   * Sweeps hung/reconciling settlements.
+   */
+  async sweepReconciliation(req: Request, res: Response): Promise<Response> {
+    const olderThanMinutes = req.query.olderThanMinutes
+      ? Number(req.query.olderThanMinutes)
+      : 5;
+    const summary = await settlementReconciliationService.sweepReconciliation(
+      olderThanMinutes
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      message: "Settlement reconciliation sweep completed",
+      data: summary,
     });
   }
 }

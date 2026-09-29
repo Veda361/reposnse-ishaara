@@ -139,17 +139,12 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     await disconnectDatabase();
   });
 
-  beforeEach(async () => {
-    // Reset all active events before each test
-    await EmergencyEventModel.updateMany(
-      { rideId: activeRide._id, status: EmergencyStatus.ACTIVE },
-      { $set: { status: EmergencyStatus.CANCELLED, cancelledAt: new Date() } }
-    );
-  });
-
   // ── POST /rides/:rideId/safety/sos ──────────────────────────────────────────
 
   describe("POST /api/v1/rides/:rideId/safety/sos", () => {
+    beforeEach(async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
+    });
     it("returns 201 with EmergencyEvent on passenger SOS", async () => {
       const res = await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
@@ -193,7 +188,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
         .send({ emergencyType: "SOS" });
 
       assert.equal(res.status, 409);
-      assert.equal(res.body.code, "SOS_ALREADY_ACTIVE");
+      assert.equal(res.body.error?.code, "SOS_ALREADY_ACTIVE");
     });
 
     it("returns 403 for non-participant", async () => {
@@ -202,7 +197,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
         .send({ emergencyType: "SOS" });
 
       assert.equal(res.status, 403);
-      assert.equal(res.body.code, "SAFETY_EVENT_NOT_AUTHORIZED");
+      assert.equal(res.body.error?.code, "SAFETY_EVENT_NOT_AUTHORIZED");
     });
 
     it("returns 400 for invalid emergencyType", async () => {
@@ -250,6 +245,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
 
   describe("GET /api/v1/rides/:rideId/safety/active", () => {
     it("returns 200 with null data when no active SOS", async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       const res = await request(passengerApp)
         .get(`/api/v1/rides/${activeRide._id}/safety/active`);
 
@@ -259,6 +255,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     });
 
     it("returns 200 with active event when SOS is active", async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
         .send({ emergencyType: "SOS" });
@@ -309,6 +306,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
 
   describe("POST /api/v1/rides/:rideId/safety/cancel", () => {
     it("returns 404 when no active SOS exists", async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       const res = await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/cancel`)
         .send({});
@@ -317,6 +315,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     });
 
     it("returns 200 after successful cancellation", async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
         .send({ emergencyType: "SOS" });
@@ -337,10 +336,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     let createdEventId: string;
 
     before(async () => {
-      await EmergencyEventModel.updateMany(
-        { rideId: activeRide._id, status: EmergencyStatus.ACTIVE },
-        { $set: { status: EmergencyStatus.CANCELLED, cancelledAt: new Date() } }
-      );
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       const res = await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
         .send({ emergencyType: "SOS" });
@@ -384,10 +380,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     let activeEventId: string;
 
     before(async () => {
-      await EmergencyEventModel.updateMany(
-        { rideId: activeRide._id, status: EmergencyStatus.ACTIVE },
-        { $set: { status: EmergencyStatus.CANCELLED, cancelledAt: new Date() } }
-      );
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       const res = await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
         .send({ emergencyType: "SOS" });
@@ -404,10 +397,7 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     });
 
     it("returns 403 when non-trigger user tries to cancel", async () => {
-      await EmergencyEventModel.updateMany(
-        { rideId: activeRide._id, status: EmergencyStatus.ACTIVE },
-        { $set: { status: EmergencyStatus.CANCELLED, cancelledAt: new Date() } }
-      );
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
       const trigger = await request(passengerApp)
         .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
         .send({ emergencyType: "SOS" });
@@ -421,12 +411,25 @@ describe("Phase 15: Safety HTTP API Integration Tests", () => {
     });
 
     it("returns 400 SOS_ALREADY_CANCELLED on double cancel", async () => {
+      await EmergencyEventModel.deleteMany({ rideId: activeRide._id });
+      const trigger = await request(passengerApp)
+        .post(`/api/v1/rides/${activeRide._id}/safety/sos`)
+        .send({ emergencyType: "SOS" });
+      const eid = trigger.body.data.eventId;
+
+      // First cancel succeeds
+      const first = await request(passengerApp)
+        .post(`/api/v1/safety/events/${eid}/cancel`)
+        .send({});
+      assert.equal(first.status, 200);
+
+      // Second cancel returns 400 SOS_ALREADY_CANCELLED
       const res = await request(passengerApp)
-        .post(`/api/v1/safety/events/${activeEventId}/cancel`)
+        .post(`/api/v1/safety/events/${eid}/cancel`)
         .send({});
 
       assert.equal(res.status, 400);
-      assert.equal(res.body.code, "SOS_ALREADY_CANCELLED");
+      assert.equal(res.body.error?.code, "SOS_ALREADY_CANCELLED");
     });
   });
 });

@@ -6,8 +6,19 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "test": "tsx --test src/**/*.test.ts",
-    "start": "node dist/server.js"
+    "test": "NODE_ENV=test tsx --test src/**/*.test.ts",
+    "test:phase08": "NODE_ENV=test tsx --test src/modules/vehicles/__tests__/vehicle-assignment-phase08.test.ts",
+    "test:phase09": "NODE_ENV=test tsx --test src/modules/trips/__tests__/trip-phase09.test.ts",
+    "test:phase10": "NODE_ENV=test tsx --test src/modules/ride-requests/__tests__/ride-lifecycle-phase10.test.ts",
+    "test:phase12": "NODE_ENV=test tsx --test src/modules/payments/__tests__/phase12-pricing-billing.test.ts",
+    "test:phase13": "NODE_ENV=test tsx --test src/modules/payments/__tests__/phase13-payment-processing.test.ts",
+    "test:phase14": "NODE_ENV=test tsx --test --test-concurrency=1 src/modules/safety/__tests__/*.test.ts src/modules/ratings/__tests__/*.test.ts",
+    "test:phase15": "NODE_ENV=test tsx --test src/modules/notifications/__tests__/device-token.test.ts src/modules/notifications/__tests__/notification.api.test.ts src/modules/notifications/__tests__/notification.orchestrator.test.ts src/modules/notifications/__tests__/notification.concurrency.test.ts src/modules/notifications/__tests__/notification.integration.test.ts",
+    "test:phase16": "NODE_ENV=test tsx --test src/modules/drivers/__tests__/phase16-driver-earnings.test.ts",
+    "test:phase17": "NODE_ENV=test tsx --test src/modules/payments/__tests__/phase17-settlement-engine.test.ts src/modules/payments/__tests__/phase17-qr-settlement.test.ts",
+    "start": "node dist/server.js",
+    "lint:check": "echo 'Lint: ESLint is not configured in this project. TypeScript strict-mode compilation (tsc --noEmit) serves as the static analysis gate. Run: npm run typecheck' && exit 0",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "isahara",

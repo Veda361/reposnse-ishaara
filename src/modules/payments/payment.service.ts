@@ -13,6 +13,7 @@ import {
   PaymentVerificationInput,
   RefundRecord,
 } from "./payment.types";
+import { validatePaymentTransition } from "./payment.state-machine";
 import { RideModel } from "../rides/ride.model";
 import { RideStatus } from "../rides/ride.constants";
 import { DriverProfileModel } from "../drivers/driver.model";
@@ -97,7 +98,34 @@ export class PaymentService {
       );
     }
 
-    // 3. Check for existing payment
+    // 3. Check for existing payment & idempotency
+    if (idempotencyKey) {
+      const existingByIdempotency = await PaymentModel.findOne({
+        userId: new Types.ObjectId(userId),
+        idempotencyKey,
+      });
+      if (existingByIdempotency) {
+        if (existingByIdempotency.rideId.toString() !== ride._id.toString()) {
+          throw new AppError(
+            ERROR_CODES.IDEMPOTENCY_CONFLICT,
+            "Idempotency key has already been used for another payment",
+            HTTP_STATUS.CONFLICT
+          );
+        }
+        return {
+          paymentId: existingByIdempotency._id.toString(),
+          rideId: ride._id.toString(),
+          grossAmountMinor: existingByIdempotency.grossAmountMinor,
+          currency: existingByIdempotency.currency,
+          provider: existingByIdempotency.provider,
+          providerOrderId: existingByIdempotency.providerOrderId,
+          keyId: env.RAZORPAY_KEY_ID,
+          qrPayload: `upi://pay?pa=${env.RAZORPAY_KEY_ID || "isahara"}@icici&pn=IsaharaMobility&tr=${existingByIdempotency._id.toString()}&am=${(existingByIdempotency.grossAmountMinor / 100).toFixed(2)}&cu=${existingByIdempotency.currency}&mc=4121&tn=Ride_${ride._id.toString()}`,
+          expiresAt: existingByIdempotency.expiresAt.toISOString(),
+        };
+      }
+    }
+
     const existingPayment = await PaymentModel.findOne({ rideId: ride._id });
     if (existingPayment) {
       if (existingPayment.status === PAYMENT_STATUS.CAPTURED) {
@@ -113,7 +141,6 @@ export class PaymentService {
         existingPayment.status === PAYMENT_STATUS.ORDER_CREATED &&
         existingPayment.expiresAt > new Date()
       ) {
-        // If idempotency key was supplied and matches or is omitted, return session
         return {
           paymentId: existingPayment._id.toString(),
           rideId: ride._id.toString(),
@@ -129,16 +156,62 @@ export class PaymentService {
     }
 
     // 4. Calculate authoritative server-side fare
-    // Compute distance between pickup and destination coordinates
-    const distanceMeters = distanceService.distanceBetweenCoordinates(
-      ride.pickup.coordinates.coordinates as [number, number],
-      ride.destination.coordinates.coordinates as [number, number]
-    );
+    // The Phase 12 fareSnapshot is the ONLY authoritative source for the payable amount
+    let fareGross: number;
+    let farePlatformFee: number;
+    let fareProviderAmount: number;
+    let fareCurrency: string;
 
-    const fare = fareService.calculateFare({
-      distanceMeters,
-      grossAmountMinorOverride: fareOverrideMinor,
-    });
+    if (ride.fareSnapshot && !fareOverrideMinor) {
+      fareGross = ride.fareSnapshot.totalMinor;
+      farePlatformFee = ride.fareSnapshot.serviceFeeMinor;
+      fareProviderAmount = ride.fareSnapshot.providerAmountMinor;
+      fareCurrency = ride.fareSnapshot.currency;
+    } else if (ride.fareEstimate && !fareOverrideMinor) {
+      const snapshot = fareService.calculateFinalFare({
+        distanceMeters: ride.fareEstimate.distanceMeters,
+        durationSeconds: ride.fareEstimate.estimatedDurationSeconds || 60,
+      });
+      ride.fareSnapshot = snapshot;
+      await ride.save();
+      fareGross = snapshot.totalMinor;
+      farePlatformFee = snapshot.serviceFeeMinor;
+      fareProviderAmount = snapshot.providerAmountMinor;
+      fareCurrency = snapshot.currency;
+    } else if (fareOverrideMinor && env.NODE_ENV === "test") {
+      const snapshot = fareService.calculateFinalFare({
+        distanceMeters: 5000,
+        grossAmountMinorOverride: fareOverrideMinor,
+      });
+      ride.fareSnapshot = snapshot;
+      await ride.save();
+      fareGross = snapshot.totalMinor;
+      farePlatformFee = snapshot.serviceFeeMinor;
+      fareProviderAmount = snapshot.providerAmountMinor;
+      fareCurrency = snapshot.currency;
+    } else {
+      const distanceMeters = distanceService.distanceBetweenCoordinates(
+        ride.pickup.coordinates.coordinates as [number, number],
+        ride.destination.coordinates.coordinates as [number, number]
+      );
+      const snapshot = fareService.calculateFinalFare({
+        distanceMeters,
+      });
+      ride.fareSnapshot = snapshot;
+      await ride.save();
+      fareGross = snapshot.totalMinor;
+      farePlatformFee = snapshot.serviceFeeMinor;
+      fareProviderAmount = snapshot.providerAmountMinor;
+      fareCurrency = snapshot.currency;
+    }
+
+    if (fareGross <= 0) {
+      throw new AppError(
+        ERROR_CODES.INVALID_PAYMENT_AMOUNT,
+        "Payment gross amount must be a positive integer in minor units",
+        HTTP_STATUS.BAD_REQUEST
+      );
+    }
 
     // 5. Expiration time
     const expiresAt = new Date(
@@ -147,8 +220,8 @@ export class PaymentService {
 
     // 6. Create Gateway Order (outside database transaction)
     const providerOrder = await paymentProvider.createOrder({
-      amountMinor: fare.grossAmountMinor,
-      currency: fare.currency,
+      amountMinor: fareGross,
+      currency: fareCurrency,
       receipt: `rcpt_${ride._id.toString().slice(-12)}_${Date.now()}`,
       notes: {
         rideId: ride._id.toString(),
@@ -163,33 +236,64 @@ export class PaymentService {
     if (existingPayment) {
       // Re-use record with updated provider order and fresh expiry
       existingPayment.providerOrderId = providerOrder.id;
-      existingPayment.grossAmountMinor = fare.grossAmountMinor;
-      existingPayment.platformFeeMinor = fare.platformFeeMinor;
-      existingPayment.providerAmountMinor = fare.providerAmountMinor;
-      existingPayment.currency = fare.currency;
+      existingPayment.grossAmountMinor = fareGross;
+      existingPayment.platformFeeMinor = farePlatformFee;
+      existingPayment.providerAmountMinor = fareProviderAmount;
+      existingPayment.currency = fareCurrency;
       existingPayment.status = PAYMENT_STATUS.ORDER_CREATED;
       existingPayment.expiresAt = expiresAt;
       existingPayment.idempotencyKey = idempotencyKey ?? null;
       paymentDoc = await existingPayment.save();
     } else {
-      paymentDoc = await PaymentModel.create({
-        rideId: ride._id,
-        userId: new Types.ObjectId(userId),
-        driverId: ride.driverId,
-        grossAmountMinor: fare.grossAmountMinor,
-        platformFeeMinor: fare.platformFeeMinor,
-        providerAmountMinor: fare.providerAmountMinor,
-        refundedAmountMinor: 0,
-        currency: fare.currency,
-        status: PAYMENT_STATUS.ORDER_CREATED,
-        provider:
-          env.PAYMENT_ENVIRONMENT === "live" && env.RAZORPAY_KEY_ID
-            ? PAYMENT_PROVIDER.RAZORPAY
-            : PAYMENT_PROVIDER.MOCK,
-        providerOrderId: providerOrder.id,
-        idempotencyKey: idempotencyKey ?? null,
-        expiresAt,
-      });
+      try {
+        paymentDoc = await PaymentModel.create({
+          rideId: ride._id,
+          userId: new Types.ObjectId(userId),
+          driverId: ride.driverId,
+          grossAmountMinor: fareGross,
+          platformFeeMinor: farePlatformFee,
+          providerAmountMinor: fareProviderAmount,
+          refundedAmountMinor: 0,
+          currency: fareCurrency,
+          status: PAYMENT_STATUS.ORDER_CREATED,
+          provider:
+            env.PAYMENT_ENVIRONMENT === "live" && env.RAZORPAY_KEY_ID
+              ? PAYMENT_PROVIDER.RAZORPAY
+              : PAYMENT_PROVIDER.MOCK,
+          providerOrderId: providerOrder.id,
+          idempotencyKey: idempotencyKey ?? null,
+          expiresAt,
+        });
+      } catch (err: any) {
+        if (err.code === 11000) {
+          const raceExisting = await PaymentModel.findOne({
+            $or: [
+              { providerOrderId: providerOrder.id },
+              {
+                rideId: ride._id,
+                status: PAYMENT_STATUS.ORDER_CREATED,
+              },
+              ...(idempotencyKey
+                ? [{ userId: new Types.ObjectId(userId), idempotencyKey }]
+                : []),
+            ],
+          });
+          if (raceExisting) {
+            return {
+              paymentId: raceExisting._id.toString(),
+              rideId: ride._id.toString(),
+              grossAmountMinor: raceExisting.grossAmountMinor,
+              currency: raceExisting.currency,
+              provider: raceExisting.provider,
+              providerOrderId: raceExisting.providerOrderId,
+              keyId: env.RAZORPAY_KEY_ID,
+              qrPayload: `upi://pay?pa=${env.RAZORPAY_KEY_ID || "isahara"}@icici&pn=IsaharaMobility&tr=${raceExisting._id.toString()}&am=${(raceExisting.grossAmountMinor / 100).toFixed(2)}&cu=${raceExisting.currency}&mc=4121&tn=Ride_${ride._id.toString()}`,
+              expiresAt: raceExisting.expiresAt.toISOString(),
+            };
+          }
+        }
+        throw err;
+      }
     }
 
     // Update ride payment status to PENDING
@@ -212,8 +316,8 @@ export class PaymentService {
         rideId: ride._id.toString(),
         userId,
         driverId: ride.driverId.toString(),
-        grossAmountMinor: fare.grossAmountMinor,
-        currency: fare.currency,
+        grossAmountMinor: fareGross,
+        currency: fareCurrency,
         providerOrderId: providerOrder.id,
       },
     });
@@ -308,38 +412,65 @@ export class PaymentService {
       );
     }
 
-    // Mark as CAPTURED
-    payment.status = PAYMENT_STATUS.CAPTURED;
-    payment.providerPaymentId = verificationData.providerPaymentId;
-    payment.providerSignature = verificationData.signature;
-    payment.capturedAt = new Date();
-    await payment.save();
+    // Validate state transition
+    validatePaymentTransition(payment.status, PAYMENT_STATUS.CAPTURED);
+
+    // Atomic conditional capture to prevent concurrent capture/webhook races
+    const updatedPayment = await PaymentModel.findOneAndUpdate(
+      {
+        _id: payment._id,
+        status: {
+          $in: [PAYMENT_STATUS.ORDER_CREATED, PAYMENT_STATUS.AUTHORIZED],
+        },
+      },
+      {
+        $set: {
+          status: PAYMENT_STATUS.CAPTURED,
+          providerPaymentId: verificationData.providerPaymentId,
+          providerSignature: verificationData.signature,
+          capturedAt: new Date(),
+        },
+      },
+      { new: true }
+    );
+
+    if (!updatedPayment) {
+      const current = await PaymentModel.findById(payment._id);
+      if (current && current.status === PAYMENT_STATUS.CAPTURED) {
+        return toPaymentResponse(current);
+      }
+      throw new AppError(
+        ERROR_CODES.PAYMENT_INVALID_STATE,
+        `Payment is in invalid status '${current?.status}' for verification capture`,
+        HTTP_STATUS.CONFLICT
+      );
+    }
 
     // Update authoritative ride payment status
-    await RideModel.findByIdAndUpdate(payment.rideId, {
+    await RideModel.findByIdAndUpdate(updatedPayment.rideId, {
       $set: { paymentStatus: "PAID" },
     });
 
     // Record immutable double-entry ledger transaction
     await ledgerService.recordPaymentCapture({
-      paymentId: payment._id.toString(),
-      grossAmountMinor: payment.grossAmountMinor,
-      platformFeeMinor: payment.platformFeeMinor,
-      providerAmountMinor: payment.providerAmountMinor,
-      currency: payment.currency,
+      paymentId: updatedPayment._id.toString(),
+      grossAmountMinor: updatedPayment.grossAmountMinor,
+      platformFeeMinor: updatedPayment.platformFeeMinor,
+      providerAmountMinor: updatedPayment.providerAmountMinor,
+      currency: updatedPayment.currency,
     });
 
     // Create Settlement record for operator/driver payout
-    await this.initiateSettlementRecord(payment);
+    await this.initiateSettlementRecord(updatedPayment);
 
     // Notify driver/conductor in real time
-    realtimeGateway.emitDriverPaymentConfirmed(payment.driverId.toString(), {
-      rideId: payment.rideId.toString(),
-      paymentId: payment._id.toString(),
-      grossAmountMinor: payment.grossAmountMinor,
-      currency: payment.currency,
-      capturedAt: payment.capturedAt.toISOString(),
-      providerPaymentId: payment.providerPaymentId,
+    realtimeGateway.emitDriverPaymentConfirmed(updatedPayment.driverId.toString(), {
+      rideId: updatedPayment.rideId.toString(),
+      paymentId: updatedPayment._id.toString(),
+      grossAmountMinor: updatedPayment.grossAmountMinor,
+      currency: updatedPayment.currency,
+      capturedAt: updatedPayment.capturedAt?.toISOString() || new Date().toISOString(),
+      providerPaymentId: updatedPayment.providerPaymentId,
     });
 
     // Emit domain event to outbox
@@ -347,24 +478,24 @@ export class PaymentService {
       eventId: uuidv4(),
       type: DOMAIN_EVENT_TYPES.PAYMENT_CAPTURED,
       aggregateType: "Payment",
-      aggregateId: payment._id.toString(),
+      aggregateId: updatedPayment._id.toString(),
       actorUserId: userId,
       occurredAt: new Date(),
       version: 1,
       payload: {
-        paymentId: payment._id.toString(),
-        rideId: payment.rideId.toString(),
-        userId: payment.userId.toString(),
-        driverId: payment.driverId.toString(),
-        grossAmountMinor: payment.grossAmountMinor,
-        platformFeeMinor: payment.platformFeeMinor,
-        providerAmountMinor: payment.providerAmountMinor,
-        currency: payment.currency,
-        providerPaymentId: payment.providerPaymentId,
+        paymentId: updatedPayment._id.toString(),
+        rideId: updatedPayment.rideId.toString(),
+        userId: updatedPayment.userId.toString(),
+        driverId: updatedPayment.driverId.toString(),
+        grossAmountMinor: updatedPayment.grossAmountMinor,
+        platformFeeMinor: updatedPayment.platformFeeMinor,
+        providerAmountMinor: updatedPayment.providerAmountMinor,
+        currency: updatedPayment.currency,
+        providerPaymentId: updatedPayment.providerPaymentId,
       },
     });
 
-    return toPaymentResponse(payment);
+    return toPaymentResponse(updatedPayment);
   }
 
   /**
@@ -432,10 +563,13 @@ export class PaymentService {
       );
     }
 
-    if (payment.status !== PAYMENT_STATUS.CAPTURED) {
+    if (
+      payment.status !== PAYMENT_STATUS.CAPTURED &&
+      payment.status !== PAYMENT_STATUS.PARTIALLY_REFUNDED
+    ) {
       throw new AppError(
-        ERROR_CODES.PAYMENT_NOT_AUTHORIZED,
-        "Only CAPTURED payments can be refunded",
+        ERROR_CODES.PAYMENT_REFUND_NOT_ALLOWED,
+        `Payment in status '${payment.status}' cannot be refunded. Only CAPTURED or PARTIALLY_REFUNDED payments are refundable.`,
         HTTP_STATUS.BAD_REQUEST
       );
     }
@@ -473,6 +607,12 @@ export class PaymentService {
       );
     }
 
+    const targetStatus =
+      refundAmountMinor === remainingRefundableMinor
+        ? PAYMENT_STATUS.REFUNDED
+        : PAYMENT_STATUS.PARTIALLY_REFUNDED;
+    validatePaymentTransition(payment.status, targetStatus);
+
     // Call payment provider to execute refund
     let providerRefundId: string | null = null;
     if (payment.providerPaymentId) {
@@ -487,14 +627,34 @@ export class PaymentService {
       providerRefundId = providerRefund.id;
     }
 
-    // Update payment refunded totals
-    payment.refundedAmountMinor += refundAmountMinor;
-    if (payment.refundedAmountMinor >= payment.grossAmountMinor) {
-      payment.status = PAYMENT_STATUS.REFUNDED;
-    } else {
-      payment.status = PAYMENT_STATUS.PARTIALLY_REFUNDED;
+    // Atomic conditional update of payment refunded totals
+    const updatedPayment = await PaymentModel.findOneAndUpdate(
+      {
+        _id: payment._id,
+        status: {
+          $in: [PAYMENT_STATUS.CAPTURED, PAYMENT_STATUS.PARTIALLY_REFUNDED],
+        },
+        $expr: {
+          $lte: [
+            { $add: ["$refundedAmountMinor", refundAmountMinor] },
+            "$grossAmountMinor",
+          ],
+        },
+      },
+      {
+        $inc: { refundedAmountMinor: refundAmountMinor },
+        $set: { status: targetStatus },
+      },
+      { new: true }
+    );
+
+    if (!updatedPayment) {
+      throw new AppError(
+        ERROR_CODES.REFUND_EXCEEDS_CAPTURED_AMOUNT,
+        "Refund cannot be processed because remaining refundable balance is insufficient or concurrent refund intervened",
+        HTTP_STATUS.CONFLICT
+      );
     }
-    await payment.save();
 
     // Create Refund record
     const refundDoc = await RefundModel.create({
@@ -508,6 +668,31 @@ export class PaymentService {
       processedAt: new Date(),
     });
 
+    // If an associated settlement exists and has not yet been processed,
+    // cancel or adjust it immediately to prevent paying out refunded money.
+    const pendingSettlement = await SettlementModel.findOne({
+      paymentId: payment._id,
+      status: { $in: [SETTLEMENT_STATUS.PENDING, SETTLEMENT_STATUS.NOT_READY] },
+    });
+    if (pendingSettlement) {
+      if (targetStatus === PAYMENT_STATUS.REFUNDED) {
+        pendingSettlement.status = SETTLEMENT_STATUS.FAILED;
+        pendingSettlement.failureReason = "Payment fully refunded prior to settlement execution";
+        await pendingSettlement.save();
+      } else if (targetStatus === PAYMENT_STATUS.PARTIALLY_REFUNDED) {
+        const remainingProviderShare = Math.max(
+          0,
+          payment.providerAmountMinor - Math.round(refundAmountMinor * 0.9)
+        );
+        pendingSettlement.amountMinor = remainingProviderShare;
+        if (remainingProviderShare === 0) {
+          pendingSettlement.status = SETTLEMENT_STATUS.FAILED;
+          pendingSettlement.failureReason = "Payment refund exhausted provider settlement share";
+        }
+        await pendingSettlement.save();
+      }
+    }
+
     // Record compensating double-entry ledger entry
     await ledgerService.recordRefund({
       refundId: refundDoc._id.toString(),
@@ -517,7 +702,7 @@ export class PaymentService {
       platformFeeMinor: payment.platformFeeMinor,
       providerAmountMinor: payment.providerAmountMinor,
       currency: payment.currency,
-      isPartial: payment.status === PAYMENT_STATUS.PARTIALLY_REFUNDED,
+      isPartial: updatedPayment.status === PAYMENT_STATUS.PARTIALLY_REFUNDED,
     });
 
     // Emit refund event to outbox

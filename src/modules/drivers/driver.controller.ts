@@ -8,12 +8,14 @@ import {
   CreateDriverProfileInput,
   UpdateDriverProfileInput,
   UpdateDriverLocationInput,
+  SubmitDriverVerificationInput,
 } from "./driver.schema";
 import { UnauthorizedError } from "../../shared/errors/app-error";
 import { driverLocationService } from "./driver-location.service";
 import { driverOperationsService } from "./driver-operations.service";
 import { driverEarningsService } from "./driver-earnings.service";
 import { DriverEarningsQueryInput } from "./driver-operations.schema";
+import { settlementService } from "../payments/settlement.service";
 
 export class DriverController {
   /**
@@ -259,6 +261,105 @@ export class DriverController {
       res,
       statusCode: HTTP_STATUS.OK,
       data: earnings,
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/settlements
+   * Phase 17: Retrieves paginated settlement records associated with the authenticated driver's rides.
+   */
+  getSettlements = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const profile = await driverService.getDriverProfileByUserId(userId);
+    const page = req.query.page ? Number(req.query.page) : 1;
+    const limit = req.query.limit ? Number(req.query.limit) : 20;
+
+    const result = await settlementService.listDriverSettlements(
+      profile._id.toString(),
+      { page, limit }
+    );
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: result,
+    });
+  };
+
+  /**
+   * POST /api/v1/drivers/me/verification
+   * Phase 06: Driver submits platform verification request or resubmits after rejection.
+   */
+  submitVerification = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const input = req.body as SubmitDriverVerificationInput;
+    const result = await driverService.submitVerification(userId, input);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: result,
+      message: "Driver verification request submitted successfully.",
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/verification
+   * Phase 06: Driver retrieves their platform verification status.
+   */
+  getVerificationStatus = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const result = await driverService.getVerificationStatus(userId);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: result,
+      message: "Driver verification status retrieved successfully.",
+    });
+  };
+
+  /**
+   * GET /api/v1/drivers/me/readiness
+   * Phase 07: Evaluates and returns authoritative driver operational readiness.
+   */
+  getOperationalReadiness = async (
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<Response> => {
+    const userId = req.auth?.applicationUserId || req.user?.id;
+    if (!userId) {
+      throw new UnauthorizedError("Authentication required.");
+    }
+
+    const readiness = await driverOperationsService.evaluateDriverOperationalReadiness(userId);
+
+    return sendSuccess({
+      res,
+      statusCode: HTTP_STATUS.OK,
+      data: readiness,
+      message: "Driver operational readiness evaluated successfully.",
     });
   };
 }

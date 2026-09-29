@@ -1,6 +1,7 @@
 import { Types, Document } from "mongoose";
 import { RideStatus } from "./ride.constants";
 import { GeoJSONPoint } from "../drivers/driver.types";
+import { FareEstimate, FareSnapshot } from "../payments/fare.types";
 
 /**
  * Normalized physical waypoint for ride pickup/destination.
@@ -26,6 +27,8 @@ export interface IRide {
   destination: RideLocation;
   status: RideStatus;
   paymentStatus?: string;
+  fareEstimate?: FareEstimate | null;
+  fareSnapshot?: FareSnapshot | null;
   acceptedAt: Date;
   arrivedAt?: Date | null;
   pickedUpAt?: Date | null;
@@ -72,6 +75,8 @@ export interface RideResponse {
   };
   status: RideStatus;
   paymentStatus?: string;
+  fareEstimate?: FareEstimate | null;
+  fareSnapshot?: FareSnapshot | null;
   acceptedAt: string;
   arrivedAt: string | null;
   pickedUpAt: string | null;

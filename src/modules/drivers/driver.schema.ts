@@ -1,5 +1,34 @@
 import { z } from "zod";
 
+export const emergencyContactInputSchema = z
+  .object({
+    name: z
+      .string({ required_error: "Emergency contact name is required" })
+      .trim()
+      .min(2, "Emergency contact name must be at least 2 characters")
+      .max(60, "Emergency contact name cannot exceed 60 characters"),
+    phoneNumber: z
+      .string({ required_error: "Emergency contact phone number is required" })
+      .trim()
+      .regex(
+        /^\+?[1-9]\d{7,14}$/,
+        "Please provide a valid emergency contact phone number (8-15 digits, optional leading +)"
+      ),
+    relationship: z
+      .string()
+      .trim()
+      .max(40, "Relationship description cannot exceed 40 characters")
+      .optional()
+      .nullable(),
+  })
+  .strict({
+    message: "Unrecognized fields are not permitted in emergency contact payload",
+  });
+
+export type EmergencyContactInput = z.infer<
+  typeof emergencyContactInputSchema
+>;
+
 /**
  * Validation schema for POST /api/v1/drivers/me/profile.
  * Validates driver license number and strictly forbids client from setting server-owned fields.
@@ -13,6 +42,15 @@ export const createDriverProfileSchema = z
       .trim()
       .min(3, "License number must be at least 3 characters")
       .max(30, "License number cannot exceed 30 characters"),
+    yearsOfExperience: z
+      .number()
+      .int("Years of experience must be an integer")
+      .min(0, "Years of experience cannot be negative")
+      .max(60, "Years of experience cannot exceed 60")
+      .optional()
+      .nullable(),
+    emergencyContact: emergencyContactInputSchema.optional().nullable(),
+    operatingType: z.enum(["INDIVIDUAL", "AGENCY"]).optional(),
   })
   .strict({
     message:
@@ -35,6 +73,14 @@ export const updateDriverProfileSchema = z
       .min(3, "License number must be at least 3 characters")
       .max(30, "License number cannot exceed 30 characters")
       .optional(),
+    yearsOfExperience: z
+      .number()
+      .int("Years of experience must be an integer")
+      .min(0, "Years of experience cannot be negative")
+      .max(60, "Years of experience cannot exceed 60")
+      .optional()
+      .nullable(),
+    emergencyContact: emergencyContactInputSchema.optional().nullable(),
   })
   .strict({
     message:
@@ -111,3 +157,23 @@ export type UpdateDriverLocationInput = z.infer<
   typeof updateDriverLocationSchema
 >;
 
+/**
+ * Phase 06: Validation schema for POST /api/v1/drivers/me/verification.
+ * Rejects client attempts to inject status, timestamps, reviewer, or administrative fields.
+ */
+export const submitDriverVerificationSchema = z
+  .object({
+    notes: z
+      .string()
+      .trim()
+      .max(500, "Notes cannot exceed 500 characters")
+      .optional(),
+  })
+  .strict({
+    message:
+      "Unrecognized fields are not permitted. State, reviewer, and timestamps are server-controlled.",
+  });
+
+export type SubmitDriverVerificationInput = z.infer<
+  typeof submitDriverVerificationSchema
+>;

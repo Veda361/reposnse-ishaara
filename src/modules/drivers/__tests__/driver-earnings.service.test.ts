@@ -170,8 +170,8 @@ describe("Phase 16: Driver Earnings Service Unit & Integration Tests", () => {
         coordinates: { type: "Point", coordinates: [77.08, 28.49] },
       },
       status: RideStatus.COMPLETED,
-      acceptedAt: new Date(Date.now() - 3600000),
-      completedAt: new Date(Date.now() - 1800000),
+      acceptedAt: new Date(Date.now() - 120000),
+      completedAt: new Date(Date.now() - 60000),
     });
     createdRideIds.push(ride1._id);
 

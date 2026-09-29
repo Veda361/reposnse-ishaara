@@ -36,6 +36,14 @@ export const createVehicleSchema = z
       .trim()
       .min(1, "model cannot be empty")
       .max(50, "model cannot exceed 50 characters"),
+    capacity: z
+      .number({
+        invalid_type_error: "capacity must be a number",
+      })
+      .int("capacity must be an integer")
+      .min(1, "capacity must be at least 1")
+      .max(200, "capacity cannot exceed 200")
+      .optional(),
   })
   .strict({
     message:
@@ -80,6 +88,14 @@ export const updateVehicleSchema = z
       .min(1, "model cannot be empty")
       .max(50, "model cannot exceed 50 characters")
       .optional(),
+    capacity: z
+      .number({
+        invalid_type_error: "capacity must be a number",
+      })
+      .int("capacity must be an integer")
+      .min(1, "capacity must be at least 1")
+      .max(200, "capacity cannot exceed 200")
+      .optional(),
   })
   .strict({
     message:
@@ -104,3 +120,80 @@ export const vehicleIdParamSchema = z
   .strict();
 
 export type VehicleIdParam = z.infer<typeof vehicleIdParamSchema>;
+
+/**
+ * Schema for assigning a driver to a vehicle.
+ * POST /api/v1/vehicles/:vehicleId/assignments or POST /api/v1/agencies/:agencyId/vehicles/:vehicleId/assignments
+ */
+export const assignVehicleSchema = z
+  .object({
+    driverId: z
+      .string({
+        required_error: "driverId is required",
+        invalid_type_error: "driverId must be a string",
+      })
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid driverId format: must be a 24-character hex ObjectId"),
+  })
+  .strict({
+    message: "Unrecognized fields are not permitted in vehicle assignment",
+  });
+
+export type AssignVehicleInput = z.infer<typeof assignVehicleSchema>;
+
+/**
+ * Schema for unassigning a vehicle.
+ * POST /api/v1/vehicles/:vehicleId/unassign or POST /api/v1/agencies/:agencyId/vehicles/:vehicleId/unassign
+ */
+export const unassignVehicleSchema = z
+  .object({
+    reason: z
+      .string({
+        invalid_type_error: "reason must be a string",
+      })
+      .trim()
+      .max(300, "reason cannot exceed 300 characters")
+      .optional(),
+  })
+  .strict({
+    message: "Unrecognized fields are not permitted in vehicle unassign",
+  });
+
+export type UnassignVehicleInput = z.infer<typeof unassignVehicleSchema>;
+
+/**
+ * Route parameter validation schema for :agencyId and :vehicleId.
+ */
+export const agencyIdVehicleIdParamSchema = z
+  .object({
+    agencyId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid agency ID format"),
+    vehicleId: z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/, "Invalid vehicle ID format"),
+  })
+  .strict();
+
+export type AgencyIdVehicleIdParam = z.infer<typeof agencyIdVehicleIdParamSchema>;
+
+/**
+ * Query schema for listing agency vehicles.
+ */
+export const listAgencyVehiclesQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    isActive: z
+      .enum(["true", "false"])
+      .transform((val) => val === "true")
+      .optional(),
+    isAssigned: z
+      .enum(["true", "false"])
+      .transform((val) => val === "true")
+      .optional(),
+  })
+  .strict();
+
+export type ListAgencyVehiclesQueryInput = z.infer<
+  typeof listAgencyVehiclesQuerySchema
+>;

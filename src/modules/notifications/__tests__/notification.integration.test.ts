@@ -46,6 +46,7 @@ describe("Phase 12: End-to-End Domain Event & Notification Integration Tests", (
     await OutboxModel.init();
     await NotificationModel.init();
     await DeviceTokenModel.init();
+    await OutboxModel.deleteMany({});
 
     testPassenger = await UserModel.create({
       betterAuthUserId: `${TEST_PREFIX}pass`,

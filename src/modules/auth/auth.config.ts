@@ -1,9 +1,10 @@
 import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
-import { bearer } from "better-auth/plugins";
+import { bearer, emailOTP } from "better-auth/plugins";
 import { MongoClient } from "mongodb";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
+import { emailService } from "./email.service";
 
 // Native MongoDB client for Better Auth adapter, sharing the configured database with bounded timeouts
 export const mongoAuthClient = new MongoClient(env.MONGODB_URI, {
@@ -68,7 +69,26 @@ export const auth = betterAuth({
   basePath: "/api/auth",
   secret: env.BETTER_AUTH_SECRET,
   trustedOrigins,
-  plugins: [bearer()],
+  rateLimit: {
+    enabled: env.NODE_ENV !== "test",
+  },
+  plugins: [
+    bearer(),
+    emailOTP({
+      async sendVerificationOTP({ email, otp, type }) {
+        await emailService.sendOTP({ email, otp, type });
+      },
+      otpLength: 6,
+      expiresIn: 300, // 5-minute validity window
+      allowedAttempts: 3, // Brute-force protection: locks after 3 failed attempts
+      storeOTP: "hashed", // Cryptographic security: store hashed OTPs in db
+      resendStrategy: "rotate",
+      rateLimit: {
+        window: 60,
+        max: env.NODE_ENV === "test" ? 100 : 3,
+      },
+    }),
+  ],
   socialProviders: {
     google: {
       clientId: googleClientIds.length === 1 ? googleClientIds[0] : googleClientIds,

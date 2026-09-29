@@ -57,6 +57,11 @@ export interface DiscoveryItemDto {
     compatibility: CompatibilityLevel;
     score: number;
   };
+  estimatedFare?: {
+    amountMinor: number;
+    currency: string;
+    formatted: string;
+  };
 }
 
 export interface DiscoveryPagination {

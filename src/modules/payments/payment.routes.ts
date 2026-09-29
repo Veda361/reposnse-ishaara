@@ -6,11 +6,13 @@ import {
   requireUser,
   requireAdminKey,
 } from "../../middleware/authorization";
-import { validateBody } from "../../middleware/validation";
+import { validateBody, validateQuery } from "../../middleware/validation";
 import {
   createPaymentOrderSchema,
   verifyPaymentSchema,
   refundPaymentSchema,
+  listSettlementsQuerySchema,
+  retrySettlementSchema,
 } from "./payment.schema";
 import {
   paymentRateLimiter,
@@ -27,6 +29,14 @@ const router = Router();
  */
 router.post(
   "/webhooks/razorpay",
+  webhookRateLimiter,
+  asyncHandler((req, res) =>
+    paymentWebhookController.handleRazorpayWebhook(req, res)
+  )
+);
+
+router.post(
+  "/webhook",
   webhookRateLimiter,
   asyncHandler((req, res) =>
     paymentWebhookController.handleRazorpayWebhook(req, res)
@@ -59,11 +69,55 @@ router.post(
  * Settlement Endpoints (Administrative / Worker Protected)
  * -------------------------------------------------------------------------
  */
+router.get(
+  "/settlements",
+  requireAuth,
+  requireAdminKey,
+  validateQuery(listSettlementsQuerySchema),
+  asyncHandler((req, res) => paymentController.listSettlements(req, res))
+);
+
+router.get(
+  "/settlements/reconciliation/audit",
+  requireAuth,
+  requireAdminKey,
+  asyncHandler((req, res) => paymentController.auditSettlementIntegrity(req, res))
+);
+
+router.post(
+  "/settlements/reconciliation/sweep",
+  requireAuth,
+  requireAdminKey,
+  asyncHandler((req, res) => paymentController.sweepReconciliation(req, res))
+);
+
+router.post(
+  "/settlements/batch/process",
+  requireAuth,
+  requireAdminKey,
+  asyncHandler((req, res) => paymentController.processBatchSettlements(req, res))
+);
+
+router.get(
+  "/settlements/:settlementId",
+  requireAuth,
+  requireAdminKey,
+  asyncHandler((req, res) => paymentController.getSettlementById(req, res))
+);
+
 router.post(
   "/settlements/:settlementId/process",
   requireAuth,
   requireAdminKey,
   asyncHandler((req, res) => paymentController.processSettlement(req, res))
+);
+
+router.post(
+  "/settlements/:settlementId/retry",
+  requireAuth,
+  requireAdminKey,
+  validateBody(retrySettlementSchema),
+  asyncHandler((req, res) => paymentController.retrySettlement(req, res))
 );
 
 router.post(

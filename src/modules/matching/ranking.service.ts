@@ -1,5 +1,6 @@
 import { DiscoveryItemDto, RouteMatchResult, DiscoveryPagination } from "./matching.types";
 import { ITripDocument } from "../trips/trip.types";
+import { fareService } from "../payments/fare.service";
 
 export interface CandidateEvaluation {
   trip: ITripDocument;
@@ -89,6 +90,15 @@ export class RankingService {
         compatibility: match.compatibility,
         score: match.score,
       },
+      estimatedFare: (() => {
+        const dist = trip.route?.distanceMeters ?? 5000;
+        const est = fareService.calculateFareEstimate({ distanceMeters: dist });
+        return {
+          amountMinor: est.totalMinor,
+          currency: est.currency,
+          formatted: `₹${(est.totalMinor / 100).toFixed(2)}`,
+        };
+      })(),
     };
   }
 

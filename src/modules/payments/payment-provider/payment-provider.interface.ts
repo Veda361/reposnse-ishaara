@@ -47,6 +47,7 @@ export interface CreateProviderTransferInput {
   recipientAccountId: string;
   amountMinor: number;
   currency: string;
+  idempotencyKey?: string;
   notes?: Record<string, string>;
 }
 
@@ -72,4 +73,12 @@ export interface PaymentProvider {
   createTransfer?(
     input: CreateProviderTransferInput
   ): Promise<ProviderTransferDetails>;
+
+  fetchTransfer?(
+    transferId: string
+  ): Promise<ProviderTransferDetails>;
+
+  fetchTransferByNotes?(
+    notes: Record<string, string>
+  ): Promise<ProviderTransferDetails | null>;
 }

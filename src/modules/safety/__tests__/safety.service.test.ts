@@ -24,7 +24,7 @@ import { DriverProfileModel } from "../../drivers/driver.model";
 import { UserModel } from "../../users/user.model";
 import { RideStatus } from "../../rides/ride.constants";
 import { ROLES } from "../../../shared/constants/roles.constants";
-import { env } from "../../../config/env";
+import { connectDatabase, disconnectDatabase } from "../../../config/database";
 
 // Helpers
 let passengerUser: any;
@@ -34,8 +34,10 @@ let activeRide: any;
 let unrelatedUser: any;
 
 async function createTestUser(role: string) {
+  const rand = Math.random().toString(36).substring(7);
   return UserModel.create({
-    email: `test-${Date.now()}-${Math.random()}@isahara-safety.test`,
+    betterAuthUserId: `auth_${Date.now()}_${rand}`,
+    email: `test-${Date.now()}-${rand}@isahara-safety.test`,
     name: "Test User",
     role,
     onboardingCompleted: true,
@@ -65,6 +67,7 @@ async function createRide(
     destination: { formattedAddress: "B", coordinates: { type: "Point", coordinates: [77.6, 13.0] } },
     fareAmountMinor: 5000,
     currency: "INR",
+    acceptedAt: new Date(),
   });
 }
 
@@ -72,7 +75,12 @@ describe("Phase 15: Safety Service Unit & Integration Tests", () => {
   let safetyService: SafetyService;
 
   before(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    await connectDatabase();
+    await UserModel.init();
+    await DriverProfileModel.init();
+    await RideModel.init();
+    await EmergencyEventModel.init();
+    await SafetyAuditEventModel.init();
     safetyService = new SafetyService();
 
     passengerUser = await createTestUser(ROLES.USER);
@@ -83,11 +91,13 @@ describe("Phase 15: Safety Service Unit & Integration Tests", () => {
   });
 
   after(async () => {
-    await EmergencyEventModel.deleteMany({
-      rideId: activeRide._id,
-    });
+    if (activeRide) {
+      await EmergencyEventModel.deleteMany({
+        rideId: activeRide._id,
+      });
+    }
     await SafetyAuditEventModel.deleteMany({});
-    await mongoose.connection.close();
+    await disconnectDatabase();
   });
 
   describe("SOS Triggering", () => {

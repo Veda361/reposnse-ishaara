@@ -31,6 +31,9 @@ import { RatingModel } from "../ratings/rating.model";
 import { PaymentModel } from "../payments/payment.model";
 import { SettlementModel } from "../payments/settlement.model";
 import { resolveEarningsPeriodBounds } from "../drivers/driver-earnings.service";
+import { fareService } from "../payments/fare.service";
+import { distanceService } from "../matching/distance.service";
+import { RideFareResponse } from "../payments/fare.types";
 
 export class RideService {
   private eventPublisher: RideEventPublisher;
@@ -108,6 +111,13 @@ export class RideService {
 
     const acceptedAt = request.respondedAt || new Date();
 
+    // Phase 12: Calculate server-side authoritative fare estimate based on planned geometry
+    const distanceMeters = distanceService.distanceBetweenCoordinates(
+      [request.pickup.coordinates.coordinates[0], request.pickup.coordinates.coordinates[1]],
+      [request.destination.coordinates.coordinates[0], request.destination.coordinates.coordinates[1]]
+    );
+    const fareEstimate = fareService.calculateFareEstimate({ distanceMeters });
+
     try {
       const rideDoc = new RideModel({
         userId: request.userId,
@@ -116,6 +126,7 @@ export class RideService {
         operatorId: (trip as any).operatorId ?? null,
         rideRequestId: request._id,
         paymentStatus: "UNPAID",
+        fareEstimate,
         pickup: {
           name: request.pickup.name,
           formattedAddress: request.pickup.formattedAddress,
@@ -482,6 +493,21 @@ export class RideService {
     }
 
     const now = new Date();
+
+    // Phase 12: Calculate authoritative immutable final fare snapshot
+    const distanceMeters = distanceService.distanceBetweenCoordinates(
+      [existing.pickup.coordinates.coordinates[0], existing.pickup.coordinates.coordinates[1]],
+      [existing.destination.coordinates.coordinates[0], existing.destination.coordinates.coordinates[1]]
+    );
+    const durationSeconds = existing.startedAt
+      ? Math.max(0, Math.round((now.getTime() - existing.startedAt.getTime()) / 1000))
+      : (existing.pickedUpAt ? Math.max(0, Math.round((now.getTime() - existing.pickedUpAt.getTime()) / 1000)) : 0);
+
+    const fareSnapshot = existing.fareSnapshot ?? fareService.calculateFinalFare({
+      distanceMeters,
+      durationSeconds,
+    });
+
     const updated = await RideModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(rideId),
@@ -492,6 +518,7 @@ export class RideService {
         $set: {
           status: RideStatus.COMPLETED,
           completedAt: now,
+          fareSnapshot,
         },
       },
       { new: true }
@@ -915,6 +942,55 @@ export class RideService {
         settlementStatus: s?.status ?? "UNSETTLED",
       };
     }
+  }
+
+  /**
+   * Phase 12: Retrieves the authoritative fare breakdown and billing snapshot for a ride.
+   * Authorized strictly for the passenger who booked the ride or the assigned driver.
+   */
+  async getRideFare(
+    rideId: string,
+    caller: { userId: string; role: Role; driverProfileId?: string }
+  ): Promise<RideFareResponse> {
+    if (!Types.ObjectId.isValid(rideId)) {
+      throw new BadRequestError("Invalid rideId format.", ERROR_CODES.INVALID_ID);
+    }
+
+    const ride = await RideModel.findById(rideId);
+    if (!ride) {
+      throw new NotFoundError("Ride not found.", ERROR_CODES.RIDE_NOT_FOUND);
+    }
+
+    // Ownership check (IDOR protection)
+    if (caller.role === ROLES.USER) {
+      if (ride.userId.toString() !== caller.userId) {
+        throw new ForbiddenError(
+          "You do not have permission to view the fare for this ride.",
+          ERROR_CODES.RIDE_NOT_AUTHORIZED
+        );
+      }
+    } else if (caller.role === ROLES.DRIVER_CONDUCTOR) {
+      if (!caller.driverProfileId || ride.driverId.toString() !== caller.driverProfileId) {
+        throw new ForbiddenError(
+          "You do not have permission to view the fare for this ride.",
+          ERROR_CODES.RIDE_NOT_AUTHORIZED
+        );
+      }
+    }
+
+    const isFinal = Boolean(ride.fareSnapshot && ride.status === RideStatus.COMPLETED);
+    const currentFareMinor = ride.fareSnapshot?.totalMinor ?? ride.fareEstimate?.totalMinor ?? 0;
+    const currency = ride.fareSnapshot?.currency ?? ride.fareEstimate?.currency ?? "INR";
+
+    return {
+      rideId: ride._id.toString(),
+      status: ride.status,
+      currency,
+      currentFareMinor,
+      isFinal,
+      fareEstimate: (ride.fareEstimate as any) ?? null,
+      fareSnapshot: (ride.fareSnapshot as any) ?? null,
+    };
   }
 }
 

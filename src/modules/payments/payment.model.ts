@@ -127,7 +127,10 @@ paymentSchema.index({ rideId: 1, createdAt: -1 }, { name: "idx_payments_rideId_c
 paymentSchema.index({ userId: 1, createdAt: -1 }, { name: "idx_payments_userId_createdAt" });
 
 // 3. Provider Order lookup (critical for signature verification and webhooks)
-paymentSchema.index({ providerOrderId: 1 }, { name: "idx_payments_providerOrderId" });
+paymentSchema.index(
+  { providerOrderId: 1 },
+  { name: "idx_payments_providerOrderId_v2", unique: true }
+);
 
 // 4. Provider Payment ID lookup
 paymentSchema.index(
@@ -135,14 +138,34 @@ paymentSchema.index(
   { name: "idx_payments_providerPaymentId", sparse: true }
 );
 
-// 5. User + IdempotencyKey compound index (to enforce idempotency per user request)
+// 5. User + IdempotencyKey compound index (to enforce idempotency per user request when key is present)
 paymentSchema.index(
   { userId: 1, idempotencyKey: 1 },
-  { name: "idx_payments_userId_idempotencyKey", sparse: true }
+  {
+    name: "idx_payments_userId_idempotencyKey_v3",
+    unique: true,
+    partialFilterExpression: { idempotencyKey: { $type: "string" } },
+  }
 );
 
-// 6. Active payment status lookup
+// 5b. Partial unique index to enforce exactly one active payment order per ride concurrently
+paymentSchema.index(
+  { rideId: 1 },
+  {
+    name: "idx_payments_rideId_active_order",
+    unique: true,
+    partialFilterExpression: {
+      status: "ORDER_CREATED",
+    },
+  }
+);
+
+// 6. Active payment status lookup & compound rideId + status lookup
 paymentSchema.index({ status: 1 }, { name: "idx_payments_status" });
+paymentSchema.index(
+  { rideId: 1, status: 1 },
+  { name: "idx_payments_rideId_status" }
+);
 
 // 7. Driver earnings lookup and aggregation (Phase 16)
 paymentSchema.index(

@@ -22,11 +22,13 @@ import { DriverProfileModel } from "../../drivers/driver.model";
 import { UserModel } from "../../users/user.model";
 import { RideStatus } from "../../rides/ride.constants";
 import { ROLES } from "../../../shared/constants/roles.constants";
-import { env } from "../../../config/env";
+import { connectDatabase, disconnectDatabase } from "../../../config/database";
 
 async function createTestUser(role: string) {
+  const rand = Math.random().toString(36).substring(7);
   return UserModel.create({
-    email: `concurrency-${Date.now()}-${Math.random()}@safety.test`,
+    betterAuthUserId: `auth_${Date.now()}_${rand}`,
+    email: `concurrency-${Date.now()}-${rand}@safety.test`,
     name: "Concurrency User",
     role,
     onboardingCompleted: true,
@@ -67,7 +69,12 @@ describe("Phase 15: Safety Concurrency Tests", () => {
   let driverProfile: any;
 
   before(async () => {
-    await mongoose.connect(env.MONGODB_URI);
+    await connectDatabase();
+    await UserModel.init();
+    await DriverProfileModel.init();
+    await RideModel.init();
+    await EmergencyEventModel.init();
+    await SafetyAuditEventModel.init();
     safetyService = new SafetyService();
 
     passengerUser = await createTestUser(ROLES.USER);
@@ -76,11 +83,13 @@ describe("Phase 15: Safety Concurrency Tests", () => {
   });
 
   after(async () => {
-    await EmergencyEventModel.deleteMany({
-      triggeredByUserId: passengerUser._id,
-    });
+    if (passengerUser) {
+      await EmergencyEventModel.deleteMany({
+        triggeredByUserId: passengerUser._id,
+      });
+    }
     await SafetyAuditEventModel.deleteMany({});
-    await mongoose.connection.close();
+    await disconnectDatabase();
   });
 
   it("1. 5 simultaneous SOS requests → exactly 1 created, 4 conflict", async () => {

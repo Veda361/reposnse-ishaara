@@ -27,6 +27,9 @@ export interface IRideRequest {
   respondedAt?: Date | null;
   expiresAt: Date;
   idempotencyKey?: string | null;
+  /** Phase 10: Optional correlation from the Discovery step. Populated when the passenger
+   * submits the discoverySessionId returned by POST /api/v1/discovery. */
+  discoverySessionId?: string | null;
   rejectionReason?: string | null;
   cancellationReason?: string | null;
   createdAt: Date;
@@ -68,6 +71,8 @@ export interface RideRequestResponse {
   requestedAt: string;
   respondedAt: string | null;
   expiresAt: string;
+  /** Phase 10: Discovery funnel correlation identifier. Present when provided at creation. */
+  discoverySessionId?: string | null;
   rejectionReason?: string | null;
   cancellationReason?: string | null;
   createdAt: string;

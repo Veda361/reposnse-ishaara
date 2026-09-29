@@ -107,6 +107,16 @@ const rideRequestSchema = new Schema<IRideRequestDocument>(
       trim: true,
       default: null,
     },
+    /**
+     * Phase 10: Optional discovery session correlation.
+     * Populated when the passenger provides the discoverySessionId returned by POST /api/v1/discovery.
+     * Used for conversion-funnel analytics (Discovery → RideRequest → Ride).
+     */
+    discoverySessionId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -158,6 +168,15 @@ rideRequestSchema.index(
   { name: "idx_ride_requests_expiresAt" }
 );
 
+// 7. Phase 10: Discovery session correlation index (sparse — field optional)
+rideRequestSchema.index(
+  { discoverySessionId: 1 },
+  {
+    sparse: true,
+    name: "idx_ride_requests_discoverySessionId",
+  }
+);
+
 /**
  * Transforms an internal Mongoose RideRequest document into a clean, sanitized response.
  */
@@ -199,6 +218,7 @@ export const toRideRequestResponse = (
     requestedAt: doc.requestedAt.toISOString(),
     respondedAt: doc.respondedAt ? doc.respondedAt.toISOString() : null,
     expiresAt: doc.expiresAt.toISOString(),
+    discoverySessionId: doc.discoverySessionId ?? null,
     rejectionReason: doc.rejectionReason ?? null,
     cancellationReason: doc.cancellationReason ?? null,
     createdAt: doc.createdAt.toISOString(),

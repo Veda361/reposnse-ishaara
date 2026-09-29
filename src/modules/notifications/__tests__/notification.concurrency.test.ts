@@ -19,6 +19,7 @@ describe("Phase 12: Notification & Outbox Concurrency Tests", () => {
     await OutboxModel.init();
     await NotificationModel.init();
     await DeviceTokenModel.init();
+    await OutboxModel.deleteMany({});
     outboxService = new OutboxService();
     tokenService = new DeviceTokenService();
   });

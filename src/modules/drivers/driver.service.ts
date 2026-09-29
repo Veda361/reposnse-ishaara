@@ -1,9 +1,10 @@
 import { Types } from "mongoose";
-import { DriverProfileModel } from "./driver.model";
+import { DriverProfileModel, toCleanDriverVerificationResponse } from "./driver.model";
 import {
   IDriverProfileDocument,
   VerificationStatus,
   DriverStatus,
+  CleanDriverVerificationResponse,
 } from "./driver.types";
 import { UserModel } from "../users/user.model";
 import { UserRole } from "../../shared/constants/roles.constants";
@@ -19,9 +20,10 @@ import {
   CreateDriverProfileInput,
   UpdateDriverProfileInput,
   UpdateDriverLocationInput,
+  SubmitDriverVerificationInput,
 } from "./driver.schema";
 import { driverLocationService } from "./driver-location.service";
-
+import { driverOperationsService } from "./driver-operations.service";
 
 export class DriverService {
   /**
@@ -59,8 +61,31 @@ export class DriverService {
       const newProfile = await DriverProfileModel.create({
         userId: new Types.ObjectId(userId),
         licenseNumber: normalizedLicense,
+        yearsOfExperience: data.yearsOfExperience ?? null,
+        emergencyContact: data.emergencyContact
+          ? {
+              name: data.emergencyContact.name.trim(),
+              phoneNumber: data.emergencyContact.phoneNumber.trim(),
+              relationship: data.emergencyContact.relationship?.trim() ?? null,
+            }
+          : null,
+        operatingType: data.operatingType ?? "INDIVIDUAL",
         verificationStatus: VerificationStatus.PENDING,
         licenseVerifiedAt: null,
+        submittedAt: new Date(),
+        reviewedAt: null,
+        reviewedBy: null,
+        rejectionReason: null,
+        verificationHistory: [
+          {
+            action: "SUBMITTED",
+            previousStatus: null,
+            newStatus: VerificationStatus.PENDING,
+            actor: "DRIVER",
+            actorId: userId,
+            timestamp: new Date(),
+          },
+        ],
         status: DriverStatus.OFFLINE,
         currentLocation: null,
       });
@@ -107,8 +132,8 @@ export class DriverService {
   }
 
   /**
-   * Updates safe driver profile fields (e.g. licenseNumber).
-   * Status and location must go through their dedicated business endpoints.
+   * Updates safe driver profile fields (licenseNumber, yearsOfExperience, emergencyContact).
+   * Status, verification, and location must go through their dedicated business endpoints.
    */
   async updateDriverProfile(
     userId: string,
@@ -118,6 +143,20 @@ export class DriverService {
 
     if (data.licenseNumber !== undefined) {
       profile.licenseNumber = data.licenseNumber.trim().toUpperCase();
+    }
+
+    if (data.yearsOfExperience !== undefined) {
+      profile.yearsOfExperience = data.yearsOfExperience;
+    }
+
+    if (data.emergencyContact !== undefined) {
+      profile.emergencyContact = data.emergencyContact
+        ? {
+            name: data.emergencyContact.name.trim(),
+            phoneNumber: data.emergencyContact.phoneNumber.trim(),
+            relationship: data.emergencyContact.relationship?.trim() ?? null,
+          }
+        : null;
     }
 
     await profile.save();
@@ -139,14 +178,41 @@ export class DriverService {
   async setDriverOnline(userId: string): Promise<IDriverProfileDocument> {
     const profile = await this.getDriverProfileByUserId(userId);
 
-    // Verification gating
-    if (profile.verificationStatus !== VerificationStatus.VERIFIED) {
+    // Authoritative Phase 07 operational readiness evaluation
+    const readiness = await driverOperationsService.evaluateDriverOperationalReadiness(profile._id);
+
+    if (!readiness.authorized) {
+      if (!readiness.requirements.platformVerification) {
+        throw new ForbiddenError(
+          "Driver account verification is required before going online.",
+          ERROR_CODES.DRIVER_NOT_VERIFIED,
+          {
+            verificationStatus: profile.verificationStatus,
+            readiness,
+          }
+        );
+      }
+
+      if (!readiness.requirements.notSuspended) {
+        throw new ForbiddenError(
+          "Driver account is suspended from platform operations.",
+          ERROR_CODES.DRIVER_OPERATIONAL_SUSPENDED,
+          { readiness }
+        );
+      }
+
+      if (!readiness.requirements.agencyMembership) {
+        throw new ForbiddenError(
+          "Driver is not authorized to operate. Approved agency membership is required for agency drivers.",
+          ERROR_CODES.DRIVER_NOT_OPERATIONAL_READY,
+          { readiness }
+        );
+      }
+
       throw new ForbiddenError(
-        `Driver must be verified before going online. Current verification status is '${profile.verificationStatus}'.`,
-        ERROR_CODES.DRIVER_NOT_VERIFIED,
-        {
-          verificationStatus: profile.verificationStatus,
-        }
+        "Driver is not currently authorized to operate.",
+        ERROR_CODES.DRIVER_NOT_OPERATIONAL_READY,
+        { readiness }
       );
     }
 
@@ -208,6 +274,94 @@ export class DriverService {
     coords: UpdateDriverLocationInput
   ): Promise<IDriverProfileDocument> {
     return driverLocationService.updateDriverLocation(userId, coords);
+  }
+  /**
+   * Phase 06: Driver submits platform verification request or resubmits after rejection.
+   * State Machine:
+   * - If VERIFIED: 409 Conflict (cannot submit if already verified)
+   * - If PENDING: 409 Conflict (already pending review)
+   * - If REJECTED: Resubmission resets status to PENDING, updates submittedAt, clears rejection reason.
+   */
+  async submitVerification(
+    userId: string,
+    input?: SubmitDriverVerificationInput
+  ): Promise<CleanDriverVerificationResponse> {
+    const profile = await this.getDriverProfileByUserId(userId);
+
+    if (profile.verificationStatus === VerificationStatus.VERIFIED) {
+      throw new ConflictError(
+        "Driver is already verified on the platform.",
+        ERROR_CODES.VERIFICATION_ALREADY_PROCESSED
+      );
+    }
+
+    if (profile.verificationStatus === VerificationStatus.PENDING) {
+      throw new ConflictError(
+        "A driver verification request is already pending review.",
+        ERROR_CODES.VERIFICATION_ALREADY_PROCESSED
+      );
+    }
+
+    if (profile.verificationStatus === VerificationStatus.REJECTED) {
+      profile.verificationStatus = VerificationStatus.PENDING;
+      profile.submittedAt = new Date();
+      profile.reviewedAt = null;
+      profile.reviewedBy = null;
+      profile.rejectionReason = null;
+      profile.verificationHistory = profile.verificationHistory || [];
+      profile.verificationHistory.push({
+        action: "RESUBMITTED",
+        previousStatus: VerificationStatus.REJECTED,
+        newStatus: VerificationStatus.PENDING,
+        actor: "DRIVER",
+        actorId: userId,
+        reason: input?.notes ?? null,
+        timestamp: new Date(),
+      });
+      await profile.save();
+
+      logger.info("Driver resubmitted platform verification request:", {
+        driverProfileId: profile._id.toString(),
+        applicationUserId: userId,
+        previousStatus: VerificationStatus.REJECTED,
+        newStatus: VerificationStatus.PENDING,
+      });
+
+      return toCleanDriverVerificationResponse(profile);
+    }
+
+    // Default / initial submission:
+    profile.verificationStatus = VerificationStatus.PENDING;
+    profile.submittedAt = new Date();
+    profile.verificationHistory = profile.verificationHistory || [];
+    profile.verificationHistory.push({
+      action: "SUBMITTED",
+      previousStatus: null,
+      newStatus: VerificationStatus.PENDING,
+      actor: "DRIVER",
+      actorId: userId,
+      reason: input?.notes ?? null,
+      timestamp: new Date(),
+    });
+    await profile.save();
+
+    logger.info("Driver submitted platform verification request:", {
+      driverProfileId: profile._id.toString(),
+      applicationUserId: userId,
+      status: profile.verificationStatus,
+    });
+
+    return toCleanDriverVerificationResponse(profile);
+  }
+
+  /**
+   * Phase 06: Driver retrieves their platform verification status.
+   */
+  async getVerificationStatus(
+    userId: string
+  ): Promise<CleanDriverVerificationResponse> {
+    const profile = await this.getDriverProfileByUserId(userId);
+    return toCleanDriverVerificationResponse(profile);
   }
 }
 

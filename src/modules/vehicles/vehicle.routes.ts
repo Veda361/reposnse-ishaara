@@ -78,4 +78,43 @@ router.post(
   asyncHandler((req, res) => vehicleController.deactivate(req, res))
 );
 
+/**
+ * GET /api/v1/vehicles/me/assigned
+ * Retrieves current active assigned vehicle for the driver.
+ */
+router.get(
+  "/me/assigned",
+  asyncHandler((req, res) => vehicleController.getMyAssignedVehicle(req, res))
+);
+
+/**
+ * POST /api/v1/vehicles/:vehicleId/assignments
+ * Assigns a driver to an owned or authorized vehicle.
+ */
+router.post(
+  "/:vehicleId/assignments",
+  validateParams(vehicleIdParamSchema),
+  asyncHandler((req, res) => vehicleController.assignDriver(req, res))
+);
+
+/**
+ * POST /api/v1/vehicles/:vehicleId/unassign
+ * Safely terminates active assignment on vehicle.
+ */
+router.post(
+  "/:vehicleId/unassign",
+  validateParams(vehicleIdParamSchema),
+  asyncHandler((req, res) => vehicleController.unassignDriver(req, res))
+);
+
+/**
+ * GET /api/v1/vehicles/:vehicleId/assignments
+ * Retrieves assignment history for a vehicle.
+ */
+router.get(
+  "/:vehicleId/assignments",
+  validateParams(vehicleIdParamSchema),
+  asyncHandler((req, res) => vehicleController.getAssignmentHistory(req, res))
+);
+
 export default router;

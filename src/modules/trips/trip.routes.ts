@@ -1,20 +1,42 @@
-import { Router } from "express";
+import { Router, Response, NextFunction } from "express";
 import { tripController } from "./trip.controller";
-import { requireAuth, requireDriverConductor } from "../../middleware/authorization";
-import { validateBody, validateParams, validateQuery } from "../../middleware/validation";
+import {
+  requireAuth,
+  requireDriverConductor,
+  verifyAdminKey,
+} from "../../middleware/authorization";
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from "../../middleware/validation";
 import {
   createTripSchema,
   tripIdParamSchema,
   activeTripsQuerySchema,
+  assignTripSchema,
+  cancelTripSchema,
 } from "./trip.schema";
 import { asyncHandler } from "../../shared/utils/async-handler";
+import { AuthenticatedRequest } from "../../shared/types/common.types";
 
 const router = Router();
 
 /**
- * All trip endpoints require authentication.
+ * Guard that permits either an active authenticated user session or a valid platform admin key.
  */
-router.use(requireAuth);
+const requireOwnerOrAdmin = (
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): void => {
+  const adminKey =
+    (req.headers["x-admin-key"] as string) || (req.query?.adminKey as string);
+  if (adminKey && verifyAdminKey(adminKey)) {
+    return next();
+  }
+  requireAuth(req, res, next);
+};
 
 /**
  * GET /api/v1/trips/active
@@ -23,6 +45,7 @@ router.use(requireAuth);
  */
 router.get(
   "/active",
+  requireAuth,
   validateQuery(activeTripsQuerySchema),
   asyncHandler((req, res) => tripController.listActive(req, res))
 );
@@ -45,14 +68,15 @@ router.post(
  */
 router.get(
   "/:tripId",
+  requireAuth,
   validateParams(tripIdParamSchema),
   asyncHandler((req, res) => tripController.getById(req, res))
 );
 
 /**
  * POST /api/v1/trips/:tripId/start
- * Transitions trip from CREATED to ACTIVE.
- * Requires DRIVER_CONDUCTOR role.
+ * Transitions trip from CREATED/SCHEDULED/ASSIGNED/READY to ACTIVE.
+ * Requires DRIVER_CONDUCTOR role or Admin.
  */
 router.post(
   "/:tripId/start",
@@ -64,7 +88,7 @@ router.post(
 /**
  * POST /api/v1/trips/:tripId/complete
  * Transitions trip from ACTIVE to COMPLETED.
- * Requires DRIVER_CONDUCTOR role.
+ * Requires DRIVER_CONDUCTOR role or Admin.
  */
 router.post(
   "/:tripId/complete",
@@ -74,14 +98,26 @@ router.post(
 );
 
 /**
+ * POST /api/v1/trips/:tripId/assign
+ * Assigns or reassigns driver/vehicle to an unstarted trip.
+ */
+router.post(
+  "/:tripId/assign",
+  requireOwnerOrAdmin,
+  validateParams(tripIdParamSchema),
+  validateBody(assignTripSchema),
+  asyncHandler((req, res) => tripController.assign(req, res))
+);
+
+/**
  * POST /api/v1/trips/:tripId/cancel
- * Transitions trip from CREATED/ACTIVE to CANCELLED.
- * Requires DRIVER_CONDUCTOR role.
+ * Transitions trip from CREATED/SCHEDULED/ASSIGNED/READY/ACTIVE to CANCELLED.
  */
 router.post(
   "/:tripId/cancel",
-  requireDriverConductor,
+  requireOwnerOrAdmin,
   validateParams(tripIdParamSchema),
+  validateBody(cancelTripSchema),
   asyncHandler((req, res) => tripController.cancel(req, res))
 );
 

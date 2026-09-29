@@ -100,6 +100,9 @@ const envSchema = z.object({
   RIDE_REQUEST_EXPIRATION_SECONDS: z.coerce.number().int().positive().default(120),
   RIDE_REQUEST_MAX_RESULTS: z.coerce.number().int().positive().default(20),
   RIDE_REQUEST_CLEANUP_TTL_DAYS: z.coerce.number().int().positive().default(30),
+  // Phase 10: Expiry sweep interval — how often the worker sweeps for expired PENDING requests.
+  // Default: 30 s in development/test; set to a lower value for fast-expiry tests.
+  RIDE_REQUEST_EXPIRY_INTERVAL_SECONDS: z.coerce.number().int().positive().default(30),
 
   // Phase 10: Live GPS & Location Tracking Configuration
   GPS_LOCATION_STALE_AFTER_SECONDS: z.coerce.number().int().positive().default(60),

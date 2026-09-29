@@ -5,6 +5,7 @@ import { generateKeyPair, exportJWK, SignJWT } from "jose";
 import { createApp } from "../../../app";
 import { configuredGoogleAudiences } from "../auth.config";
 import { userService } from "../../users/user.service";
+import { connectDatabase, disconnectDatabase } from "../../../config/database";
 
 describe("Google Social Sign-In & ID-Token Audience Verification Tests", () => {
   const app = createApp();
@@ -18,6 +19,8 @@ describe("Google Social Sign-In & ID-Token Audience Verification Tests", () => {
   const unknownAudience = "unauthorized-rogue-client-id.apps.googleusercontent.com";
 
   before(async () => {
+    await connectDatabase();
+
     // Generate RSA key pair for testing Google ID token signatures
     const keyPair = await generateKeyPair("RS256");
     privateKey = keyPair.privateKey;
@@ -40,8 +43,9 @@ describe("Google Social Sign-In & ID-Token Audience Verification Tests", () => {
     };
   });
 
-  after(() => {
+  after(async () => {
     globalThis.fetch = originalFetch;
+    await disconnectDatabase();
   });
 
   async function createSignedGoogleIdToken(params: {

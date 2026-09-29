@@ -202,19 +202,52 @@ export class RazorpayProvider implements PaymentProvider {
   }
 
   /**
+   * Internal store for mock transfers to allow hermetic reconciliation testing.
+   */
+  private mockTransfers: Map<
+    string,
+    ProviderTransferDetails & { notes?: Record<string, string> }
+  > = new Map();
+
+  private simulatedTransferError: Error | null = null;
+
+  /**
+   * Test hook: Simulates gateway errors or network timeouts during transfer execution.
+   */
+  setSimulatedTransferError(err: Error | null): void {
+    this.simulatedTransferError = err;
+  }
+
+  /**
    * Initiates Razorpay Route transfer / settlement to linked account.
    */
   async createTransfer(
     input: CreateProviderTransferInput
   ): Promise<ProviderTransferDetails> {
+    if (this.simulatedTransferError) {
+      const err = this.simulatedTransferError;
+      throw err;
+    }
+
     if (this.isMockMode || !this.razorpayClient) {
       const mockTransferId = `trf_mock_${uuidv4().replace(/-/g, "").slice(0, 14)}`;
-      return {
+      const transferDetails: ProviderTransferDetails & {
+        notes?: Record<string, string>;
+      } = {
         id: mockTransferId,
         recipientAccountId: input.recipientAccountId,
         amountMinor: input.amountMinor,
         currency: input.currency,
         status: "processed",
+        notes: input.notes,
+      };
+      this.mockTransfers.set(mockTransferId, transferDetails);
+      return {
+        id: transferDetails.id,
+        recipientAccountId: transferDetails.recipientAccountId,
+        amountMinor: transferDetails.amountMinor,
+        currency: transferDetails.currency,
+        status: transferDetails.status,
       };
     }
 
@@ -241,6 +274,79 @@ export class RazorpayProvider implements PaymentProvider {
         HTTP_STATUS.BAD_GATEWAY
       );
     }
+  }
+
+  /**
+   * Fetches transfer status from gateway for reconciliation.
+   */
+  async fetchTransfer(transferId: string): Promise<ProviderTransferDetails> {
+    if (this.isMockMode || !this.razorpayClient) {
+      const existing = this.mockTransfers.get(transferId);
+      if (existing) {
+        return {
+          id: existing.id,
+          recipientAccountId: existing.recipientAccountId,
+          amountMinor: existing.amountMinor,
+          currency: existing.currency,
+          status: existing.status,
+        };
+      }
+      return {
+        id: transferId,
+        recipientAccountId: "acc_mock_recon",
+        amountMinor: 1000,
+        currency: env.PAYMENT_CURRENCY,
+        status: "processed",
+      };
+    }
+
+    try {
+      const transfer: any = await (this.razorpayClient as any).transfers.fetch(
+        transferId
+      );
+      return {
+        id: transfer.id,
+        recipientAccountId: transfer.account,
+        amountMinor: Number(transfer.amount),
+        currency: transfer.currency,
+        status: transfer.status || "processed",
+      };
+    } catch (err: any) {
+      logger.error("Razorpay fetch transfer failed", { transferId, error: err.message });
+      throw new AppError(
+        ERROR_CODES.PAYMENT_PROVIDER_ERROR,
+        err.message || "Failed to fetch transfer from provider",
+        HTTP_STATUS.BAD_GATEWAY
+      );
+    }
+  }
+
+  /**
+   * Queries transfers by notes (e.g. settlementId) for reconciliation after network timeouts.
+   */
+  async fetchTransferByNotes(
+    notes: Record<string, string>
+  ): Promise<ProviderTransferDetails | null> {
+    if (this.isMockMode || !this.razorpayClient) {
+      for (const t of this.mockTransfers.values()) {
+        if (
+          notes.settlementId &&
+          t.notes?.settlementId === notes.settlementId
+        ) {
+          return {
+            id: t.id,
+            recipientAccountId: t.recipientAccountId,
+            amountMinor: t.amountMinor,
+            currency: t.currency,
+            status: t.status,
+          };
+        }
+      }
+      return null;
+    }
+
+    // In live mode, query client if supported or return null
+    return null;
   }
 }
 

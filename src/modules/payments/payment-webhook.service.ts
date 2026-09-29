@@ -119,15 +119,31 @@ export class PaymentWebhookService {
       };
     }
 
-    // Persist incoming event for auditability and deduplication
-    const webhookEventRecord = await PaymentWebhookEventModel.create({
-      providerEventId,
-      provider: "razorpay",
-      eventType,
-      payload,
-      processed: false,
-      receivedAt: new Date(),
-    });
+    // Persist incoming event for auditability and deduplication (safe under concurrent duplicates)
+    let webhookEventRecord;
+    try {
+      webhookEventRecord = await PaymentWebhookEventModel.create({
+        providerEventId,
+        provider: "razorpay",
+        eventType,
+        payload,
+        processed: false,
+        receivedAt: new Date(),
+      });
+    } catch (err: any) {
+      if (err.code === 11000) {
+        logger.info("Ignoring concurrent duplicate webhook event", {
+          providerEventId,
+          eventType,
+        });
+        return {
+          status: "ignored_duplicate",
+          eventId: providerEventId,
+          eventType,
+        };
+      }
+      throw err;
+    }
 
     try {
       // 3. Process event transitions
@@ -184,47 +200,65 @@ export class PaymentWebhookService {
         }
 
         // Amount verification
-        if (payment.grossAmountMinor !== providerAmountMinor) {
+        if (!isNaN(providerAmountMinor) && payment.grossAmountMinor !== providerAmountMinor) {
           logger.error("Webhook payment.captured amount mismatch", {
             expected: payment.grossAmountMinor,
             received: providerAmountMinor,
           });
           throw new AppError(
-            ERROR_CODES.INVALID_PAYMENT_AMOUNT,
+            ERROR_CODES.PAYMENT_AMOUNT_MISMATCH,
             "Provider captured amount does not match expected gross amount",
             HTTP_STATUS.BAD_REQUEST
           );
         }
 
-        payment.status = PAYMENT_STATUS.CAPTURED;
-        payment.providerPaymentId = providerPaymentId;
-        payment.capturedAt = new Date();
-        await payment.save();
+        // Atomic conditional update to eliminate race condition with client verification
+        const updatedPayment = await PaymentModel.findOneAndUpdate(
+          {
+            _id: payment._id,
+            status: {
+              $in: [PAYMENT_STATUS.ORDER_CREATED, PAYMENT_STATUS.AUTHORIZED],
+            },
+          },
+          {
+            $set: {
+              status: PAYMENT_STATUS.CAPTURED,
+              providerPaymentId: providerPaymentId || payment.providerPaymentId,
+              capturedAt: new Date(),
+            },
+          },
+          { new: true }
+        );
+
+        if (!updatedPayment) {
+          // Concurrently captured by client verify or earlier webhook
+          return;
+        }
 
         // Update authoritative ride payment status
-        await RideModel.findByIdAndUpdate(payment.rideId, {
+        await RideModel.findByIdAndUpdate(updatedPayment.rideId, {
           $set: { paymentStatus: "PAID" },
         });
 
         // Record double-entry ledger capture
         await ledgerService.recordPaymentCapture({
-          paymentId: payment._id.toString(),
-          grossAmountMinor: payment.grossAmountMinor,
-          platformFeeMinor: payment.platformFeeMinor,
-          providerAmountMinor: payment.providerAmountMinor,
-          currency: payment.currency,
+          paymentId: updatedPayment._id.toString(),
+          grossAmountMinor: updatedPayment.grossAmountMinor,
+          platformFeeMinor: updatedPayment.platformFeeMinor,
+          providerAmountMinor: updatedPayment.providerAmountMinor,
+          currency: updatedPayment.currency,
         });
 
         // Initialize bus operator / driver settlement
-        await settlementService.initiateSettlementRecord(payment);
+        await settlementService.initiateSettlementRecord(updatedPayment);
 
         // Notify conductor/driver in real time
-        realtimeGateway.emitDriverPaymentConfirmed(payment.driverId.toString(), {
-          rideId: payment.rideId.toString(),
-          paymentId: payment._id.toString(),
-          grossAmountMinor: payment.grossAmountMinor,
-          currency: payment.currency,
-          capturedAt: payment.capturedAt.toISOString(),
+        realtimeGateway.emitDriverPaymentConfirmed(updatedPayment.driverId.toString(), {
+          rideId: updatedPayment.rideId.toString(),
+          paymentId: updatedPayment._id.toString(),
+          grossAmountMinor: updatedPayment.grossAmountMinor,
+          currency: updatedPayment.currency,
+          capturedAt: updatedPayment.capturedAt?.toISOString() || new Date().toISOString(),
           providerPaymentId,
         });
 
@@ -233,18 +267,18 @@ export class PaymentWebhookService {
           eventId: uuidv4(),
           type: DOMAIN_EVENT_TYPES.PAYMENT_CAPTURED,
           aggregateType: "Payment",
-          aggregateId: payment._id.toString(),
+          aggregateId: updatedPayment._id.toString(),
           occurredAt: new Date(),
           version: 1,
           payload: {
-            paymentId: payment._id.toString(),
-            rideId: payment.rideId.toString(),
-            userId: payment.userId.toString(),
-            driverId: payment.driverId.toString(),
-            grossAmountMinor: payment.grossAmountMinor,
-            platformFeeMinor: payment.platformFeeMinor,
-            providerAmountMinor: payment.providerAmountMinor,
-            currency: payment.currency,
+            paymentId: updatedPayment._id.toString(),
+            rideId: updatedPayment.rideId.toString(),
+            userId: updatedPayment.userId.toString(),
+            driverId: updatedPayment.driverId.toString(),
+            grossAmountMinor: updatedPayment.grossAmountMinor,
+            platformFeeMinor: updatedPayment.platformFeeMinor,
+            providerAmountMinor: updatedPayment.providerAmountMinor,
+            currency: updatedPayment.currency,
             providerPaymentId,
           },
         });
@@ -323,6 +357,30 @@ export class PaymentWebhookService {
           reason: refundEntity.notes?.reason || "Provider refund",
           processedAt: new Date(),
         });
+
+        // Cancel or adjust pending settlement if not yet executed
+        const pendingSettlement = await SettlementModel.findOne({
+          paymentId: payment._id,
+          status: { $in: [SETTLEMENT_STATUS.PENDING, SETTLEMENT_STATUS.NOT_READY] },
+        });
+        if (pendingSettlement) {
+          if (payment.status === PAYMENT_STATUS.REFUNDED) {
+            pendingSettlement.status = SETTLEMENT_STATUS.FAILED;
+            pendingSettlement.failureReason = "Payment fully refunded prior to settlement execution (webhook)";
+            await pendingSettlement.save();
+          } else if (payment.status === PAYMENT_STATUS.PARTIALLY_REFUNDED) {
+            const remainingProviderShare = Math.max(
+              0,
+              payment.providerAmountMinor - Math.round(refundAmountMinor * 0.9)
+            );
+            pendingSettlement.amountMinor = remainingProviderShare;
+            if (remainingProviderShare === 0) {
+              pendingSettlement.status = SETTLEMENT_STATUS.FAILED;
+              pendingSettlement.failureReason = "Payment refund exhausted provider settlement share (webhook)";
+            }
+            await pendingSettlement.save();
+          }
+        }
 
         await ledgerService.recordRefund({
           refundId: refundDoc._id.toString(),

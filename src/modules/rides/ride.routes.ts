@@ -66,6 +66,17 @@ router.get(
 );
 
 /**
+ * GET /api/v1/rides/:rideId/fare
+ * Phase 12: Retrieves authoritative fare breakdown & billing snapshot for a ride.
+ * Strictly authorized to owning passenger or assigned driver.
+ */
+router.get(
+  "/:rideId/fare",
+  rideRateLimiter,
+  asyncHandler((req, res) => rideController.getFare(req, res))
+);
+
+/**
  * POST /api/v1/rides/:rideId/payment
  * Phase 13: Authoritative ride-scoped payment order creation.
  * Strictly authorized to owning passenger.
@@ -78,12 +89,22 @@ router.post(
   asyncHandler((req, res) => paymentController.createPaymentOrder(req, res))
 );
 
+router.post(
+  "/:rideId/payment/order",
+  requireUser,
+  paymentRateLimiter,
+  validateBody(createPaymentOrderSchema),
+  asyncHandler((req, res) => paymentController.createPaymentOrder(req, res))
+);
+
 /**
  * GET /api/v1/rides/:rideId/payment
  * Phase 13: Authoritative ride payment status check.
  */
 router.get(
   "/:rideId/payment",
+  requireAuth,
+  paymentRateLimiter,
   asyncHandler((req, res) => paymentController.getPaymentByRideId(req, res))
 );
 

@@ -74,6 +74,7 @@ export const createTripSchema = z
     origin: locationInputSchema,
     destination: locationInputSchema,
     route: routeInputSchema.optional(),
+    scheduledDepartureAt: z.string().datetime().optional(),
   })
   .strict({
     message:
@@ -81,6 +82,71 @@ export const createTripSchema = z
   });
 
 export type CreateTripInput = z.infer<typeof createTripSchema>;
+
+/**
+ * Validation schema for POST /api/v1/agencies/:id/trips
+ */
+export const agencyCreateTripSchema = z
+  .object({
+    driverId: z
+      .string({
+        required_error: "driverId is required",
+      })
+      .regex(objectIdRegex, "Invalid driver ID format"),
+    vehicleId: z
+      .string({
+        required_error: "vehicleId is required",
+      })
+      .regex(objectIdRegex, "Invalid vehicle ID format"),
+    origin: locationInputSchema,
+    destination: locationInputSchema,
+    route: routeInputSchema.optional(),
+    scheduledDepartureAt: z.string().datetime().optional(),
+  })
+  .strict({
+    message:
+      "Unrecognized fields are not permitted in agency trip creation payload.",
+  });
+
+export type AgencyCreateTripInput = z.infer<typeof agencyCreateTripSchema>;
+
+/**
+ * Validation schema for trip assignment: POST /api/v1/trips/:tripId/assign
+ */
+export const assignTripSchema = z
+  .object({
+    driverId: z
+      .string({
+        required_error: "driverId is required",
+      })
+      .regex(objectIdRegex, "Invalid driver ID format"),
+    vehicleId: z
+      .string()
+      .regex(objectIdRegex, "Invalid vehicle ID format")
+      .optional(),
+  })
+  .strict({
+    message: "Unrecognized fields are not permitted in trip assignment payload.",
+  });
+
+export type AssignTripInput = z.infer<typeof assignTripSchema>;
+
+/**
+ * Validation schema for trip cancellation: POST /api/v1/trips/:tripId/cancel
+ */
+export const cancelTripSchema = z
+  .object({
+    reason: z
+      .string()
+      .trim()
+      .max(300, "Cancellation reason cannot exceed 300 characters")
+      .optional(),
+  })
+  .strict({
+    message: "Unrecognized fields are not permitted in trip cancellation payload.",
+  });
+
+export type CancelTripInput = z.infer<typeof cancelTripSchema>;
 
 /**
  * Validation schema for :tripId URL parameter.
@@ -108,6 +174,26 @@ export const listDriverTripsQuerySchema = z.object({
 });
 
 export type ListDriverTripsQuery = z.infer<typeof listDriverTripsQuerySchema>;
+
+/**
+ * Validation schema for GET /api/v1/agencies/:id/trips.
+ */
+export const listAgencyTripsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1, "Page must be at least 1").default(1),
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1, "Limit must be at least 1")
+    .max(100, "Limit cannot exceed 100")
+    .default(20),
+  status: z.nativeEnum(TripStatus).optional(),
+  driverId: z.string().regex(objectIdRegex, "Invalid driver ID format").optional(),
+  vehicleId: z.string().regex(objectIdRegex, "Invalid vehicle ID format").optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
+export type ListAgencyTripsQuery = z.infer<typeof listAgencyTripsQuerySchema>;
 
 /**
  * Validation schema for GET /api/v1/trips/active.

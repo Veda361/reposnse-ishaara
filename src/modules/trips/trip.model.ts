@@ -105,6 +105,12 @@ const tripSchema = new Schema<ITripDocument>(
       default: null,
       index: true,
     },
+    agencyId: {
+      type: Schema.Types.ObjectId,
+      ref: "Agency",
+      default: null,
+      index: true,
+    },
     origin: {
       type: tripLocationSchema,
       required: [true, "origin is required"],
@@ -123,6 +129,10 @@ const tripSchema = new Schema<ITripDocument>(
       default: TripStatus.CREATED,
       required: true,
     },
+    scheduledDepartureAt: {
+      type: Date,
+      default: null,
+    },
     startedAt: {
       type: Date,
       default: null,
@@ -134,6 +144,31 @@ const tripSchema = new Schema<ITripDocument>(
     cancelledAt: {
       type: Date,
       default: null,
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    cancelledBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    cancelledByRole: {
+      type: String,
+      enum: ["DRIVER", "AGENCY_OWNER", "ADMIN"],
+      default: null,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    createdByRole: {
+      type: String,
+      enum: ["DRIVER", "AGENCY_OWNER", "ADMIN"],
+      default: "DRIVER",
     },
   },
   {
@@ -162,6 +197,14 @@ tripSchema.index(
   }
 );
 
+// Multi-tenant & Lifecycle Indexes
+tripSchema.index(
+  { agencyId: 1, status: 1, createdAt: -1 },
+  { sparse: true, name: "idx_agencyId_status_createdAt" }
+);
+tripSchema.index({ driverId: 1, status: 1 }, { name: "idx_driverId_status" });
+tripSchema.index({ vehicleId: 1, status: 1 }, { name: "idx_vehicleId_status" });
+
 // Discovery & Driver History Query Indexes
 tripSchema.index({ status: 1, createdAt: -1 }, { name: "idx_status_createdAt" });
 tripSchema.index({ driverId: 1, createdAt: -1 }, { name: "idx_driverId_createdAt" });
@@ -176,6 +219,7 @@ export const toCleanTripResponse = (trip: ITripDocument): CleanTripResponse => {
     id: trip._id.toString(),
     driverId: trip.driverId.toString(),
     vehicleId: trip.vehicleId.toString(),
+    agencyId: trip.agencyId ? trip.agencyId.toString() : null,
     operatorId: trip.operatorId ? trip.operatorId.toString() : null,
     origin: {
       name: trip.origin.name,
@@ -217,9 +261,17 @@ export const toCleanTripResponse = (trip: ITripDocument): CleanTripResponse => {
         }
       : null,
     status: trip.status,
+    scheduledDepartureAt: trip.scheduledDepartureAt
+      ? trip.scheduledDepartureAt.toISOString()
+      : null,
     startedAt: trip.startedAt ? trip.startedAt.toISOString() : null,
     completedAt: trip.completedAt ? trip.completedAt.toISOString() : null,
     cancelledAt: trip.cancelledAt ? trip.cancelledAt.toISOString() : null,
+    cancellationReason: trip.cancellationReason || null,
+    cancelledBy: trip.cancelledBy ? trip.cancelledBy.toString() : null,
+    cancelledByRole: trip.cancelledByRole || null,
+    createdBy: trip.createdBy ? trip.createdBy.toString() : null,
+    createdByRole: trip.createdByRole || "DRIVER",
     createdAt: trip.createdAt.toISOString(),
     updatedAt: trip.updatedAt.toISOString(),
   };

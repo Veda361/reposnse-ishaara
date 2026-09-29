@@ -3,18 +3,21 @@ import { GeoJSONPoint } from "../drivers/driver.types";
 
 /**
  * Trip lifecycle status states.
- * Allowed transitions:
- * CREATED -> ACTIVE
- * CREATED -> CANCELLED
- * ACTIVE -> COMPLETED
- * ACTIVE -> CANCELLED
+ * Complete state machine:
+ * CREATED / SCHEDULED / ASSIGNED / READY -> ACTIVE -> COMPLETED
+ * CREATED / SCHEDULED / ASSIGNED / READY / ACTIVE -> CANCELLED
  */
 export enum TripStatus {
   CREATED = "CREATED",
+  SCHEDULED = "SCHEDULED",
+  ASSIGNED = "ASSIGNED",
+  READY = "READY",
   ACTIVE = "ACTIVE",
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
 }
+
+export type TripActorRole = "DRIVER" | "AGENCY_OWNER" | "ADMIN";
 
 /**
  * Normalized trip waypoint location (origin / destination).
@@ -47,14 +50,21 @@ export interface TripRoute {
 export interface ITrip {
   driverId: Types.ObjectId;
   vehicleId: Types.ObjectId;
+  agencyId?: Types.ObjectId | null;
   operatorId?: Types.ObjectId | null;
   origin: TripLocation;
   destination: TripLocation;
   route?: TripRoute | null;
   status: TripStatus;
+  scheduledDepartureAt?: Date | null;
   startedAt?: Date | null;
   completedAt?: Date | null;
   cancelledAt?: Date | null;
+  cancellationReason?: string | null;
+  cancelledBy?: Types.ObjectId | null;
+  cancelledByRole?: TripActorRole | null;
+  createdBy?: Types.ObjectId | null;
+  createdByRole?: TripActorRole;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,20 +72,27 @@ export interface ITrip {
 export interface ITripDocument extends Document<Types.ObjectId>, ITrip {}
 
 /**
- * Sanitized trip representation returned to the driver owner.
+ * Sanitized trip representation returned to authorized driver / agency owner / admin.
  */
 export interface CleanTripResponse {
   id: string;
   driverId: string;
   vehicleId: string;
+  agencyId?: string | null;
   operatorId?: string | null;
   origin: TripLocation;
   destination: TripLocation;
   route?: TripRoute | null;
   status: TripStatus;
+  scheduledDepartureAt?: string | null;
   startedAt: string | null;
   completedAt: string | null;
   cancelledAt: string | null;
+  cancellationReason?: string | null;
+  cancelledBy?: string | null;
+  cancelledByRole?: string | null;
+  createdBy?: string | null;
+  createdByRole?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -92,6 +109,7 @@ export interface PublicTripResponse {
   destination: TripLocation;
   route?: TripRoute | null;
   startedAt: string | null;
+  scheduledDepartureAt?: string | null;
   createdAt: string;
   driver: {
     id: string;
@@ -134,12 +152,36 @@ export interface CreateTripDto {
     durationSeconds?: number;
     provider?: string;
   };
+  scheduledDepartureAt?: string;
+}
+
+export interface AssignTripDto {
+  driverId: string;
+  vehicleId?: string;
+}
+
+export interface CancelTripDto {
+  reason?: string;
+}
+
+export interface AgencyCreateTripDto extends CreateTripDto {
+  driverId: string;
 }
 
 export interface ListDriverTripsDto {
   page?: number;
   limit?: number;
   status?: TripStatus;
+}
+
+export interface ListAgencyTripsDto {
+  page?: number;
+  limit?: number;
+  status?: TripStatus;
+  driverId?: string;
+  vehicleId?: string;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface ListActiveTripsDto {
