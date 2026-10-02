@@ -5,6 +5,7 @@ import { createApp } from "../../../app";
 import { emailService } from "../email.service";
 import { connectDatabase, disconnectDatabase } from "../../../config/database";
 import { UserModel } from "../../users/user.model";
+import { mongoAuthClient } from "../auth.config";
 
 describe("Email OTP Authentication & User Reconciliation Tests", () => {
   const app = createApp();
@@ -15,6 +16,11 @@ describe("Email OTP Authentication & User Reconciliation Tests", () => {
 
   after(async () => {
     await disconnectDatabase();
+    try {
+      await mongoAuthClient.close();
+    } catch {
+      // ignore
+    }
   });
 
   describe("OTP Generation & Verification Life-Cycle", () => {

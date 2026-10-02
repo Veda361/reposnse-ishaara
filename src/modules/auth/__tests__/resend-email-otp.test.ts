@@ -6,6 +6,7 @@ import { emailService, maskEmail } from "../email.service";
 import { connectDatabase, disconnectDatabase } from "../../../config/database";
 import { logger } from "../../../config/logger";
 import { Resend } from "resend";
+import { mongoAuthClient } from "../auth.config";
 
 describe("Resend Email OTP & Security Verification Tests (Phase 10)", () => {
   const app = createApp();
@@ -18,6 +19,11 @@ describe("Resend Email OTP & Security Verification Tests (Phase 10)", () => {
   after(async () => {
     process.env = { ...originalEnv };
     await disconnectDatabase();
+    try {
+      await mongoAuthClient.close();
+    } catch {
+      // ignore
+    }
   });
 
   beforeEach(() => {

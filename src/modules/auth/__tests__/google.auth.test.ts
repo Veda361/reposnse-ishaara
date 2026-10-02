@@ -3,7 +3,7 @@ import assert from "node:assert";
 import request from "supertest";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
 import { createApp } from "../../../app";
-import { configuredGoogleAudiences } from "../auth.config";
+import { configuredGoogleAudiences, mongoAuthClient } from "../auth.config";
 import { userService } from "../../users/user.service";
 import { connectDatabase, disconnectDatabase } from "../../../config/database";
 
@@ -46,6 +46,11 @@ describe("Google Social Sign-In & ID-Token Audience Verification Tests", () => {
   after(async () => {
     globalThis.fetch = originalFetch;
     await disconnectDatabase();
+    try {
+      await mongoAuthClient.close();
+    } catch {
+      // ignore
+    }
   });
 
   async function createSignedGoogleIdToken(params: {
