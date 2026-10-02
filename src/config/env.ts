@@ -27,6 +27,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(), // Deprecated backward-compatible fallback for GOOGLE_WEB_CLIENT_ID
 
+  // Resend Email Delivery Configuration (Phase 1 / Production OTP)
+  RESEND_API_KEY: z.string().optional(),
+  EMAIL_FROM: z.string().optional(),
+
   // Location System configuration (Phase 4)
   GOOGLE_MAPS_API_KEY: z.string().optional(),
   SERPAPI_API_KEY: z.string().optional(),
@@ -203,6 +207,22 @@ const envSchema = z.object({
         code: z.ZodIssueCode.custom,
         path: ["BETTER_AUTH_SECRET"],
         message: "BETTER_AUTH_SECRET must not use default development secret in production",
+      });
+    }
+
+    if (!isNonEmpty(data.RESEND_API_KEY)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["RESEND_API_KEY"],
+        message: "RESEND_API_KEY is required in production for Resend OTP email delivery",
+      });
+    }
+
+    if (!isNonEmpty(data.EMAIL_FROM)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["EMAIL_FROM"],
+        message: "EMAIL_FROM is required in production for Resend OTP email delivery",
       });
     }
   }

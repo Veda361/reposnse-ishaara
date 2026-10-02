@@ -114,6 +114,24 @@ const startServer = async () => {
     logger.info(`Speech primary provider: ${env.SPEECH_PRIMARY_PROVIDER}`);
     logger.info(`Speech fallback provider: ${env.SPEECH_FALLBACK_PROVIDER}`);
 
+    // Safe startup email configuration verification (Never log secrets/keys)
+    const hasResendApiKey = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim().length > 0);
+    const hasEmailFrom = Boolean(process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim().length > 0);
+
+    logger.info("Email provider: Resend");
+    logger.info(`Email sender configured: ${hasEmailFrom ? "yes" : "no"}`);
+
+    if (env.NODE_ENV === "production") {
+      if (!hasResendApiKey) {
+        logger.error("FATAL: RESEND_API_KEY is missing in production environment.");
+        throw new Error("RESEND_API_KEY must be configured in production.");
+      }
+      if (!hasEmailFrom) {
+        logger.error("FATAL: EMAIL_FROM is missing in production environment.");
+        throw new Error("EMAIL_FROM must be configured in production.");
+      }
+    }
+
     // Signal listeners for graceful shutdown
     process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
     process.on("SIGINT", () => gracefulShutdown("SIGINT"));

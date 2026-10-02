@@ -12,6 +12,7 @@ import { sendError } from "./shared/responses/api-response";
 import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants";
 import { ERROR_CODES } from "./shared/errors/error-codes";
 import { apiRateLimiter } from "./middleware/rate-limit";
+import { emailService } from "./modules/auth/email.service";
 
 export interface CreateAppOptions {
   preRouterMiddleware?: express.RequestHandler;
@@ -30,7 +31,7 @@ export const createApp = (options?: CreateAppOptions): Express => {
   app.use(helmet());
 
   /**
-   * CORS Configuration
+   * CORS Configuration able for all the origins
    * In development: allows configured CLIENT_URL and standard localhost origins.
    * In production: restricts strictly to configured CLIENT_URL.
    */
@@ -69,6 +70,60 @@ export const createApp = (options?: CreateAppOptions): Express => {
 
   // Mount Better Auth endpoints BEFORE body parsers with global API rate limiting
   app.use("/api/auth", apiRateLimiter);
+
+  // Intercept send-verification-otp to guarantee delivery failures are never silently masked as successes
+  app.post("/api/auth/email-otp/send-verification-otp", (req, res, next) => {
+    emailService.clearLastSendError();
+
+    // Production fail-fast guard if provider secrets are absent
+    const isProduction = (process.env.NODE_ENV || env.NODE_ENV) === "production";
+    if (isProduction && (!process.env.RESEND_API_KEY || !process.env.EMAIL_FROM)) {
+      logger.error("Rejecting send-verification-otp: email provider unconfigured in production");
+      return res.status(HTTP_STATUS.SERVICE_UNAVAILABLE).json({
+        success: false,
+        code: "EMAIL_SERVICE_UNCONFIGURED",
+        message: "Email delivery service is not configured in production",
+      });
+    }
+
+    const origWriteHead = res.writeHead.bind(res);
+    const origWrite = res.write.bind(res);
+    const origEnd = res.end.bind(res);
+
+    res.writeHead = function (status: number, ...args: any[]) {
+      const sendErr = emailService.getLastSendError();
+      if (sendErr) {
+        res.statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
+        return origWriteHead(HTTP_STATUS.INTERNAL_SERVER_ERROR, { "content-type": "application/json" });
+      }
+      return (origWriteHead as any)(status, ...args);
+    };
+
+    res.write = function (chunk: any, ...args: any[]) {
+      const sendErr = emailService.getLastSendError();
+      if (sendErr) {
+        return true; // suppress { "success": true } payload
+      }
+      return (origWrite as any)(chunk, ...args);
+    };
+
+    res.end = function (chunk: any, ...args: any[]) {
+      const sendErr = emailService.getLastSendError();
+      if (sendErr) {
+        return origEnd(
+          JSON.stringify({
+            success: false,
+            code: "EMAIL_DELIVERY_FAILED",
+            message: sendErr.message,
+          })
+        );
+      }
+      return (origEnd as any)(chunk, ...args);
+    };
+
+    next();
+  });
+
   app.all("/api/auth", toNodeHandler(auth));
   app.all("/api/auth/*", toNodeHandler(auth));
 

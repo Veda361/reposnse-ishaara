@@ -27,6 +27,8 @@ describe("Environment Configuration & Validation Tests", () => {
     GOOGLE_ANDROID_CLIENT_ID: "android-prod-123.apps.googleusercontent.com",
     GOOGLE_WEB_CLIENT_ID: "web-prod-456.apps.googleusercontent.com",
     GOOGLE_CLIENT_SECRET: "web-prod-secret-789",
+    RESEND_API_KEY: "re_mock_test_key_for_testing_12345",
+    EMAIL_FROM: "onboarding@resend.dev",
   };
 
   describe("Development Environment Configuration", () => {
@@ -86,6 +88,22 @@ describe("Environment Configuration & Validation Tests", () => {
       assert.throws(
         () => validateEnv(invalidProd),
         /GOOGLE_CLIENT_SECRET is required in production/
+      );
+    });
+
+    it("should reject production if RESEND_API_KEY is missing", () => {
+      const { RESEND_API_KEY, ...invalidProd } = baseValidProdEnv;
+      assert.throws(
+        () => validateEnv(invalidProd),
+        /RESEND_API_KEY is required in production/
+      );
+    });
+
+    it("should reject production if EMAIL_FROM is missing", () => {
+      const { EMAIL_FROM, ...invalidProd } = baseValidProdEnv;
+      assert.throws(
+        () => validateEnv(invalidProd),
+        /EMAIL_FROM is required in production/
       );
     });
 
