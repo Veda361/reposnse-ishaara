@@ -47,7 +47,9 @@ export const approveDriverBodySchema = z
   .strict({
     message:
       "Approval does not accept body parameters. State and timestamps are server-controlled.",
-  });
+  })
+  .optional()
+  .default({});
 
 export type ApproveDriverBody = z.infer<typeof approveDriverBodySchema>;
 
@@ -126,6 +128,8 @@ export const unsuspendDriverBodySchema = z
   .object({})
   .strict({
     message: "Unsuspension does not accept body parameters",
-  });
+  })
+  .optional()
+  .default({});
 
 export type UnsuspendDriverBody = z.infer<typeof unsuspendDriverBodySchema>;
