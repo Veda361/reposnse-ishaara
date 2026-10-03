@@ -57,6 +57,7 @@ router.get(
  */
 router.post(
   "/",
+  requireAuth,
   requireDriverConductor,
   validateBody(createTripSchema),
   asyncHandler((req, res) => tripController.create(req, res))
@@ -80,6 +81,7 @@ router.get(
  */
 router.post(
   "/:tripId/start",
+  requireAuth,
   requireDriverConductor,
   validateParams(tripIdParamSchema),
   asyncHandler((req, res) => tripController.start(req, res))
@@ -92,6 +94,7 @@ router.post(
  */
 router.post(
   "/:tripId/complete",
+  requireAuth,
   requireDriverConductor,
   validateParams(tripIdParamSchema),
   asyncHandler((req, res) => tripController.complete(req, res))

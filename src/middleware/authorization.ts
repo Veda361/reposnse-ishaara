@@ -39,7 +39,18 @@ export function verifyAdminKey(providedKey?: string): boolean {
  * Roles are strictly verified from the trusted server-side Isahara application user.
  */
 export const requireRole = (...allowedRoles: Role[]): RequestHandler => {
-  return (req: AuthenticatedRequest, _res: Response, next: NextFunction) => {
+  return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    if (!req.auth?.user && !req.user) {
+      let authError: unknown = null;
+      await requireAuth(req, res, (err) => {
+        if (err) {
+          authError = err;
+        }
+      });
+      if (authError) {
+        return next(authError);
+      }
+    }
     const user = req.auth?.user || req.user;
 
     if (!user) {
