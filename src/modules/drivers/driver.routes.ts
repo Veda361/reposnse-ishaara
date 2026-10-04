@@ -187,10 +187,18 @@ router.get(
 
 /**
  * PATCH /api/v1/drivers/me/location
+ * POST /api/v1/drivers/me/location
  * Updates driver's latest geographic coordinates (GeoJSON Point).
  * Protected by strict input validation, GPS write frequency rate limiter, and monotonic ordering.
  */
 router.patch(
+  "/me/location",
+  gpsLocationRateLimiter,
+  validateBody(updateDriverLocationSchema),
+  asyncHandler((req, res) => driverController.updateMeLocation(req, res))
+);
+
+router.post(
   "/me/location",
   gpsLocationRateLimiter,
   validateBody(updateDriverLocationSchema),

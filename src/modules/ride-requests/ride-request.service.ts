@@ -130,7 +130,10 @@ export class RideRequestService {
         ERROR_CODES.DRIVER_NOT_VERIFIED
       );
     }
-    if (driverProfile.status !== DriverStatus.ONLINE) {
+    if (
+      driverProfile.status !== DriverStatus.ONLINE &&
+      driverProfile.status !== DriverStatus.ON_RIDE
+    ) {
       throw new BadRequestError(
         "Trip driver is currently offline.",
         ERROR_CODES.TRIP_NOT_ELIGIBLE

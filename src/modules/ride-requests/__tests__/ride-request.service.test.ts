@@ -397,6 +397,35 @@ describe("RideRequestService Unit & Domain Logic Tests", () => {
       );
     });
 
+    it("should allow ride request creation when driver status is ON_RIDE on an ACTIVE trip", async () => {
+      const tempPassenger = await UserModel.create({
+        betterAuthUserId: `${TEST_PREFIX}temp_pass_onride`,
+        email: `${TEST_PREFIX}temp_pass_onride@isahara.test`,
+        name: "Temp Passenger OnRide",
+        role: UserRole.USER,
+        onboardingCompleted: true,
+      });
+      createdUserIds.push(tempPassenger._id);
+
+      await DriverProfileModel.updateOne({ _id: driverProfile1._id }, { status: DriverStatus.ON_RIDE });
+      try {
+        const req = await rideRequestService.createRideRequest(
+          tempPassenger._id.toString(),
+          {
+            tripId: activeTrip1._id.toString(),
+            pickup: { formattedAddress: "BHU Gate New", latitude: 25.2670, longitude: 82.9910 },
+            destination: { formattedAddress: "Lanka Crossing", latitude: 25.2780, longitude: 82.9990 },
+          }
+        );
+        createdRequestIds.push(req.id);
+        assert.strictEqual(req.status, RideRequestStatus.PENDING);
+      } finally {
+        await DriverProfileModel.updateOne({ _id: driverProfile1._id }, { status: DriverStatus.ONLINE });
+        await RideRequestModel.deleteOne({ userId: tempPassenger._id });
+        await UserModel.deleteOne({ _id: tempPassenger._id });
+      }
+    });
+
     it("should reject request when pickup and destination are geographically identical (<50m separation)", async () => {
       await assert.rejects(
         async () => {
