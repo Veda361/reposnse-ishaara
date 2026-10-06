@@ -250,7 +250,11 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .send({
           tripId: activeTrip1._id.toString(),
           pickup: { formattedAddress: "A", latitude: 25.28, longitude: 82.99 },
-          destination: { formattedAddress: "B", latitude: 25.29, longitude: 83.00 },
+          destination: {
+            formattedAddress: "B",
+            latitude: 25.29,
+            longitude: 83.0,
+          },
         });
 
       assert.strictEqual(res.status, HTTP_STATUS.UNAUTHORIZED);
@@ -264,7 +268,11 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .send({
           tripId: activeTrip1._id.toString(),
           pickup: { formattedAddress: "A", latitude: 25.28, longitude: 82.99 },
-          destination: { formattedAddress: "B", latitude: 25.29, longitude: 83.00 },
+          destination: {
+            formattedAddress: "B",
+            latitude: 25.29,
+            longitude: 83.0,
+          },
         });
 
       assert.strictEqual(res.status, HTTP_STATUS.FORBIDDEN);
@@ -278,7 +286,11 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .send({
           tripId: "invalid_id_not_hex",
           pickup: { formattedAddress: "A", latitude: 25.28, longitude: 82.99 },
-          destination: { formattedAddress: "B", latitude: 25.29, longitude: 83.00 },
+          destination: {
+            formattedAddress: "B",
+            latitude: 25.29,
+            longitude: 83.0,
+          },
         });
 
       assert.strictEqual(res.status, HTTP_STATUS.BAD_REQUEST);
@@ -294,7 +306,11 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
           status: "ACCEPTED", // Tampering attempt!
           driverId: driverProfile2._id.toString(), // Tampering attempt!
           pickup: { formattedAddress: "A", latitude: 25.28, longitude: 82.99 },
-          destination: { formattedAddress: "B", latitude: 25.29, longitude: 83.00 },
+          destination: {
+            formattedAddress: "B",
+            latitude: 25.29,
+            longitude: 83.0,
+          },
         });
 
       assert.strictEqual(res.status, HTTP_STATUS.BAD_REQUEST);
@@ -335,8 +351,9 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
     });
 
     it("Passenger views own request via GET /api/v1/ride-requests/:requestId", async () => {
-      const res = await request(passengerApp1)
-        .get(`/api/v1/ride-requests/${createdRequestId}`);
+      const res = await request(passengerApp1).get(
+        `/api/v1/ride-requests/${createdRequestId}`,
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.OK);
       assert.strictEqual(res.body.data.id, createdRequestId);
@@ -344,24 +361,27 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
     });
 
     it("Driver views incoming request via GET /api/v1/ride-requests/:requestId", async () => {
-      const res = await request(driverApp1)
-        .get(`/api/v1/ride-requests/${createdRequestId}`);
+      const res = await request(driverApp1).get(
+        `/api/v1/ride-requests/${createdRequestId}`,
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.OK);
       assert.strictEqual(res.body.data.id, createdRequestId);
     });
 
     it("Unrelated Passenger 2 cannot view Passenger 1's request (403 REQUEST_NOT_OWNED)", async () => {
-      const res = await request(passengerApp2)
-        .get(`/api/v1/ride-requests/${createdRequestId}`);
+      const res = await request(passengerApp2).get(
+        `/api/v1/ride-requests/${createdRequestId}`,
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.FORBIDDEN);
       assert.strictEqual(res.body.error.code, ERROR_CODES.REQUEST_NOT_OWNED);
     });
 
     it("Unrelated Driver 2 cannot view Driver 1's request (403 REQUEST_NOT_OWNED)", async () => {
-      const res = await request(driverApp2)
-        .get(`/api/v1/ride-requests/${createdRequestId}`);
+      const res = await request(driverApp2).get(
+        `/api/v1/ride-requests/${createdRequestId}`,
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.FORBIDDEN);
       assert.strictEqual(res.body.error.code, ERROR_CODES.REQUEST_NOT_OWNED);
@@ -383,18 +403,30 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .post("/api/v1/ride-requests")
         .send({
           tripId: activeTrip1._id.toString(),
-          pickup: { formattedAddress: "BHU Gate", latitude: 25.2799, longitude: 82.9995 },
-          destination: { formattedAddress: "Lanka", latitude: 25.285, longitude: 83.003 },
+          pickup: {
+            formattedAddress: "BHU Gate",
+            latitude: 25.2799,
+            longitude: 82.9995,
+          },
+          destination: {
+            formattedAddress: "Lanka",
+            latitude: 25.285,
+            longitude: 83.003,
+          },
         });
 
       const newRequestId = createRes.body.data.id;
       createdRequestIds.push(new mongoose.Types.ObjectId(newRequestId));
 
-      const acceptRes = await request(driverApp1)
-        .post(`/api/v1/ride-requests/${newRequestId}/accept`);
+      const acceptRes = await request(driverApp1).post(
+        `/api/v1/ride-requests/${newRequestId}/accept`,
+      );
 
       assert.strictEqual(acceptRes.status, HTTP_STATUS.OK);
-      assert.strictEqual(acceptRes.body.data.status, RideRequestStatus.ACCEPTED);
+      assert.strictEqual(
+        acceptRes.body.data.status,
+        RideRequestStatus.ACCEPTED,
+      );
       assert.ok(acceptRes.body.data.respondedAt);
     });
 
@@ -404,8 +436,16 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .post("/api/v1/ride-requests")
         .send({
           tripId: activeTrip1._id.toString(),
-          pickup: { formattedAddress: "BHU Gate", latitude: 25.2799, longitude: 82.9995 },
-          destination: { formattedAddress: "Lanka", latitude: 25.285, longitude: 83.003 },
+          pickup: {
+            formattedAddress: "BHU Gate",
+            latitude: 25.2799,
+            longitude: 82.9995,
+          },
+          destination: {
+            formattedAddress: "Lanka",
+            latitude: 25.285,
+            longitude: 83.003,
+          },
         });
 
       const newRequestId = createRes.body.data.id;
@@ -416,13 +456,20 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
         .send({ reason: "Cannot stop at this location" });
 
       assert.strictEqual(rejectRes.status, HTTP_STATUS.OK);
-      assert.strictEqual(rejectRes.body.data.status, RideRequestStatus.REJECTED);
-      assert.strictEqual(rejectRes.body.data.rejectionReason, "Cannot stop at this location");
+      assert.strictEqual(
+        rejectRes.body.data.status,
+        RideRequestStatus.REJECTED,
+      );
+      assert.strictEqual(
+        rejectRes.body.data.rejectionReason,
+        "Cannot stop at this location",
+      );
     });
 
     it("GET /api/v1/users/me/ride-requests lists passenger requests", async () => {
-      const res = await request(passengerApp1)
-        .get("/api/v1/users/me/ride-requests?limit=10&page=1");
+      const res = await request(passengerApp1).get(
+        "/api/v1/users/me/ride-requests?limit=10&page=1",
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.OK);
       assert.ok(Array.isArray(res.body.data.items));
@@ -430,8 +477,9 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
     });
 
     it("GET /api/v1/drivers/me/ride-requests lists driver requests", async () => {
-      const res = await request(driverApp1)
-        .get("/api/v1/drivers/me/ride-requests?limit=10&page=1");
+      const res = await request(driverApp1).get(
+        "/api/v1/drivers/me/ride-requests?limit=10&page=1",
+      );
 
       assert.strictEqual(res.status, HTTP_STATUS.OK);
       assert.ok(Array.isArray(res.body.data.items));
@@ -447,43 +495,71 @@ describe("RideRequest HTTP API & Realtime End-to-End Tests", () => {
           headers: {
             authorization: "Bearer token_driver1",
           },
-        }
+        },
       );
 
-      await new Promise<void>((resolve, reject) => {
-        driverWs.on("open", () => resolve());
-        driverWs.on("error", reject);
-      });
+      let hasResolvedMessage = false;
+      let onMessage: ((data: WebSocket.RawData) => void) | undefined;
 
-      const messagePromise = new Promise<any>((resolve) => {
-        driverWs.on("message", (data) => {
-          const parsed = JSON.parse(data.toString());
-          if (parsed.type === "RIDE_REQUEST_CREATED") {
-            resolve(parsed);
-          }
-        });
-      });
-
-      // Passenger creates request via REST
-      const createRes = await request(passengerApp1)
-        .post("/api/v1/ride-requests")
-        .send({
-          tripId: activeTrip1._id.toString(),
-          pickup: { formattedAddress: "BHU Gate", latitude: 25.2799, longitude: 82.9995 },
-          destination: { formattedAddress: "Lanka", latitude: 25.285, longitude: 83.003 },
+      try {
+        await new Promise<void>((resolve, reject) => {
+          driverWs.on("open", () => resolve());
+          driverWs.on("error", reject);
         });
 
-      assert.strictEqual(createRes.status, HTTP_STATUS.CREATED);
-      createdRequestIds.push(new mongoose.Types.ObjectId(createRes.body.data.id));
+        const messagePromise = new Promise<any>((resolve) => {
+          onMessage = (data: WebSocket.RawData) => {
+            const parsed = JSON.parse(data.toString());
+            if (parsed.type === "RIDE_REQUEST_CREATED") {
+              hasResolvedMessage = true;
+              resolve(parsed);
+            }
+          };
+          driverWs.on("message", onMessage);
+        });
 
-      const event = await messagePromise;
-      assert.strictEqual(event.type, "RIDE_REQUEST_CREATED");
-      assert.strictEqual(event.payload.requestId, createRes.body.data.id);
-      assert.strictEqual(event.payload.driverId, driverProfile1._id.toString());
-      assert.strictEqual(event.payload.tripId, activeTrip1._id.toString());
+        // Passenger creates request via REST
+        const createRes = await request(passengerApp1)
+          .post("/api/v1/ride-requests")
+          .send({
+            tripId: activeTrip1._id.toString(),
+            pickup: {
+              formattedAddress: "BHU Gate",
+              latitude: 25.2799,
+              longitude: 82.9995,
+            },
+            destination: {
+              formattedAddress: "Lanka",
+              latitude: 25.285,
+              longitude: 83.003,
+            },
+          });
 
-      driverWs.close();
+        assert.strictEqual(createRes.status, HTTP_STATUS.CREATED);
+        createdRequestIds.push(
+          new mongoose.Types.ObjectId(createRes.body.data.id),
+        );
+
+        const event = await messagePromise;
+        assert.strictEqual(event.type, "RIDE_REQUEST_CREATED");
+        assert.strictEqual(event.payload.requestId, createRes.body.data.id);
+        assert.strictEqual(
+          event.payload.driverId,
+          driverProfile1._id.toString(),
+        );
+        assert.strictEqual(event.payload.tripId, activeTrip1._id.toString());
+        assert.ok(hasResolvedMessage);
+      } finally {
+        if (onMessage) {
+          driverWs.off("message", onMessage);
+        }
+        if (
+          driverWs.readyState === WebSocket.OPEN ||
+          driverWs.readyState === WebSocket.CONNECTING
+        ) {
+          driverWs.close();
+        }
+      }
     });
   });
 });
-
