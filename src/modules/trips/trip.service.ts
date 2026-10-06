@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { TripModel, toCleanTripResponse, toPublicTripResponse } from "./trip.model";
+import {
+  TripModel,
+  toCleanTripResponse,
+  toPublicTripResponse,
+} from "./trip.model";
 import {
   TripStatus,
   CleanTripResponse,
@@ -30,9 +34,11 @@ import {
   ForbiddenError,
 } from "../../shared/errors/app-error";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
+import { env } from "../../config/env";
 import { logger } from "../../config/logger";
 import { routingService } from "../routing/routing.service";
 import { tripDiscoveryChangeSource } from "../realtime/trip-discovery-change.source";
+import { driverPresenceService } from "../drivers/driver-presence.service";
 
 /**
  * Computes great-circle distance between two geographic coordinates in meters
@@ -42,7 +48,7 @@ export const calculateDistanceMeters = (
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number => {
   const R = 6371000; // Earth radius in meters
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -50,7 +56,10 @@ export const calculateDistanceMeters = (
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -62,10 +71,13 @@ export class TripService {
   private async assertAgencyOwnerOrAdmin(
     agencyId: string,
     requestingUserId?: string,
-    isAdmin = false
+    isAdmin = false,
   ) {
     if (!Types.ObjectId.isValid(agencyId)) {
-      throw new BadRequestError("Invalid agency ID format", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid agency ID format",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const agency = await AgencyModel.findById(agencyId);
@@ -73,10 +85,13 @@ export class TripService {
       throw new NotFoundError("Agency not found", ERROR_CODES.NOT_FOUND);
     }
 
-    if (!isAdmin && (!requestingUserId || agency.ownerUserId.toString() !== requestingUserId)) {
+    if (
+      !isAdmin &&
+      (!requestingUserId || agency.ownerUserId.toString() !== requestingUserId)
+    ) {
       throw new ForbiddenError(
         "You do not have permission to manage trips for this agency.",
-        ERROR_CODES.FORBIDDEN
+        ERROR_CODES.FORBIDDEN,
       );
     }
 
@@ -89,28 +104,28 @@ export class TripService {
   private async validateDriverAndVehicleEligibility(
     driverId: Types.ObjectId,
     vehicleId: Types.ObjectId,
-    expectedAgencyId?: Types.ObjectId | null
+    expectedAgencyId?: Types.ObjectId | null,
   ) {
     // 1. Driver Profile validation
     const driverProfile = await DriverProfileModel.findById(driverId);
     if (!driverProfile) {
       throw new NotFoundError(
         "Driver profile not found.",
-        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND
+        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND,
       );
     }
 
     if (driverProfile.isSuspended) {
       throw new ForbiddenError(
         "Cannot assign or operate trip with a suspended driver.",
-        ERROR_CODES.DRIVER_OPERATIONAL_SUSPENDED
+        ERROR_CODES.DRIVER_OPERATIONAL_SUSPENDED,
       );
     }
 
     if (driverProfile.verificationStatus !== VerificationStatus.VERIFIED) {
       throw new ForbiddenError(
         `Driver must be verified to operate trips. Current status: '${driverProfile.verificationStatus}'.`,
-        ERROR_CODES.DRIVER_NOT_VERIFIED
+        ERROR_CODES.DRIVER_NOT_VERIFIED,
       );
     }
 
@@ -119,23 +134,26 @@ export class TripService {
     if (!vehicle) {
       throw new NotFoundError(
         "Vehicle not found.",
-        ERROR_CODES.VEHICLE_NOT_FOUND
+        ERROR_CODES.VEHICLE_NOT_FOUND,
       );
     }
 
     if (!vehicle.isActive) {
       throw new BadRequestError(
         "Vehicle is not active.",
-        ERROR_CODES.VEHICLE_INACTIVE
+        ERROR_CODES.VEHICLE_INACTIVE,
       );
     }
 
     // 3. Agency Fleet vs Individual Ownership scoping
     if (vehicle.agencyId) {
-      if (expectedAgencyId && vehicle.agencyId.toString() !== expectedAgencyId.toString()) {
+      if (
+        expectedAgencyId &&
+        vehicle.agencyId.toString() !== expectedAgencyId.toString()
+      ) {
         throw new ForbiddenError(
           "Vehicle does not belong to the specified agency.",
-          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN
+          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN,
         );
       }
 
@@ -149,14 +167,14 @@ export class TripService {
       if (!membership) {
         throw new ForbiddenError(
           "Driver does not have an approved membership with this agency.",
-          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN
+          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN,
         );
       }
     } else if (expectedAgencyId) {
       // Vehicle is INDIVIDUAL but agency trip was requested
       throw new ForbiddenError(
         "Vehicle does not belong to the agency fleet.",
-        ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN
+        ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN,
       );
     }
 
@@ -172,12 +190,14 @@ export class TripService {
       if (!activeAssignment) {
         throw new ForbiddenError(
           "Driver does not have an active assignment to this agency vehicle.",
-          ERROR_CODES.VEHICLE_NOT_ASSIGNED
+          ERROR_CODES.VEHICLE_NOT_ASSIGNED,
         );
       }
     } else {
       // Individual vehicle: driver must own the vehicle or have active assignment
-      const isOwner = vehicle.driverId && vehicle.driverId.toString() === driverProfile._id.toString();
+      const isOwner =
+        vehicle.driverId &&
+        vehicle.driverId.toString() === driverProfile._id.toString();
       if (!isOwner) {
         const activeAssignment = await DriverVehicleAssignmentModel.findOne({
           driverId: driverProfile._id,
@@ -187,7 +207,7 @@ export class TripService {
         if (!activeAssignment) {
           throw new ForbiddenError(
             "Vehicle does not belong to or is not assigned to the driver.",
-            ERROR_CODES.FORBIDDEN
+            ERROR_CODES.FORBIDDEN,
           );
         }
       }
@@ -203,7 +223,7 @@ export class TripService {
    */
   async createTrip(
     driverProfileId: Types.ObjectId | string,
-    input: CreateTripInput
+    input: CreateTripInput,
   ): Promise<CleanTripResponse> {
     const driverId = new Types.ObjectId(driverProfileId);
     const vehicleId = new Types.ObjectId(input.vehicleId);
@@ -213,13 +233,13 @@ export class TripService {
       input.origin.latitude,
       input.origin.longitude,
       input.destination.latitude,
-      input.destination.longitude
+      input.destination.longitude,
     );
 
     if (separation < 50) {
       throw new BadRequestError(
         "Origin and destination cannot be the same physical location (minimum 50m separation required)",
-        ERROR_CODES.SAME_ORIGIN_DESTINATION
+        ERROR_CODES.SAME_ORIGIN_DESTINATION,
       );
     }
 
@@ -228,7 +248,7 @@ export class TripService {
     if (!driverProfile) {
       throw new NotFoundError(
         "Driver profile not found.",
-        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND
+        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND,
       );
     }
 
@@ -237,14 +257,14 @@ export class TripService {
     if (!vehicle) {
       throw new NotFoundError(
         "Vehicle not found.",
-        ERROR_CODES.VEHICLE_NOT_FOUND
+        ERROR_CODES.VEHICLE_NOT_FOUND,
       );
     }
 
     if (!vehicle.isActive) {
       throw new BadRequestError(
         "Cannot create trip with an inactive vehicle.",
-        ERROR_CODES.VEHICLE_INACTIVE
+        ERROR_CODES.VEHICLE_INACTIVE,
       );
     }
 
@@ -260,7 +280,7 @@ export class TripService {
       if (!membership) {
         throw new ForbiddenError(
           "Driver does not belong to the agency owning this vehicle.",
-          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN
+          ERROR_CODES.CROSS_AGENCY_ASSIGNMENT_FORBIDDEN,
         );
       }
 
@@ -273,16 +293,17 @@ export class TripService {
       if (!activeAssignment) {
         throw new ForbiddenError(
           "Driver is not currently assigned to this agency vehicle.",
-          ERROR_CODES.VEHICLE_NOT_ASSIGNED
+          ERROR_CODES.VEHICLE_NOT_ASSIGNED,
         );
       }
     } else {
       // Individual vehicle: driver must own the vehicle
-      const isOwner = vehicle.driverId && vehicle.driverId.toString() === driverId.toString();
+      const isOwner =
+        vehicle.driverId && vehicle.driverId.toString() === driverId.toString();
       if (!isOwner) {
         throw new NotFoundError(
           "Vehicle not found or does not belong to the authenticated driver.",
-          ERROR_CODES.VEHICLE_NOT_FOUND
+          ERROR_CODES.VEHICLE_NOT_FOUND,
         );
       }
     }
@@ -312,7 +333,10 @@ export class TripService {
         formattedAddress: input.destination.formattedAddress,
         coordinates: {
           type: "Point",
-          coordinates: [input.destination.longitude, input.destination.latitude],
+          coordinates: [
+            input.destination.longitude,
+            input.destination.latitude,
+          ],
         },
         googlePlaceId: input.destination.googlePlaceId,
         serpApiDataId: input.destination.serpApiDataId,
@@ -358,10 +382,14 @@ export class TripService {
     agencyId: string,
     input: AgencyCreateTripInput,
     actorUserId?: string,
-    actorRole: TripActorRole = "AGENCY_OWNER"
+    actorRole: TripActorRole = "AGENCY_OWNER",
   ): Promise<CleanTripResponse> {
     const isAdmin = actorRole === "ADMIN";
-    const agency = await this.assertAgencyOwnerOrAdmin(agencyId, actorUserId, isAdmin);
+    const agency = await this.assertAgencyOwnerOrAdmin(
+      agencyId,
+      actorUserId,
+      isAdmin,
+    );
 
     const driverId = new Types.ObjectId(input.driverId);
     const vehicleId = new Types.ObjectId(input.vehicleId);
@@ -371,19 +399,23 @@ export class TripService {
       input.origin.latitude,
       input.origin.longitude,
       input.destination.latitude,
-      input.destination.longitude
+      input.destination.longitude,
     );
 
     if (separation < 50) {
       throw new BadRequestError(
         "Origin and destination cannot be the same physical location (minimum 50m separation required)",
-        ERROR_CODES.SAME_ORIGIN_DESTINATION
+        ERROR_CODES.SAME_ORIGIN_DESTINATION,
       );
     }
 
     // 2. Validate Driver & Vehicle eligibility in agency fleet
     const { driverProfile, vehicle } =
-      await this.validateDriverAndVehicleEligibility(driverId, vehicleId, agency._id);
+      await this.validateDriverAndVehicleEligibility(
+        driverId,
+        vehicleId,
+        agency._id,
+      );
 
     // 3. Check for conflicting active trips
     const [existingDriverActive, existingVehicleActive] = await Promise.all([
@@ -394,14 +426,14 @@ export class TripService {
     if (existingDriverActive) {
       throw new ConflictError(
         "Driver already has an active trip in progress.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
     if (existingVehicleActive) {
       throw new ConflictError(
         "Vehicle is already operating on another active trip.",
-        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP
+        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP,
       );
     }
 
@@ -409,7 +441,9 @@ export class TripService {
       ? new Date(input.scheduledDepartureAt)
       : null;
 
-    const initialStatus = scheduledAt ? TripStatus.SCHEDULED : TripStatus.ASSIGNED;
+    const initialStatus = scheduledAt
+      ? TripStatus.SCHEDULED
+      : TripStatus.ASSIGNED;
 
     const trip = await TripModel.create({
       driverId,
@@ -431,7 +465,10 @@ export class TripService {
         formattedAddress: input.destination.formattedAddress,
         coordinates: {
           type: "Point",
-          coordinates: [input.destination.longitude, input.destination.latitude],
+          coordinates: [
+            input.destination.longitude,
+            input.destination.latitude,
+          ],
         },
         googlePlaceId: input.destination.googlePlaceId,
         serpApiDataId: input.destination.serpApiDataId,
@@ -454,7 +491,10 @@ export class TripService {
       startedAt: null,
       completedAt: null,
       cancelledAt: null,
-      createdBy: actorUserId && Types.ObjectId.isValid(actorUserId) ? new Types.ObjectId(actorUserId) : null,
+      createdBy:
+        actorUserId && Types.ObjectId.isValid(actorUserId)
+          ? new Types.ObjectId(actorUserId)
+          : null,
       createdByRole: actorRole,
     });
 
@@ -478,10 +518,13 @@ export class TripService {
     input: AssignTripInput,
     actorUserId?: string,
     actorRole: TripActorRole = "AGENCY_OWNER",
-    scopedAgencyId?: string
+    scopedAgencyId?: string,
   ): Promise<CleanTripResponse> {
     if (!Types.ObjectId.isValid(tripId)) {
-      throw new BadRequestError("Invalid trip ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid trip ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const trip = await TripModel.findById(tripId);
@@ -493,19 +536,19 @@ export class TripService {
     if (trip.status === TripStatus.ACTIVE) {
       throw new ConflictError(
         "Cannot assign a trip that is already ACTIVE.",
-        ERROR_CODES.TRIP_ALREADY_STARTED
+        ERROR_CODES.TRIP_ALREADY_STARTED,
       );
     }
     if (trip.status === TripStatus.COMPLETED) {
       throw new ConflictError(
         "Cannot assign a trip that is already COMPLETED.",
-        ERROR_CODES.TRIP_ALREADY_COMPLETED
+        ERROR_CODES.TRIP_ALREADY_COMPLETED,
       );
     }
     if (trip.status === TripStatus.CANCELLED) {
       throw new ConflictError(
         "Cannot assign a trip that is already CANCELLED.",
-        ERROR_CODES.TRIP_ALREADY_CANCELLED
+        ERROR_CODES.TRIP_ALREADY_CANCELLED,
       );
     }
 
@@ -514,14 +557,18 @@ export class TripService {
       if (!trip.agencyId || trip.agencyId.toString() !== scopedAgencyId) {
         throw new ForbiddenError(
           "Trip does not belong to the specified agency.",
-          ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS
+          ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS,
         );
       }
     }
 
     const isAdmin = actorRole === "ADMIN";
     if (trip.agencyId && !isAdmin) {
-      await this.assertAgencyOwnerOrAdmin(trip.agencyId.toString(), actorUserId, false);
+      await this.assertAgencyOwnerOrAdmin(
+        trip.agencyId.toString(),
+        actorUserId,
+        false,
+      );
     }
 
     const newDriverId = new Types.ObjectId(input.driverId);
@@ -533,7 +580,7 @@ export class TripService {
     await this.validateDriverAndVehicleEligibility(
       newDriverId,
       newVehicleId,
-      trip.agencyId
+      trip.agencyId,
     );
 
     // Check for conflicting active trips
@@ -545,14 +592,14 @@ export class TripService {
     if (existingDriverActive) {
       throw new ConflictError(
         "Driver already has an active trip in progress.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
     if (existingVehicleActive) {
       throw new ConflictError(
         "Vehicle is already operating on another active trip.",
-        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP
+        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP,
       );
     }
 
@@ -578,10 +625,13 @@ export class TripService {
     tripId: string,
     actorProfileId?: string,
     actorRole: TripActorRole = "DRIVER",
-    scopedAgencyId?: string
+    scopedAgencyId?: string,
   ): Promise<CleanTripResponse> {
     if (!Types.ObjectId.isValid(tripId)) {
-      throw new BadRequestError("Invalid trip ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid trip ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const trip = await TripModel.findById(tripId);
@@ -589,14 +639,21 @@ export class TripService {
       throw new NotFoundError("Trip not found.", ERROR_CODES.TRIP_NOT_FOUND);
     }
 
-    if (scopedAgencyId && (!trip.agencyId || trip.agencyId.toString() !== scopedAgencyId)) {
+    if (
+      scopedAgencyId &&
+      (!trip.agencyId || trip.agencyId.toString() !== scopedAgencyId)
+    ) {
       throw new ForbiddenError(
         "Trip does not belong to the specified agency.",
-        ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS
+        ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS,
       );
     }
 
-    if (actorRole === "DRIVER" && actorProfileId && trip.driverId.toString() !== actorProfileId) {
+    if (
+      actorRole === "DRIVER" &&
+      actorProfileId &&
+      trip.driverId.toString() !== actorProfileId
+    ) {
       throw new NotFoundError("Trip not found.", ERROR_CODES.TRIP_NOT_FOUND);
     }
 
@@ -609,7 +666,7 @@ export class TripService {
     if (!validInitialStatuses.includes(trip.status)) {
       throw new ConflictError(
         `Cannot mark trip ready from status '${trip.status}'.`,
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
@@ -617,7 +674,7 @@ export class TripService {
     await this.validateDriverAndVehicleEligibility(
       trip.driverId,
       trip.vehicleId,
-      trip.agencyId
+      trip.agencyId,
     );
 
     trip.status = TripStatus.READY;
@@ -633,7 +690,7 @@ export class TripService {
    */
   async startTrip(
     driverProfileId: Types.ObjectId | string,
-    tripId: string
+    tripId: string,
   ): Promise<CleanTripResponse> {
     const driverId = new Types.ObjectId(driverProfileId);
 
@@ -653,7 +710,7 @@ export class TripService {
     if (!startableStatuses.includes(trip.status)) {
       throw new ConflictError(
         `Cannot start trip with status '${trip.status}'. Only unstarted trips can be started.`,
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
@@ -661,8 +718,27 @@ export class TripService {
     const { driverProfile } = await this.validateDriverAndVehicleEligibility(
       driverId,
       trip.vehicleId,
-      trip.agencyId
+      trip.agencyId,
     );
+
+    const tripStartEligibility = driverPresenceService.getPresenceEligibility(
+      driverProfile,
+      { status: TripStatus.ACTIVE },
+      env.GPS_LOCATION_STALE_AFTER_SECONDS,
+    );
+    if (!tripStartEligibility.eligible) {
+      const reason = tripStartEligibility.reason;
+      const code =
+        reason === "GPS_MISSING" || reason === "GPS_STALE"
+          ? ERROR_CODES.DRIVER_LOCATION_STALE
+          : reason === "DRIVER_SUSPENDED"
+            ? ERROR_CODES.DRIVER_OPERATIONAL_SUSPENDED
+            : reason === "DRIVER_NOT_VERIFIED"
+              ? ERROR_CODES.DRIVER_NOT_VERIFIED
+              : ERROR_CODES.TRIP_NOT_READY;
+
+      throw new BadRequestError(tripStartEligibility.message, code);
+    }
 
     // 3. Verify no concurrent ACTIVE trip exists for this driver
     const existingDriverActive = await TripModel.findOne({
@@ -672,7 +748,7 @@ export class TripService {
     if (existingDriverActive) {
       throw new ConflictError(
         "Driver already has an active trip in progress.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
@@ -684,13 +760,16 @@ export class TripService {
     if (existingVehicleActive) {
       throw new ConflictError(
         "Vehicle is already operating on another active trip.",
-        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP
+        ERROR_CODES.VEHICLE_HAS_ACTIVE_TRIP,
       );
     }
 
     // 5. Ensure normalized route geometry is present before activation
     let routeToPersist = trip.route;
-    if (!trip.route?.geometry?.coordinates || trip.route.geometry.coordinates.length < 2) {
+    if (
+      !trip.route?.geometry?.coordinates ||
+      trip.route.geometry.coordinates.length < 2
+    ) {
       try {
         const computed = await routingService.computeRoute({
           origin: {
@@ -709,10 +788,13 @@ export class TripService {
           provider: computed.provider,
         };
       } catch (routeErr: any) {
-        logger.warn("Route computation failed during trip start, using fallback geometry", {
-          tripId,
-          error: routeErr.message,
-        });
+        logger.warn(
+          "Route computation failed during trip start, using fallback geometry",
+          {
+            tripId,
+            error: routeErr.message,
+          },
+        );
       }
     }
 
@@ -730,13 +812,13 @@ export class TripService {
           startedAt: now,
           ...(routeToPersist ? { route: routeToPersist } : {}),
         },
-        { new: true }
+        { new: true },
       );
 
       if (!updated) {
         throw new ConflictError(
           "Trip could not be started or was modified concurrently.",
-          ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+          ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
         );
       }
 
@@ -745,12 +827,17 @@ export class TripService {
       await driverProfile.save();
 
       // Dispatch discovery synchronization event to affected subscribers
-      tripDiscoveryChangeSource.notifyTripChange(updated, "ACTIVATED").catch((err) => {
-        logger.error("Error dispatching discovery notification on trip activation", {
-          tripId,
-          err,
+      tripDiscoveryChangeSource
+        .notifyTripChange(updated, "ACTIVATED")
+        .catch((err) => {
+          logger.error(
+            "Error dispatching discovery notification on trip activation",
+            {
+              tripId,
+              err,
+            },
+          );
         });
-      });
 
       logger.info("Trip started (status -> ACTIVE)", {
         tripId,
@@ -768,7 +855,7 @@ export class TripService {
       ) {
         throw new ConflictError(
           "Driver or vehicle already has an active trip (unique index constraint).",
-          ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+          ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
         );
       }
       throw err;
@@ -781,7 +868,7 @@ export class TripService {
    */
   async completeTrip(
     driverProfileId: Types.ObjectId | string,
-    tripId: string
+    tripId: string,
   ): Promise<CleanTripResponse> {
     const driverId = new Types.ObjectId(driverProfileId);
 
@@ -793,7 +880,7 @@ export class TripService {
     if (trip.status !== TripStatus.ACTIVE) {
       throw new ConflictError(
         `Cannot complete trip with status '${trip.status}'. Only ACTIVE trips can be completed.`,
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
@@ -808,29 +895,38 @@ export class TripService {
         status: TripStatus.COMPLETED,
         completedAt: now,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updated) {
       throw new ConflictError(
         "Trip is no longer active or was modified concurrently.",
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
-    // Restore driver operational status to ONLINE
+    const statusAfterTrip = await DriverProfileModel.findById(driverId);
+    const nextDriverStatus = statusAfterTrip?.isSuspended
+      ? DriverStatus.OFFLINE
+      : DriverStatus.ONLINE;
+
     await DriverProfileModel.updateOne(
       { _id: driverId, status: DriverStatus.ON_RIDE },
-      { status: DriverStatus.ONLINE }
+      { status: nextDriverStatus },
     );
 
     // Dispatch discovery synchronization event to affected subscribers
-    tripDiscoveryChangeSource.notifyTripChange(updated, "COMPLETED").catch((err) => {
-      logger.error("Error dispatching discovery notification on trip completion", {
-        tripId,
-        err,
+    tripDiscoveryChangeSource
+      .notifyTripChange(updated, "COMPLETED")
+      .catch((err) => {
+        logger.error(
+          "Error dispatching discovery notification on trip completion",
+          {
+            tripId,
+            err,
+          },
+        );
       });
-    });
 
     logger.info("Trip completed (ACTIVE -> COMPLETED)", {
       tripId,
@@ -851,10 +947,13 @@ export class TripService {
     input?: CancelTripInput,
     actorUserId?: string,
     actorRole: TripActorRole = "DRIVER",
-    scopedAgencyId?: string
+    scopedAgencyId?: string,
   ): Promise<CleanTripResponse> {
     if (!Types.ObjectId.isValid(tripId)) {
-      throw new BadRequestError("Invalid trip ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid trip ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const trip = await TripModel.findById(tripId);
@@ -869,7 +968,7 @@ export class TripService {
     ) {
       throw new ConflictError(
         `Cannot cancel a trip that is already ${trip.status}.`,
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
@@ -878,24 +977,31 @@ export class TripService {
       if (!trip.agencyId || trip.agencyId.toString() !== scopedAgencyId) {
         throw new ForbiddenError(
           "Trip does not belong to the specified agency.",
-          ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS
+          ERROR_CODES.TRIP_CROSS_AGENCY_ACCESS,
         );
       }
     }
 
     // Authorization checks
     if (actorRole === "DRIVER") {
-      if (!actorDriverProfileId || trip.driverId.toString() !== actorDriverProfileId.toString()) {
+      if (
+        !actorDriverProfileId ||
+        trip.driverId.toString() !== actorDriverProfileId.toString()
+      ) {
         throw new NotFoundError("Trip not found.", ERROR_CODES.TRIP_NOT_FOUND);
       }
     } else if (actorRole === "AGENCY_OWNER") {
       if (!trip.agencyId) {
         throw new ForbiddenError(
           "Trip does not belong to any agency.",
-          ERROR_CODES.FORBIDDEN
+          ERROR_CODES.FORBIDDEN,
         );
       }
-      await this.assertAgencyOwnerOrAdmin(trip.agencyId.toString(), actorUserId, false);
+      await this.assertAgencyOwnerOrAdmin(
+        trip.agencyId.toString(),
+        actorUserId,
+        false,
+      );
     }
 
     const wasActive = trip.status === TripStatus.ACTIVE;
@@ -918,33 +1024,46 @@ export class TripService {
         status: TripStatus.CANCELLED,
         cancelledAt: now,
         cancellationReason: input?.reason || null,
-        cancelledBy: actorUserId && Types.ObjectId.isValid(actorUserId) ? new Types.ObjectId(actorUserId) : null,
+        cancelledBy:
+          actorUserId && Types.ObjectId.isValid(actorUserId)
+            ? new Types.ObjectId(actorUserId)
+            : null,
         cancelledByRole: actorRole,
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updated) {
       throw new ConflictError(
         "Trip could not be cancelled or state was modified concurrently.",
-        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION
+        ERROR_CODES.INVALID_TRIP_STATUS_TRANSITION,
       );
     }
 
     if (wasActive) {
+      const driverProfile = await DriverProfileModel.findById(trip.driverId);
+      const nextDriverStatus = driverProfile?.isSuspended
+        ? DriverStatus.OFFLINE
+        : DriverStatus.ONLINE;
+
       await DriverProfileModel.updateOne(
         { _id: trip.driverId, status: DriverStatus.ON_RIDE },
-        { status: DriverStatus.ONLINE }
+        { status: nextDriverStatus },
       );
     }
 
     // Dispatch discovery synchronization event to affected subscribers
-    tripDiscoveryChangeSource.notifyTripChange(updated, "CANCELLED").catch((err) => {
-      logger.error("Error dispatching discovery notification on trip cancellation", {
-        tripId,
-        err,
+    tripDiscoveryChangeSource
+      .notifyTripChange(updated, "CANCELLED")
+      .catch((err) => {
+        logger.error(
+          "Error dispatching discovery notification on trip cancellation",
+          {
+            tripId,
+            err,
+          },
+        );
       });
-    });
 
     logger.info("Trip cancelled", {
       tripId,
@@ -962,10 +1081,13 @@ export class TripService {
    */
   async getTripById(
     tripId: string,
-    callerDriverProfileId?: string
+    callerDriverProfileId?: string,
   ): Promise<CleanTripResponse | PublicTripResponse> {
     if (!Types.ObjectId.isValid(tripId)) {
-      throw new BadRequestError("Invalid trip ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid trip ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const trip = await TripModel.findById(tripId);
@@ -974,7 +1096,10 @@ export class TripService {
     }
 
     // If driver owner, return full owner details
-    if (callerDriverProfileId && trip.driverId.toString() === callerDriverProfileId) {
+    if (
+      callerDriverProfileId &&
+      trip.driverId.toString() === callerDriverProfileId
+    ) {
       return toCleanTripResponse(trip);
     }
 
@@ -1000,7 +1125,7 @@ export class TripService {
             make: vehicle.make,
             model: vehicle.model,
           }
-        : undefined
+        : undefined,
     );
   }
 
@@ -1011,12 +1136,15 @@ export class TripService {
     agencyId: string,
     tripId: string,
     requestingUserId?: string,
-    isAdmin = false
+    isAdmin = false,
   ): Promise<CleanTripResponse> {
     await this.assertAgencyOwnerOrAdmin(agencyId, requestingUserId, isAdmin);
 
     if (!Types.ObjectId.isValid(tripId)) {
-      throw new BadRequestError("Invalid trip ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid trip ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const trip = await TripModel.findOne({
@@ -1027,7 +1155,7 @@ export class TripService {
     if (!trip) {
       throw new NotFoundError(
         "Trip not found for this agency.",
-        ERROR_CODES.TRIP_NOT_FOUND
+        ERROR_CODES.TRIP_NOT_FOUND,
       );
     }
 
@@ -1039,7 +1167,7 @@ export class TripService {
    */
   async listDriverTrips(
     driverProfileId: Types.ObjectId | string,
-    query: ListDriverTripsQuery
+    query: ListDriverTripsQuery,
   ): Promise<{
     trips: CleanTripResponse[];
     pagination: {
@@ -1087,7 +1215,7 @@ export class TripService {
     agencyId: string,
     query: ListAgencyTripsQuery,
     requestingUserId?: string,
-    isAdmin = false
+    isAdmin = false,
   ): Promise<{
     trips: CleanTripResponse[];
     pagination: {
@@ -1097,7 +1225,11 @@ export class TripService {
       totalPages: number;
     };
   }> {
-    const agency = await this.assertAgencyOwnerOrAdmin(agencyId, requestingUserId, isAdmin);
+    const agency = await this.assertAgencyOwnerOrAdmin(
+      agencyId,
+      requestingUserId,
+      isAdmin,
+    );
 
     const filter: Record<string, unknown> = {
       agencyId: agency._id,
@@ -1236,7 +1368,7 @@ export class TripService {
       driverProfiles.map((dp) => [
         dp._id.toString(),
         userMap.get(dp.userId.toString()),
-      ])
+      ]),
     );
     const vehicleMap = new Map(vehicles.map((v) => [v._id.toString(), v]));
 
@@ -1246,7 +1378,7 @@ export class TripService {
       return toPublicTripResponse(
         trip,
         user ? { name: user.name, image: user.image || undefined } : undefined,
-        veh
+        veh,
       );
     });
 

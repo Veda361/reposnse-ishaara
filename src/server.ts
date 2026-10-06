@@ -5,9 +5,12 @@ import { logger } from "./config/logger";
 import { mongoAuthClient } from "./modules/auth/auth.config";
 import { realtimeGateway } from "./modules/realtime/realtime.gateway";
 import { outboxWorker } from "./modules/events/outbox.worker";
+import { presenceWorker } from "./workers/presence.worker";
 import { Server } from "http";
 
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : (env.PORT || 5000);
+const PORT = process.env.PORT
+  ? parseInt(process.env.PORT, 10)
+  : env.PORT || 5000;
 const HOST = "0.0.0.0";
 
 let server: Server | null = null;
@@ -30,6 +33,7 @@ const gracefulShutdown = async (signal: string) => {
   try {
     // 1. Stop background workers
     await outboxWorker.stop();
+    await presenceWorker.stop();
 
     // 2. Stop accepting new HTTP requests
     if (server && server.listening) {
@@ -97,6 +101,10 @@ const startServer = async () => {
     outboxWorker.start();
     logger.info("Outbox worker running.");
 
+    logger.info("Starting background Presence Worker...");
+    presenceWorker.start();
+    logger.info("Presence worker running.");
+
     logger.info(`
 =====================================================
 🚀 Isahara Backend Server running!
@@ -115,15 +123,22 @@ const startServer = async () => {
     logger.info(`Speech fallback provider: ${env.SPEECH_FALLBACK_PROVIDER}`);
 
     // Safe startup email configuration verification (Never log secrets/keys)
-    const hasResendApiKey = Boolean(process.env.RESEND_API_KEY && process.env.RESEND_API_KEY.trim().length > 0);
-    const hasEmailFrom = Boolean(process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim().length > 0);
+    const hasResendApiKey = Boolean(
+      process.env.RESEND_API_KEY &&
+      process.env.RESEND_API_KEY.trim().length > 0,
+    );
+    const hasEmailFrom = Boolean(
+      process.env.EMAIL_FROM && process.env.EMAIL_FROM.trim().length > 0,
+    );
 
     logger.info("Email provider: Resend");
     logger.info(`Email sender configured: ${hasEmailFrom ? "yes" : "no"}`);
 
     if (env.NODE_ENV === "production") {
       if (!hasResendApiKey) {
-        logger.error("FATAL: RESEND_API_KEY is missing in production environment.");
+        logger.error(
+          "FATAL: RESEND_API_KEY is missing in production environment.",
+        );
         throw new Error("RESEND_API_KEY must be configured in production.");
       }
       if (!hasEmailFrom) {

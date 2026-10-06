@@ -155,7 +155,9 @@ export const createApp = (options?: CreateAppOptions): Express => {
     });
   });
 
-  // Mount central versioned API routes with global API rate limiting
+  // Mount central versioned API routes with global API rate limiting.
+  // Note: Driver GPS telemetry ingestion (POST / PATCH /api/v1/drivers/me/location)
+  // is exempted via apiRateLimiter skip predicate and protected by dedicated gpsLocationRateLimiter.
   app.use(API_PREFIX, apiRateLimiter, apiV1Router);
 
   // 404 Route Handler for undefined endpoints

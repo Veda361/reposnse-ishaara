@@ -32,6 +32,7 @@ import { ERROR_CODES } from "../../shared/errors/error-codes";
 import { Role, ROLES } from "../../shared/constants/roles.constants";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
+import { driverPresenceService } from "../drivers/driver-presence.service";
 
 /**
  * Calculates great-circle distance between two coordinates in meters (Haversine formula).
@@ -40,7 +41,7 @@ const calculateSeparationMeters = (
   lat1: number,
   lon1: number,
   lat2: number,
-  lon2: number
+  lon2: number,
 ): number => {
   const R = 6371000;
   const toRad = (deg: number) => (deg * Math.PI) / 180;
@@ -48,7 +49,10 @@ const calculateSeparationMeters = (
   const dLon = toRad(lon2 - lon1);
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -59,7 +63,7 @@ export class RideRequestService {
 
   constructor(
     eventPublisher?: RideRequestEventPublisher,
-    outbox?: OutboxService
+    outbox?: OutboxService,
   ) {
     this.eventPublisher = eventPublisher ?? rideRequestEventPublisher;
     this.outboxService = outbox ?? outboxService;
@@ -73,7 +77,7 @@ export class RideRequestService {
   async createRideRequest(
     userId: string,
     input: CreateRideRequestInput,
-    idempotencyKey?: string
+    idempotencyKey?: string,
   ): Promise<RideRequestResponse> {
     const userObjectId = new Types.ObjectId(userId);
 
@@ -99,7 +103,10 @@ export class RideRequestService {
       throw new NotFoundError("User not found.", ERROR_CODES.USER_NOT_FOUND);
     }
     if (user.isActive === false) {
-      throw new ForbiddenError("User account is inactive.", ERROR_CODES.USER_INACTIVE);
+      throw new ForbiddenError(
+        "User account is inactive.",
+        ERROR_CODES.USER_INACTIVE,
+      );
     }
 
     // 3. Load authoritative Trip
@@ -112,32 +119,39 @@ export class RideRequestService {
     if (trip.status !== TripStatus.ACTIVE) {
       throw new BadRequestError(
         `Trip is not eligible for ride requests (current trip status: ${trip.status}). Requests are only permitted on ACTIVE trips.`,
-        ERROR_CODES.TRIP_NOT_ELIGIBLE
+        ERROR_CODES.TRIP_NOT_ELIGIBLE,
       );
     }
 
-    // 5. Verify Driver existence, verification, and online status
+    // 5. Verify Driver existence, verification, and presence freshness.
     const driverProfile = await DriverProfileModel.findById(trip.driverId);
     if (!driverProfile) {
       throw new NotFoundError(
         "Driver profile for this trip was not found.",
-        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND
+        ERROR_CODES.DRIVER_PROFILE_NOT_FOUND,
       );
     }
-    if (driverProfile.verificationStatus !== VerificationStatus.VERIFIED) {
-      throw new BadRequestError(
-        "Trip driver is not verified.",
-        ERROR_CODES.DRIVER_NOT_VERIFIED
-      );
-    }
-    if (
-      driverProfile.status !== DriverStatus.ONLINE &&
-      driverProfile.status !== DriverStatus.ON_RIDE
-    ) {
-      throw new BadRequestError(
-        "Trip driver is currently offline.",
-        ERROR_CODES.TRIP_NOT_ELIGIBLE
-      );
+
+    const driverEligibility =
+      driverPresenceService.evaluateDriverTripEligibility(driverProfile, trip);
+    if (!driverEligibility.eligible) {
+      const code =
+        driverEligibility.reason === "GPS_MISSING" ||
+        driverEligibility.reason === "GPS_STALE"
+          ? ERROR_CODES.DRIVER_LOCATION_STALE
+          : driverEligibility.reason === "DRIVER_SUSPENDED"
+            ? ERROR_CODES.DRIVER_OPERATIONAL_SUSPENDED
+            : driverEligibility.reason === "DRIVER_NOT_VERIFIED"
+              ? ERROR_CODES.DRIVER_NOT_VERIFIED
+              : ERROR_CODES.TRIP_NOT_ELIGIBLE;
+
+      logger.warn("Ride request rejected by presence gate", {
+        tripId: trip._id.toString(),
+        driverId: driverProfile._id.toString(),
+        reason: driverEligibility.reason,
+      });
+
+      throw new BadRequestError(driverEligibility.message, code);
     }
 
     // 6. Validate Pickup and Destination geographical separation
@@ -145,13 +159,13 @@ export class RideRequestService {
       input.pickup.latitude,
       input.pickup.longitude,
       input.destination.latitude,
-      input.destination.longitude
+      input.destination.longitude,
     );
 
     if (separation < 50) {
       throw new BadRequestError(
         "Pickup and destination cannot be the same physical location (minimum 50m separation required).",
-        ERROR_CODES.SAME_ORIGIN_DESTINATION
+        ERROR_CODES.SAME_ORIGIN_DESTINATION,
       );
     }
 
@@ -164,13 +178,13 @@ export class RideRequestService {
       if (!session) {
         throw new NotFoundError(
           "Discovery session not found or has expired. Start a new trip discovery.",
-          ERROR_CODES.DISCOVERY_SESSION_NOT_FOUND
+          ERROR_CODES.DISCOVERY_SESSION_NOT_FOUND,
         );
       }
       if (session.userId.toString() !== userId) {
         throw new ForbiddenError(
           "Discovery session belongs to a different user.",
-          ERROR_CODES.DISCOVERY_SESSION_MISMATCH
+          ERROR_CODES.DISCOVERY_SESSION_MISMATCH,
         );
       }
     }
@@ -182,7 +196,11 @@ export class RideRequestService {
     // prevents any single passenger from holding multiple PENDING slots on the same trip.
     // Atomic seat reservation (via $inc counter on Trip) is deferred to Phase 11+.
     const vehicle = await VehicleModel.findById(trip.vehicleId);
-    if (vehicle && typeof vehicle.capacity === "number" && vehicle.capacity > 0) {
+    if (
+      vehicle &&
+      typeof vehicle.capacity === "number" &&
+      vehicle.capacity > 0
+    ) {
       const acceptedCount = await RideRequestModel.countDocuments({
         tripId: trip._id,
         status: RideRequestStatus.ACCEPTED,
@@ -190,7 +208,7 @@ export class RideRequestService {
       if (acceptedCount >= vehicle.capacity) {
         throw new ConflictError(
           `This trip has no available seats (capacity: ${vehicle.capacity}, accepted: ${acceptedCount}).`,
-          ERROR_CODES.TRIP_FULL_CAPACITY
+          ERROR_CODES.TRIP_FULL_CAPACITY,
         );
       }
     }
@@ -198,7 +216,7 @@ export class RideRequestService {
     // 7. Calculate Server-Controlled Timestamps & Expiration
     const requestedAt = new Date();
     const expiresAt = new Date(
-      requestedAt.getTime() + env.RIDE_REQUEST_EXPIRATION_SECONDS * 1000
+      requestedAt.getTime() + env.RIDE_REQUEST_EXPIRATION_SECONDS * 1000,
     );
 
     // 8. Create RideRequest Document
@@ -222,7 +240,10 @@ export class RideRequestService {
           formattedAddress: input.destination.formattedAddress,
           coordinates: {
             type: "Point",
-            coordinates: [input.destination.longitude, input.destination.latitude],
+            coordinates: [
+              input.destination.longitude,
+              input.destination.latitude,
+            ],
           },
           googlePlaceId: input.destination.googlePlaceId,
           serpApiDataId: input.destination.serpApiDataId,
@@ -254,7 +275,10 @@ export class RideRequestService {
           },
           destination: {
             formattedAddress: input.destination.formattedAddress,
-            coordinates: [input.destination.longitude, input.destination.latitude],
+            coordinates: [
+              input.destination.longitude,
+              input.destination.latitude,
+            ],
           },
           expiresAt,
         },
@@ -286,7 +310,7 @@ export class RideRequestService {
         }
         throw new ConflictError(
           "You already have an active pending ride request for this trip.",
-          ERROR_CODES.DUPLICATE_RIDE_REQUEST
+          ERROR_CODES.DUPLICATE_RIDE_REQUEST,
         );
       }
       throw err;
@@ -298,17 +322,20 @@ export class RideRequestService {
    */
   async getRideRequest(
     requestId: string,
-    caller: { userId: string; role: Role }
+    caller: { userId: string; role: Role },
   ): Promise<RideRequestResponse> {
     if (!Types.ObjectId.isValid(requestId)) {
-      throw new BadRequestError("Invalid requestId format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid requestId format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const doc = await RideRequestModel.findById(requestId);
     if (!doc) {
       throw new NotFoundError(
         "Ride request not found.",
-        ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+        ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
       );
     }
 
@@ -317,15 +344,17 @@ export class RideRequestService {
       if (doc.userId.toString() !== caller.userId) {
         throw new ForbiddenError(
           "You do not have permission to view this ride request.",
-          ERROR_CODES.REQUEST_NOT_OWNED
+          ERROR_CODES.REQUEST_NOT_OWNED,
         );
       }
     } else if (caller.role === ROLES.DRIVER_CONDUCTOR) {
-      const driverProfile = await driverService.getDriverProfileByUserId(caller.userId);
+      const driverProfile = await driverService.getDriverProfileByUserId(
+        caller.userId,
+      );
       if (doc.driverId.toString() !== driverProfile._id.toString()) {
         throw new ForbiddenError(
           "You do not have permission to view this ride request.",
-          ERROR_CODES.REQUEST_NOT_OWNED
+          ERROR_CODES.REQUEST_NOT_OWNED,
         );
       }
     }
@@ -338,7 +367,7 @@ export class RideRequestService {
    */
   async listUserRequests(
     userId: string,
-    query: ListRideRequestsQuery
+    query: ListRideRequestsQuery,
   ): Promise<PaginatedRideRequestsResponse> {
     const filter: Record<string, any> = {
       userId: new Types.ObjectId(userId),
@@ -351,11 +380,7 @@ export class RideRequestService {
       filter.tripId = new Types.ObjectId(query.tripId);
     }
 
-    const limit = Math.min(
-      query.limit || 20,
-      env.RIDE_REQUEST_MAX_RESULTS,
-      50
-    );
+    const limit = Math.min(query.limit || 20, env.RIDE_REQUEST_MAX_RESULTS, 50);
     const page = Math.max(1, query.page || 1);
     const skip = (page - 1) * limit;
 
@@ -383,7 +408,7 @@ export class RideRequestService {
    */
   async listDriverRequests(
     driverProfileId: string,
-    query: ListRideRequestsQuery
+    query: ListRideRequestsQuery,
   ): Promise<PaginatedRideRequestsResponse> {
     const filter: Record<string, any> = {
       driverId: new Types.ObjectId(driverProfileId),
@@ -396,11 +421,7 @@ export class RideRequestService {
       filter.tripId = new Types.ObjectId(query.tripId);
     }
 
-    const limit = Math.min(
-      query.limit || 20,
-      env.RIDE_REQUEST_MAX_RESULTS,
-      50
-    );
+    const limit = Math.min(query.limit || 20, env.RIDE_REQUEST_MAX_RESULTS, 50);
     const page = Math.max(1, query.page || 1);
     const skip = (page - 1) * limit;
 
@@ -429,10 +450,13 @@ export class RideRequestService {
    */
   async acceptRideRequest(
     requestId: string,
-    driverProfileId: string
+    driverProfileId: string,
   ): Promise<RideRequestResponse> {
     if (!Types.ObjectId.isValid(requestId)) {
-      throw new BadRequestError("Invalid requestId format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid requestId format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     // 1. Initialize session for multi-document transaction where supported
@@ -453,27 +477,31 @@ export class RideRequestService {
 
     try {
       // 2. Pre-flight check: verify document existence and driver ownership
-      const existing = await RideRequestModel.findById(requestId).session(session || null);
+      const existing = await RideRequestModel.findById(requestId).session(
+        session || null,
+      );
       if (!existing) {
         throw new NotFoundError(
           "Ride request not found.",
-          ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+          ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
         );
       }
 
       if (existing.driverId.toString() !== driverProfileId) {
         throw new ForbiddenError(
           "You do not have permission to accept this ride request.",
-          ERROR_CODES.REQUEST_NOT_OWNED
+          ERROR_CODES.REQUEST_NOT_OWNED,
         );
       }
 
       // 3. Validate Trip is still ACTIVE
-      const trip = await TripModel.findById(existing.tripId).session(session || null);
+      const trip = await TripModel.findById(existing.tripId).session(
+        session || null,
+      );
       if (!trip || trip.status !== TripStatus.ACTIVE) {
         throw new ConflictError(
           `Trip is no longer active (current status: ${trip?.status || "UNKNOWN"}). Cannot accept ride requests.`,
-          ERROR_CODES.TRIP_NOT_ELIGIBLE
+          ERROR_CODES.TRIP_NOT_ELIGIBLE,
         );
       }
 
@@ -492,36 +520,41 @@ export class RideRequestService {
             respondedAt: now,
           },
         },
-        { new: true, session: session || undefined }
+        { new: true, session: session || undefined },
       );
 
       // 5. Handle transition failure deterministically
       if (!updated) {
-        const current = await RideRequestModel.findById(requestId).session(session || null);
+        const current = await RideRequestModel.findById(requestId).session(
+          session || null,
+        );
         if (!current) {
           throw new NotFoundError(
             "Ride request not found.",
-            ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+            ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
           );
         }
 
-        if (current.expiresAt <= now || current.status === RideRequestStatus.EXPIRED) {
+        if (
+          current.expiresAt <= now ||
+          current.status === RideRequestStatus.EXPIRED
+        ) {
           throw new ConflictError(
             "Ride request has expired and cannot be accepted.",
-            ERROR_CODES.RIDE_REQUEST_EXPIRED
+            ERROR_CODES.RIDE_REQUEST_EXPIRED,
           );
         }
 
         if (current.status === RideRequestStatus.ACCEPTED) {
           throw new ConflictError(
             "Ride request has already been accepted.",
-            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED,
           );
         }
 
         throw new ConflictError(
           `Ride request is no longer pending (current status: ${current.status}).`,
-          ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+          ERROR_CODES.RIDE_REQUEST_NOT_PENDING,
         );
       }
 
@@ -552,7 +585,7 @@ export class RideRequestService {
             respondedAt: updated.respondedAt,
           },
         },
-        session
+        session,
       );
 
       // 8. Commit transaction
@@ -582,17 +615,20 @@ export class RideRequestService {
       }
 
       // Handle concurrent transaction collision (MongoDB WriteConflict code 112)
-      if (err.code === 112 || err.hasErrorLabel?.("TransientTransactionError")) {
+      if (
+        err.code === 112 ||
+        err.hasErrorLabel?.("TransientTransactionError")
+      ) {
         const current = await RideRequestModel.findById(requestId);
         if (current?.status === RideRequestStatus.ACCEPTED) {
           throw new ConflictError(
             "Ride request has already been accepted.",
-            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+            ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED,
           );
         }
         throw new ConflictError(
           `Ride request is no longer pending (current status: ${current?.status || "CONFLICT"}).`,
-          ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+          ERROR_CODES.RIDE_REQUEST_NOT_PENDING,
         );
       }
 
@@ -611,24 +647,27 @@ export class RideRequestService {
   async rejectRideRequest(
     requestId: string,
     driverProfileId: string,
-    reason?: string
+    reason?: string,
   ): Promise<RideRequestResponse> {
     if (!Types.ObjectId.isValid(requestId)) {
-      throw new BadRequestError("Invalid requestId format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid requestId format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const existing = await RideRequestModel.findById(requestId);
     if (!existing) {
       throw new NotFoundError(
         "Ride request not found.",
-        ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+        ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
       );
     }
 
     if (existing.driverId.toString() !== driverProfileId) {
       throw new ForbiddenError(
         "You do not have permission to reject this ride request.",
-        ERROR_CODES.REQUEST_NOT_OWNED
+        ERROR_CODES.REQUEST_NOT_OWNED,
       );
     }
 
@@ -647,7 +686,7 @@ export class RideRequestService {
           rejectionReason: reason || null,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updated) {
@@ -655,27 +694,30 @@ export class RideRequestService {
       if (!current) {
         throw new NotFoundError(
           "Ride request not found.",
-          ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+          ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
         );
       }
 
-      if (current.expiresAt <= now || current.status === RideRequestStatus.EXPIRED) {
+      if (
+        current.expiresAt <= now ||
+        current.status === RideRequestStatus.EXPIRED
+      ) {
         throw new ConflictError(
           "Ride request has expired.",
-          ERROR_CODES.RIDE_REQUEST_EXPIRED
+          ERROR_CODES.RIDE_REQUEST_EXPIRED,
         );
       }
 
       if (current.status === RideRequestStatus.ACCEPTED) {
         throw new ConflictError(
           "Ride request has already been accepted.",
-          ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+          ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED,
         );
       }
 
       throw new ConflictError(
         `Ride request is no longer pending (current status: ${current.status}).`,
-        ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+        ERROR_CODES.RIDE_REQUEST_NOT_PENDING,
       );
     }
 
@@ -723,24 +765,27 @@ export class RideRequestService {
   async cancelRideRequest(
     requestId: string,
     userId: string,
-    reason?: string
+    reason?: string,
   ): Promise<RideRequestResponse> {
     if (!Types.ObjectId.isValid(requestId)) {
-      throw new BadRequestError("Invalid requestId format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid requestId format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const existing = await RideRequestModel.findById(requestId);
     if (!existing) {
       throw new NotFoundError(
         "Ride request not found.",
-        ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+        ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
       );
     }
 
     if (existing.userId.toString() !== userId) {
       throw new ForbiddenError(
         "You do not have permission to cancel this ride request.",
-        ERROR_CODES.REQUEST_NOT_OWNED
+        ERROR_CODES.REQUEST_NOT_OWNED,
       );
     }
 
@@ -759,7 +804,7 @@ export class RideRequestService {
           cancellationReason: reason || null,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!updated) {
@@ -767,27 +812,30 @@ export class RideRequestService {
       if (!current) {
         throw new NotFoundError(
           "Ride request not found.",
-          ERROR_CODES.RIDE_REQUEST_NOT_FOUND
+          ERROR_CODES.RIDE_REQUEST_NOT_FOUND,
         );
       }
 
-      if (current.expiresAt <= now || current.status === RideRequestStatus.EXPIRED) {
+      if (
+        current.expiresAt <= now ||
+        current.status === RideRequestStatus.EXPIRED
+      ) {
         throw new ConflictError(
           "Ride request has expired and cannot be cancelled.",
-          ERROR_CODES.RIDE_REQUEST_EXPIRED
+          ERROR_CODES.RIDE_REQUEST_EXPIRED,
         );
       }
 
       if (current.status === RideRequestStatus.ACCEPTED) {
         throw new ConflictError(
           "Ride request has already been accepted by the driver.",
-          ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED
+          ERROR_CODES.RIDE_REQUEST_ALREADY_RESPONDED,
         );
       }
 
       throw new ConflictError(
         `Ride request is no longer pending (current status: ${current.status}).`,
-        ERROR_CODES.RIDE_REQUEST_NOT_PENDING
+        ERROR_CODES.RIDE_REQUEST_NOT_PENDING,
       );
     }
 
@@ -853,7 +901,7 @@ export class RideRequestService {
             respondedAt: now,
           },
         },
-        { new: true }
+        { new: true },
       );
 
       if (updated) {

@@ -17,6 +17,7 @@ import { DriverLocationUpdatedPayload } from "../realtime/realtime.types";
 import { trackingEventPublisher } from "../tracking/tracking-event.publisher";
 import { env } from "../../config/env";
 import { logger } from "../../config/logger";
+import { driverPresenceService } from "./driver-presence.service";
 import {
   BadRequestError,
   NotFoundError,
@@ -180,6 +181,7 @@ export class DriverLocationService {
             recordedAt: recordedAtDate,
             receivedAt: serverReceivedAt,
           },
+          lastHeartbeatAt: serverReceivedAt,
         },
       },
       { new: true }
@@ -195,6 +197,12 @@ export class DriverLocationService {
       return current || profile;
     }
 
+    // Phase 02 B3: Active trip presence self-healing
+    const healed = await driverPresenceService.recoverActiveTripPresence(profile._id);
+    if (healed) {
+      updatedProfile.status = DriverStatus.ON_RIDE;
+    }
+
     // Privacy-safe operational logging (no raw lat/lon coords in standard log)
     logger.info("Driver GPS location updated", {
       driverProfileId,
@@ -203,6 +211,7 @@ export class DriverLocationService {
       headingDegrees: dto.headingDegrees ?? null,
       recordedAt: recordedAtDate.toISOString(),
       receivedAt: serverReceivedAt.toISOString(),
+      lastHeartbeatAt: serverReceivedAt.toISOString(),
     });
 
     // Targeted realtime emission to authorized subscribers of active rides

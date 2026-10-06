@@ -8,7 +8,32 @@ export interface RateLimiterOptions {
   windowMs?: number;
   max?: number;
   message?: string;
+  skip?: (req: Request, res: Response) => boolean;
+  enableInTest?: boolean;
 }
+
+/**
+ * Determines whether an incoming HTTP request is a driver GPS telemetry ingestion update.
+ * Specifically checks for POST or PATCH methods to /api/v1/drivers/me/location.
+ * Handles path normalization across sub-router mounting, query parameters,
+ * and optional trailing slashes.
+ */
+export const isGpsTelemetryRequest = (req: Request): boolean => {
+  if (req.method !== "POST" && req.method !== "PATCH") {
+    return false;
+  }
+
+  // When mounted at /api/v1 (e.g. app.use(API_PREFIX, apiRateLimiter, apiV1Router)):
+  // req.path is "/drivers/me/location"
+  // req.originalUrl is "/api/v1/drivers/me/location" (possibly with ?query)
+  const cleanPath = (req.path || "").replace(/\/+$/, "");
+  const cleanOriginalUrl = (req.originalUrl ? req.originalUrl.split("?")[0] : "").replace(/\/+$/, "");
+
+  return (
+    cleanPath === "/drivers/me/location" ||
+    cleanOriginalUrl === "/api/v1/drivers/me/location"
+  );
+};
 
 /**
  * Factory for creating configured rate limiters.
@@ -18,12 +43,27 @@ export const createRateLimiter = (options: RateLimiterOptions = {}) => {
     windowMs = 15 * 60 * 1000, // 15 minutes
     max = 100,
     message = "Too many requests from this IP address, please try again later.",
+    skip,
+    enableInTest = false,
   } = options;
 
   return rateLimit({
     windowMs,
     max,
-    skip: () => process.env.NODE_ENV === "test",
+    skip: (req: Request, res: Response) => {
+      // If a dedicated skip predicate is configured and matches, skip this limiter
+      if (skip && skip(req, res)) {
+        return true;
+      }
+
+      // In automated test runs, skip rate limiters by default so other module integration tests
+      // aren't blocked by IP request caps, UNLESS explicitly testing rate limits.
+      if (process.env.NODE_ENV === "test" && !enableInTest && process.env.TEST_RATE_LIMIT !== "true") {
+        return true;
+      }
+
+      return false;
+    },
     standardHeaders: true,
     legacyHeaders: false,
     handler: (_req: Request, res: Response) => {
@@ -51,11 +91,16 @@ export const surveyRateLimiter = createRateLimiter({
 
 /**
  * Standard API rate limiter for general endpoints.
+ * BUG-RATE-01 Fix: Driver GPS telemetry ingestion (POST / PATCH /api/v1/drivers/me/location)
+ * is exempted from this limiter because high-frequency telemetry updates (e.g. 1-2s intervals)
+ * would otherwise exhaust the 200 req / 15 min general API quota.
+ * GPS telemetry remains strictly protected by its dedicated gpsLocationRateLimiter (120 req / 1 min).
  */
 export const apiRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000,
   max: 200,
   message: "API rate limit exceeded. Please try again later.",
+  skip: (req) => isGpsTelemetryRequest(req),
 });
 
 /**

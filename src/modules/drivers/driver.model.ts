@@ -178,6 +178,11 @@ const driverProfileSchema = new Schema<IDriverProfileDocument>(
       maxlength: [500, "Suspension reason cannot exceed 500 characters"],
       default: null,
     },
+    lastHeartbeatAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: true,
@@ -190,6 +195,8 @@ driverProfileSchema.index({ currentLocation: "2dsphere" }, { sparse: true });
 // Admin index for querying drivers by verification state
 driverProfileSchema.index({ verificationStatus: 1, createdAt: -1 });
 driverProfileSchema.index({ verificationStatus: 1, submittedAt: 1, createdAt: 1 });
+// Phase 02: Presence reaper compound index for efficient status and heartbeat sweeps
+driverProfileSchema.index({ status: 1, lastHeartbeatAt: 1 });
 
 /**
  * Formats an internal DriverProfile document into a clean, sanitized public contract.
@@ -247,6 +254,9 @@ export const toCleanDriverProfileResponse = (
     operatingType: profile.operatingType ?? "INDIVIDUAL",
     isSuspended: !!profile.isSuspended,
     suspensionReason: profile.suspensionReason ?? null,
+    lastHeartbeatAt: profile.lastHeartbeatAt
+      ? profile.lastHeartbeatAt.toISOString()
+      : null,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),
   };

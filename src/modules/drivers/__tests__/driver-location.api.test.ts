@@ -381,4 +381,41 @@ describe("Phase 10: Driver Location REST API Integration Tests", () => {
       assert.strictEqual(res.body.error.code, ERROR_CODES.RIDE_NOT_FOUND);
     });
   });
+
+  describe("Location Ingestion via POST /api/v1/drivers/me/location (Production Contract Check)", () => {
+    it("should accept valid location via POST with full telemetry payload and return normalized fields", async () => {
+      const payload = {
+        latitude: 25.2685,
+        longitude: 82.9925,
+        accuracyMeters: 4.2,
+        headingDegrees: 90.0,
+        speedMps: 15.0,
+        altitudeMeters: 85.0,
+        recordedAt: new Date().toISOString(),
+      };
+
+      const res = await request(driverApp)
+        .post("/api/v1/drivers/me/location")
+        .send(payload);
+
+      assert.strictEqual(res.status, 200);
+      assert.strictEqual(res.body.success, true);
+      assert.ok(res.body.data.location);
+      assert.strictEqual(res.body.data.location.latitude, 25.2685);
+      assert.strictEqual(res.body.data.location.longitude, 82.9925);
+      assert.strictEqual(res.body.data.accuracyMeters, 4.2);
+      assert.strictEqual(res.body.data.headingDegrees, 90.0);
+      assert.strictEqual(res.body.data.speedMps, 15.0);
+    });
+
+    it("should reject POST payload with out-of-range longitude", async () => {
+      const res = await request(driverApp)
+        .post("/api/v1/drivers/me/location")
+        .send({ latitude: 25.2685, longitude: 195.0 });
+
+      assert.strictEqual(res.status, 400);
+      assert.strictEqual(res.body.success, false);
+      assert.strictEqual(res.body.error.code, ERROR_CODES.VALIDATION_ERROR);
+    });
+  });
 });

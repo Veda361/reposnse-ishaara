@@ -5,8 +5,15 @@ import { TripStatus, ITripDocument } from "../trips/trip.types";
 import { DriverProfileModel } from "../drivers/driver.model";
 import { VehicleModel } from "../vehicles/vehicle.model";
 import { UserModel } from "../users/user.model";
-import { RouteMatchingService, routeMatchingService } from "./route-matching.service";
-import { RankingService, rankingService, CandidateEvaluation } from "./ranking.service";
+import {
+  RouteMatchingService,
+  routeMatchingService,
+} from "./route-matching.service";
+import {
+  RankingService,
+  rankingService,
+  CandidateEvaluation,
+} from "./ranking.service";
 import {
   DiscoverySearchRequest,
   DiscoveryResponse,
@@ -21,6 +28,7 @@ import {
 import { logger } from "../../config/logger";
 import { BadRequestError } from "../../shared/errors/app-error";
 import { ERROR_CODES } from "../../shared/errors/error-codes";
+import { driverPresenceService } from "../drivers/driver-presence.service";
 
 export class MatchingService {
   private routeMatchSvc: RouteMatchingService;
@@ -28,7 +36,7 @@ export class MatchingService {
 
   constructor(
     routeMatchSvc?: RouteMatchingService,
-    rankingSvc?: RankingService
+    rankingSvc?: RankingService,
   ) {
     this.routeMatchSvc = routeMatchSvc ?? routeMatchingService;
     this.rankingSvc = rankingSvc ?? rankingService;
@@ -39,7 +47,7 @@ export class MatchingService {
    */
   async discoverTrips(
     userId: Types.ObjectId | string,
-    request: DiscoverySearchRequest
+    request: DiscoverySearchRequest,
   ): Promise<DiscoveryResponse> {
     const userObjectId = new Types.ObjectId(userId);
     const { origin, destination, options } = request;
@@ -48,39 +56,46 @@ export class MatchingService {
     if (!this.isValidCoordinate(origin.latitude, origin.longitude)) {
       throw new BadRequestError(
         "Invalid origin coordinates.",
-        ERROR_CODES.DISCOVERY_INVALID_ORIGIN
+        ERROR_CODES.DISCOVERY_INVALID_ORIGIN,
       );
     }
 
     if (!this.isValidCoordinate(destination.latitude, destination.longitude)) {
       throw new BadRequestError(
         "Invalid destination coordinates.",
-        ERROR_CODES.DISCOVERY_INVALID_DESTINATION
+        ERROR_CODES.DISCOVERY_INVALID_DESTINATION,
       );
     }
 
     const maxPickup = Math.min(
-      options?.maxPickupDistanceMeters ?? MATCHING_CONSTANTS.DEFAULT_PICKUP_RADIUS_METERS,
-      MATCHING_CONSTANTS.MAX_ALLOWED_PICKUP_RADIUS_METERS
+      options?.maxPickupDistanceMeters ??
+        MATCHING_CONSTANTS.DEFAULT_PICKUP_RADIUS_METERS,
+      MATCHING_CONSTANTS.MAX_ALLOWED_PICKUP_RADIUS_METERS,
     );
 
     const maxDest = Math.min(
       options?.maxDestinationDeviationMeters ??
         MATCHING_CONSTANTS.DEFAULT_DESTINATION_RADIUS_METERS,
-      MATCHING_CONSTANTS.MAX_ALLOWED_DESTINATION_RADIUS_METERS
+      MATCHING_CONSTANTS.MAX_ALLOWED_DESTINATION_RADIUS_METERS,
     );
 
     const limit = Math.min(
       options?.maxResults ?? MATCHING_CONSTANTS.DEFAULT_RESULTS_LIMIT,
-      MATCHING_CONSTANTS.MAX_RESULTS_LIMIT
+      MATCHING_CONSTANTS.MAX_RESULTS_LIMIT,
     );
 
     // ========================================================
     // STAGE 1 (CHEAP): Geospatial candidate filtering in MongoDB
     // Only ACTIVE trips within spatial proximity bounds
     // ========================================================
-    const userOriginCoord: [number, number] = [origin.longitude, origin.latitude];
-    const userDestCoord: [number, number] = [destination.longitude, destination.latitude];
+    const userOriginCoord: [number, number] = [
+      origin.longitude,
+      origin.latitude,
+    ];
+    const userDestCoord: [number, number] = [
+      destination.longitude,
+      destination.latitude,
+    ];
 
     // Query active trips with origin or route in proximity to user origin
     // 2dsphere $near query on origin.coordinates
@@ -114,9 +129,13 @@ export class MatchingService {
     ]);
 
     const driverUserIds = driverProfiles.map((dp) => dp.userId);
-    const driverUsers = await UserModel.find({ _id: { $in: driverUserIds } }).exec();
+    const driverUsers = await UserModel.find({
+      _id: { $in: driverUserIds },
+    }).exec();
 
-    const driverProfileMap = new Map(driverProfiles.map((dp) => [dp._id.toString(), dp]));
+    const driverProfileMap = new Map(
+      driverProfiles.map((dp) => [dp._id.toString(), dp]),
+    );
     const vehicleMap = new Map(vehicles.map((v) => [v._id.toString(), v]));
     const userMap = new Map(driverUsers.map((u) => [u._id.toString(), u]));
 
@@ -137,6 +156,27 @@ export class MatchingService {
         ? userMap.get(driverProfile.userId.toString())
         : undefined;
 
+      if (!driverProfile) {
+        logger.debug("Discovery candidate excluded: driver profile missing", {
+          tripId: trip._id.toString(),
+          reason: "DRIVER_NOT_FOUND",
+        });
+        continue;
+      }
+
+      const eligibility = driverPresenceService.evaluateDriverTripEligibility(
+        driverProfile,
+        trip,
+      );
+      if (!eligibility.eligible) {
+        logger.debug("Discovery candidate excluded by presence gate", {
+          tripId: trip._id.toString(),
+          driverId: driverProfile._id.toString(),
+          reason: eligibility.reason,
+        });
+        continue;
+      }
+
       const matchResult = this.routeMatchSvc.evaluateTripCompatibility(
         trip,
         userOriginCoord,
@@ -144,14 +184,16 @@ export class MatchingService {
         {
           maxPickupDistanceMeters: maxPickup,
           maxDestinationDeviationMeters: maxDest,
-        }
+        },
       );
 
       if (matchResult.isCompatible) {
         evaluatedCandidates.push({
           trip,
           match: matchResult,
-          driverUser: driverUser ? { name: driverUser.name, image: driverUser.image ?? undefined } : undefined,
+          driverUser: driverUser
+            ? { name: driverUser.name, image: driverUser.image ?? undefined }
+            : undefined,
           vehicle: {
             _id: vehicle._id,
             registrationNumber: vehicle.registrationNumber,
@@ -166,15 +208,16 @@ export class MatchingService {
     // ========================================================
     // STAGE 3 (REFINEMENT & RANKING): Deterministic Ordering & DTO
     // ========================================================
-    const rankedCandidates = this.rankingSvc.rankCandidates(evaluatedCandidates);
+    const rankedCandidates =
+      this.rankingSvc.rankCandidates(evaluatedCandidates);
     const formattedItems = rankedCandidates.map((c) =>
-      this.rankingSvc.formatDiscoveryItem(c)
+      this.rankingSvc.formatDiscoveryItem(c),
     );
 
     const { items: paginatedItems, pagination } = this.rankingSvc.paginate(
       formattedItems,
       limit,
-      options?.cursor
+      options?.cursor,
     );
 
     // Persist temporary DiscoverySession with TTL for realtime synchronization

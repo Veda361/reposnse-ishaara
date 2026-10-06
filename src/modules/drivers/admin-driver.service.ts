@@ -1,5 +1,9 @@
 import { Types } from "mongoose";
-import { DriverProfileModel, maskLicenseNumber, toCleanDriverProfileResponse } from "./driver.model";
+import {
+  DriverProfileModel,
+  maskLicenseNumber,
+  toCleanDriverProfileResponse,
+} from "./driver.model";
 import {
   VerificationStatus,
   DriverStatus,
@@ -7,7 +11,10 @@ import {
 } from "./driver.types";
 import { UserModel } from "../users/user.model";
 import { UserRole } from "../../shared/constants/roles.constants";
-import { VehicleModel, toCleanVehicleResponse } from "../vehicles/vehicle.model";
+import {
+  VehicleModel,
+  toCleanVehicleResponse,
+} from "../vehicles/vehicle.model";
 import { DriverVehicleAssignmentModel } from "../vehicles/assignment.model";
 import { TripModel } from "../trips/trip.model";
 import { TripStatus } from "../trips/trip.types";
@@ -62,9 +69,14 @@ export class AdminDriverService {
   /**
    * Helper to resolve DriverProfile by either DriverProfile._id or User._id.
    */
-  private async resolveDriverProfile(idOrUserId: string): Promise<IDriverProfileDocument> {
+  private async resolveDriverProfile(
+    idOrUserId: string,
+  ): Promise<IDriverProfileDocument> {
     if (!Types.ObjectId.isValid(idOrUserId)) {
-      throw new BadRequestError("Invalid driver ID format", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid driver ID format",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const objectId = new Types.ObjectId(idOrUserId);
@@ -75,7 +87,10 @@ export class AdminDriverService {
     }
 
     if (!profile) {
-      throw new NotFoundError("Driver not found.", ERROR_CODES.DRIVER_NOT_FOUND);
+      throw new NotFoundError(
+        "Driver not found.",
+        ERROR_CODES.DRIVER_NOT_FOUND,
+      );
     }
 
     return profile;
@@ -128,8 +143,8 @@ export class AdminDriverService {
         reviewedAt: p.reviewedAt
           ? p.reviewedAt.toISOString()
           : p.licenseVerifiedAt
-          ? p.licenseVerifiedAt.toISOString()
-          : null,
+            ? p.licenseVerifiedAt.toISOString()
+            : null,
         reviewedBy: p.reviewedBy ?? null,
         rejectionReason: p.rejectionReason ?? null,
         status: p.status,
@@ -159,7 +174,7 @@ export class AdminDriverService {
     if (!user) {
       throw new NotFoundError(
         "Associated application user not found.",
-        ERROR_CODES.USER_NOT_FOUND
+        ERROR_CODES.USER_NOT_FOUND,
       );
     }
 
@@ -198,14 +213,14 @@ export class AdminDriverService {
     if (!user) {
       throw new NotFoundError(
         "Associated application user not found.",
-        ERROR_CODES.USER_NOT_FOUND
+        ERROR_CODES.USER_NOT_FOUND,
       );
     }
 
     if (user.role !== UserRole.DRIVER_CONDUCTOR) {
       throw new BadRequestError(
         "Only users with role DRIVER_CONDUCTOR can be approved as drivers.",
-        ERROR_CODES.INVALID_ROLE
+        ERROR_CODES.INVALID_ROLE,
       );
     }
 
@@ -233,29 +248,32 @@ export class AdminDriverService {
           },
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updated) {
       const current = await DriverProfileModel.findById(profile._id);
       if (!current) {
-        throw new NotFoundError("Driver not found.", ERROR_CODES.DRIVER_NOT_FOUND);
+        throw new NotFoundError(
+          "Driver not found.",
+          ERROR_CODES.DRIVER_NOT_FOUND,
+        );
       }
       if (current.verificationStatus === VerificationStatus.VERIFIED) {
         throw new ConflictError(
           "Driver verification has already been approved.",
-          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED
+          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED,
         );
       }
       if (current.verificationStatus === VerificationStatus.REJECTED) {
         throw new ConflictError(
           "Cannot approve a rejected driver verification. Driver must resubmit.",
-          ERROR_CODES.INVALID_VERIFICATION_STATE
+          ERROR_CODES.INVALID_VERIFICATION_STATE,
         );
       }
       throw new ConflictError(
         `Invalid driver verification state transition from ${current.verificationStatus} to VERIFIED.`,
-        ERROR_CODES.CONFLICT
+        ERROR_CODES.CONFLICT,
       );
     }
 
@@ -277,7 +295,7 @@ export class AdminDriverService {
           event: "DRIVER_VERIFIED",
           driverId: updated._id.toString(),
           verificationStatus: VerificationStatus.VERIFIED,
-        }
+        },
       );
     } catch {
       // Realtime notification failure is non-fatal; DB is authoritative
@@ -299,9 +317,7 @@ export class AdminDriverService {
       submittedAt: updated.submittedAt
         ? updated.submittedAt.toISOString()
         : updated.createdAt.toISOString(),
-      reviewedAt: updated.reviewedAt
-        ? updated.reviewedAt.toISOString()
-        : null,
+      reviewedAt: updated.reviewedAt ? updated.reviewedAt.toISOString() : null,
       reviewedBy: updated.reviewedBy ?? "ADMIN",
       rejectionReason: null,
       status: updated.status,
@@ -316,7 +332,7 @@ export class AdminDriverService {
    */
   async rejectDriver(
     driverId: string,
-    reason?: string
+    reason?: string,
   ): Promise<SafePendingDriverItem & { rejectionReason?: string }> {
     const profile = await this.resolveDriverProfile(driverId);
     const user = await UserModel.findById(profile.userId);
@@ -324,14 +340,14 @@ export class AdminDriverService {
     if (!user) {
       throw new NotFoundError(
         "Associated application user not found.",
-        ERROR_CODES.USER_NOT_FOUND
+        ERROR_CODES.USER_NOT_FOUND,
       );
     }
 
     if (user.role !== UserRole.DRIVER_CONDUCTOR) {
       throw new BadRequestError(
         "Only users with role DRIVER_CONDUCTOR can be rejected as drivers.",
-        ERROR_CODES.INVALID_ROLE
+        ERROR_CODES.INVALID_ROLE,
       );
     }
 
@@ -362,29 +378,32 @@ export class AdminDriverService {
           },
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updated) {
       const current = await DriverProfileModel.findById(profile._id);
       if (!current) {
-        throw new NotFoundError("Driver not found.", ERROR_CODES.DRIVER_NOT_FOUND);
+        throw new NotFoundError(
+          "Driver not found.",
+          ERROR_CODES.DRIVER_NOT_FOUND,
+        );
       }
       if (current.verificationStatus === VerificationStatus.REJECTED) {
         throw new ConflictError(
           "Driver verification has already been rejected.",
-          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED
+          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED,
         );
       }
       if (current.verificationStatus === VerificationStatus.VERIFIED) {
         throw new ConflictError(
           "Cannot reject an already verified driver.",
-          ERROR_CODES.INVALID_VERIFICATION_STATE
+          ERROR_CODES.INVALID_VERIFICATION_STATE,
         );
       }
       throw new ConflictError(
         `Invalid driver verification state transition from ${current.verificationStatus} to REJECTED.`,
-        ERROR_CODES.CONFLICT
+        ERROR_CODES.CONFLICT,
       );
     }
 
@@ -407,7 +426,7 @@ export class AdminDriverService {
           driverId: updated._id.toString(),
           verificationStatus: VerificationStatus.REJECTED,
           reason: trimmedReason,
-        }
+        },
       );
     } catch {
       // Realtime notification failure is non-fatal
@@ -429,9 +448,7 @@ export class AdminDriverService {
       submittedAt: updated.submittedAt
         ? updated.submittedAt.toISOString()
         : updated.createdAt.toISOString(),
-      reviewedAt: updated.reviewedAt
-        ? updated.reviewedAt.toISOString()
-        : null,
+      reviewedAt: updated.reviewedAt ? updated.reviewedAt.toISOString() : null,
       reviewedBy: updated.reviewedBy ?? "ADMIN",
       status: updated.status,
       createdAt: updated.createdAt.toISOString(),
@@ -450,14 +467,14 @@ export class AdminDriverService {
     if (!user) {
       throw new NotFoundError(
         "Associated application user not found.",
-        ERROR_CODES.USER_NOT_FOUND
+        ERROR_CODES.USER_NOT_FOUND,
       );
     }
 
     if (user.role !== UserRole.DRIVER_CONDUCTOR) {
       throw new BadRequestError(
         "Only users with role DRIVER_CONDUCTOR can be re-reviewed.",
-        ERROR_CODES.INVALID_ROLE
+        ERROR_CODES.INVALID_ROLE,
       );
     }
 
@@ -483,23 +500,26 @@ export class AdminDriverService {
           },
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updated) {
       const current = await DriverProfileModel.findById(profile._id);
       if (!current) {
-        throw new NotFoundError("Driver not found.", ERROR_CODES.DRIVER_NOT_FOUND);
+        throw new NotFoundError(
+          "Driver not found.",
+          ERROR_CODES.DRIVER_NOT_FOUND,
+        );
       }
       if (current.verificationStatus === VerificationStatus.PENDING) {
         throw new ConflictError(
           "Driver verification is already pending review.",
-          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED
+          ERROR_CODES.VERIFICATION_ALREADY_PROCESSED,
         );
       }
       throw new ConflictError(
         `Cannot re-review driver with verification status '${current.verificationStatus}'. Only REJECTED drivers may be moved to PENDING.`,
-        ERROR_CODES.INVALID_VERIFICATION_STATE
+        ERROR_CODES.INVALID_VERIFICATION_STATE,
       );
     }
 
@@ -555,7 +575,7 @@ export class AdminDriverService {
    */
   async assignVehicle(
     driverId: string,
-    vehicleId: string
+    vehicleId: string,
   ): Promise<{
     driver: SafePendingDriverItem;
     vehicle: ReturnType<typeof toCleanVehicleResponse>;
@@ -566,38 +586,47 @@ export class AdminDriverService {
     if (!user) {
       throw new NotFoundError(
         "Associated application user not found.",
-        ERROR_CODES.USER_NOT_FOUND
+        ERROR_CODES.USER_NOT_FOUND,
       );
     }
 
     if (user.role !== UserRole.DRIVER_CONDUCTOR) {
       throw new BadRequestError(
         "Only users with role DRIVER_CONDUCTOR can be assigned vehicles.",
-        ERROR_CODES.INVALID_ROLE
+        ERROR_CODES.INVALID_ROLE,
       );
     }
 
     if (!Types.ObjectId.isValid(vehicleId)) {
-      throw new BadRequestError("Invalid vehicle ID format.", ERROR_CODES.INVALID_ID);
+      throw new BadRequestError(
+        "Invalid vehicle ID format.",
+        ERROR_CODES.INVALID_ID,
+      );
     }
 
     const vehicle = await VehicleModel.findById(vehicleId);
     if (!vehicle) {
-      throw new NotFoundError("Vehicle not found.", ERROR_CODES.VEHICLE_NOT_FOUND);
+      throw new NotFoundError(
+        "Vehicle not found.",
+        ERROR_CODES.VEHICLE_NOT_FOUND,
+      );
     }
 
     if (!vehicle.isActive) {
       throw new BadRequestError(
         "Cannot assign an inactive vehicle.",
-        ERROR_CODES.VEHICLE_INACTIVE
+        ERROR_CODES.VEHICLE_INACTIVE,
       );
     }
 
     // Check if vehicle is already assigned to another driver
-    if (vehicle.driverId && vehicle.driverId.toString() !== profile._id.toString()) {
+    if (
+      vehicle.driverId &&
+      vehicle.driverId.toString() !== profile._id.toString()
+    ) {
       throw new ConflictError(
         "Vehicle is already assigned to another driver.",
-        ERROR_CODES.VEHICLE_ALREADY_ASSIGNED
+        ERROR_CODES.VEHICLE_ALREADY_ASSIGNED,
       );
     }
 
@@ -611,7 +640,7 @@ export class AdminDriverService {
     if (existingVehicle) {
       throw new ConflictError(
         `Driver is already assigned to vehicle '${existingVehicle.registrationNumber}'. Please unassign it first.`,
-        ERROR_CODES.DRIVER_ALREADY_ASSIGNED
+        ERROR_CODES.DRIVER_ALREADY_ASSIGNED,
       );
     }
 
@@ -621,10 +650,13 @@ export class AdminDriverService {
       status: { $in: [TripStatus.ACTIVE, TripStatus.CREATED] },
     });
 
-    if (activeTrip && activeTrip.vehicleId.toString() !== vehicle._id.toString()) {
+    if (
+      activeTrip &&
+      activeTrip.vehicleId.toString() !== vehicle._id.toString()
+    ) {
       throw new BadRequestError(
         "Driver has an active trip with another vehicle and cannot be reassigned.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
@@ -637,13 +669,16 @@ export class AdminDriverService {
       if (!operator) {
         throw new BadRequestError(
           "Vehicle belongs to an inactive or non-existent bus operator.",
-          ERROR_CODES.BAD_REQUEST
+          ERROR_CODES.BAD_REQUEST,
         );
       }
     }
 
     // Idempotent check
-    if (vehicle.driverId && vehicle.driverId.toString() === profile._id.toString()) {
+    if (
+      vehicle.driverId &&
+      vehicle.driverId.toString() === profile._id.toString()
+    ) {
       return {
         driver: {
           driverId: profile._id.toString(),
@@ -676,13 +711,13 @@ export class AdminDriverService {
           isVerified: true,
         },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedVehicle) {
       throw new ConflictError(
         "Vehicle was concurrently assigned to another driver.",
-        ERROR_CODES.VEHICLE_ALREADY_ASSIGNED
+        ERROR_CODES.VEHICLE_ALREADY_ASSIGNED,
       );
     }
 
@@ -700,7 +735,7 @@ export class AdminDriverService {
           assignedByRole: "ADMIN",
         },
       },
-      { upsert: true }
+      { upsert: true },
     );
 
     logger.info("Assigned vehicle to driver:", {
@@ -718,7 +753,7 @@ export class AdminDriverService {
           driverId: profile._id.toString(),
           vehicleId: updatedVehicle._id.toString(),
           registrationNumber: updatedVehicle.registrationNumber,
-        }
+        },
       );
     } catch {
       // Non-fatal realtime notification failure
@@ -751,7 +786,7 @@ export class AdminDriverService {
    */
   async unassignVehicle(
     driverId: string,
-    vehicleId?: string
+    vehicleId?: string,
   ): Promise<{
     driverId: string;
     vehicle: ReturnType<typeof toCleanVehicleResponse> | null;
@@ -768,7 +803,7 @@ export class AdminDriverService {
     if (activeTrip) {
       throw new BadRequestError(
         "Cannot unassign vehicle while driver has an active or created trip.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
@@ -788,14 +823,17 @@ export class AdminDriverService {
     if (activeRide) {
       throw new BadRequestError(
         "Cannot unassign vehicle while driver has in-flight rides.",
-        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP
+        ERROR_CODES.DRIVER_HAS_ACTIVE_TRIP,
       );
     }
 
     const query: any = { driverId: profile._id, isActive: true };
     if (vehicleId) {
       if (!Types.ObjectId.isValid(vehicleId)) {
-        throw new BadRequestError("Invalid vehicle ID format.", ERROR_CODES.INVALID_ID);
+        throw new BadRequestError(
+          "Invalid vehicle ID format.",
+          ERROR_CODES.INVALID_ID,
+        );
       }
       query._id = new Types.ObjectId(vehicleId);
     }
@@ -828,7 +866,7 @@ export class AdminDriverService {
           unassignedAt: new Date(),
           unassignedByRole: "ADMIN",
         },
-      }
+      },
     );
 
     logger.info("Unassigned vehicle from driver:", {
@@ -844,7 +882,7 @@ export class AdminDriverService {
           event: "DRIVER_VEHICLE_UNASSIGNED",
           driverId: profile._id.toString(),
           vehicleId: vehicle._id.toString(),
-        }
+        },
       );
     } catch {
       // Non-fatal
@@ -865,14 +903,14 @@ export class AdminDriverService {
   async suspendDriver(
     driverId: string,
     reason: string,
-    adminIdentifier: string = "ADMIN"
+    adminIdentifier: string = "ADMIN",
   ): Promise<ReturnType<typeof toCleanDriverProfileResponse>> {
     const profile = await this.resolveDriverProfile(driverId);
 
     if (profile.isSuspended) {
       throw new ConflictError(
         "Driver is already suspended.",
-        ERROR_CODES.DRIVER_ALREADY_SUSPENDED
+        ERROR_CODES.DRIVER_ALREADY_SUSPENDED,
       );
     }
 
@@ -883,6 +921,8 @@ export class AdminDriverService {
     if (profile.status === DriverStatus.ONLINE) {
       profile.status = DriverStatus.OFFLINE;
     }
+    // Preserve active trip lifecycle on suspension. An active trip remains ON_RIDE,
+    // but the driver is non-operational as a result of the suspension gate.
 
     await profile.save();
 
@@ -901,14 +941,14 @@ export class AdminDriverService {
    */
   async unsuspendDriver(
     driverId: string,
-    adminIdentifier: string = "ADMIN"
+    adminIdentifier: string = "ADMIN",
   ): Promise<ReturnType<typeof toCleanDriverProfileResponse>> {
     const profile = await this.resolveDriverProfile(driverId);
 
     if (!profile.isSuspended) {
       throw new ConflictError(
         "Driver is not currently suspended.",
-        ERROR_CODES.DRIVER_NOT_SUSPENDED
+        ERROR_CODES.DRIVER_NOT_SUSPENDED,
       );
     }
 

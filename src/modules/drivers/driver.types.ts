@@ -89,6 +89,7 @@ export interface IDriverProfile {
   isSuspended?: boolean;
   suspendedAt?: Date | null;
   suspensionReason?: string | null;
+  lastHeartbeatAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -133,6 +134,7 @@ export interface CleanDriverProfileResponse {
   operatingType?: string;
   isSuspended: boolean;
   suspensionReason?: string | null;
+  lastHeartbeatAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }
