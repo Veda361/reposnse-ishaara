@@ -204,6 +204,164 @@ describe("Location System & GPS Integration Tests", () => {
     });
   });
 
+  describe("Geocoding & Reverse Geocoding Endpoints (Phase 02)", () => {
+    it("GET /api/v1/locations/geocode should reject unauthenticated requests with 401", async () => {
+      const res = await request(rawApp)
+        .get("/api/v1/locations/geocode")
+        .query({ address: "Banaras Hindu University" });
+
+      assert.equal(res.status, 401);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, ERROR_CODES.UNAUTHORIZED);
+    });
+
+    it("GET /api/v1/locations/geocode should reject missing address with 400 VALIDATION_ERROR", async () => {
+      const res = await request(passengerApp)
+        .get("/api/v1/locations/geocode");
+
+      assert.equal(res.status, 400);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, ERROR_CODES.VALIDATION_ERROR);
+    });
+
+    it("GET /api/v1/locations/geocode should reject address shorter than 2 chars with 400", async () => {
+      const res = await request(passengerApp)
+        .get("/api/v1/locations/geocode")
+        .query({ address: "x" });
+
+      assert.equal(res.status, 400);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, ERROR_CODES.VALIDATION_ERROR);
+    });
+
+    it("GET /api/v1/locations/geocode should resolve address and cache result", async () => {
+      process.env.GOOGLE_GEOCODING_API_KEY = "mock_geocoding_key";
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls++;
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                placeId: "ChIJb_bhu_mock",
+                address: {
+                  formattedAddress: "Banaras Hindu University, Varanasi, UP, India",
+                  postalAddress: {
+                    locality: "Varanasi",
+                    administrativeArea: "Uttar Pradesh",
+                    regionCode: "IN",
+                    postalCode: "221005",
+                  },
+                },
+                location: {
+                  latitude: 25.2677,
+                  longitude: 82.9913,
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      };
+
+      // 1st request: Cache miss -> calls provider
+      const res1 = await request(passengerApp)
+        .get("/api/v1/locations/geocode")
+        .query({ address: "BHU", languageCode: "en" });
+
+      assert.equal(res1.status, 200);
+      assert.equal(res1.body.success, true);
+      assert.equal(res1.body.data.length, 1);
+      assert.equal(res1.body.data[0].provider, "google_geocoding");
+      assert.equal(res1.body.data[0].latitude, 25.2677);
+      assert.equal(res1.body.data[0].longitude, 82.9913);
+      assert.equal(calls, 1);
+
+      // 2nd request: Cache hit -> does not call provider
+      const res2 = await request(passengerApp)
+        .get("/api/v1/locations/geocode")
+        .query({ address: "BHU", languageCode: "en" });
+
+      assert.equal(res2.status, 200);
+      assert.equal(res2.body.success, true);
+      assert.equal(res2.body.data.length, 1);
+      assert.equal(calls, 1, "Should have served geocoding response from LRU cache");
+    });
+
+    it("GET /api/v1/locations/reverse-geocode should reject unauthenticated requests with 401", async () => {
+      const res = await request(rawApp)
+        .get("/api/v1/locations/reverse-geocode")
+        .query({ latitude: 25.281, longitude: 82.999 });
+
+      assert.equal(res.status, 401);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, ERROR_CODES.UNAUTHORIZED);
+    });
+
+    it("GET /api/v1/locations/reverse-geocode should reject out-of-bounds coordinates with 400", async () => {
+      const res = await request(passengerApp)
+        .get("/api/v1/locations/reverse-geocode")
+        .query({ latitude: 95.0, longitude: 82.999 });
+
+      assert.equal(res.status, 400);
+      assert.equal(res.body.success, false);
+      assert.equal(res.body.error.code, ERROR_CODES.VALIDATION_ERROR);
+    });
+
+    it("GET /api/v1/locations/reverse-geocode should resolve coordinates and cache result", async () => {
+      process.env.GOOGLE_GEOCODING_API_KEY = "mock_geocoding_key";
+      let calls = 0;
+      globalThis.fetch = async () => {
+        calls++;
+        return new Response(
+          JSON.stringify({
+            results: [
+              {
+                placeId: "ChIJ_lanka_mock",
+                address: {
+                  formattedAddress: "Lanka, Varanasi, Uttar Pradesh 221005, India",
+                  postalAddress: {
+                    locality: "Varanasi",
+                    administrativeArea: "Uttar Pradesh",
+                    regionCode: "IN",
+                    postalCode: "221005",
+                  },
+                },
+                location: {
+                  latitude: 25.281,
+                  longitude: 82.999,
+                },
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      };
+
+      // 1st request: Cache miss -> calls provider
+      const res1 = await request(passengerApp)
+        .get("/api/v1/locations/reverse-geocode")
+        .query({ latitude: 25.281, longitude: 82.999 });
+
+      assert.equal(res1.status, 200);
+      assert.equal(res1.body.success, true);
+      assert.ok(res1.body.data);
+      assert.equal(res1.body.data.provider, "google_geocoding");
+      assert.equal(res1.body.data.latitude, 25.281);
+      assert.equal(res1.body.data.longitude, 82.999);
+      assert.equal(calls, 1);
+
+      // 2nd request: Cache hit -> does not call provider
+      const res2 = await request(passengerApp)
+        .get("/api/v1/locations/reverse-geocode")
+        .query({ latitude: 25.281, longitude: 82.999 });
+
+      assert.equal(res2.status, 200);
+      assert.equal(res2.body.success, true);
+      assert.equal(calls, 1, "Should have served reverse geocoding response from LRU cache");
+    });
+  });
+
   describe("Live Driver GPS Foundation Regression", () => {
     it("PATCH /api/v1/drivers/me/location should update currentLocation with GeoJSON [longitude, latitude]", async () => {
       const gpsPayload = {

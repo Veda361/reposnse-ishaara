@@ -89,4 +89,44 @@ describe("RoutingService Unit Tests", () => {
     assert.strictEqual(result.provider, "OFFLINE_FALLBACK");
     assert.strictEqual(result.geometry.coordinates.length, 2);
   });
+
+  it("should NOT cache fallback_geometry results to avoid poisoning cache", async () => {
+    let callCount = 0;
+    const fallbackProvider: RoutingProvider = {
+      name: "fallback_geometry",
+      isAvailable: () => true,
+      computeRoute: async (req: RouteRequest) => {
+        callCount++;
+        return {
+          geometry: {
+            type: "LineString",
+            coordinates: [
+              [req.origin.longitude, req.origin.latitude],
+              [req.destination.longitude, req.destination.latitude],
+            ],
+          },
+          distanceMeters: 500,
+          durationSeconds: 60,
+          provider: "fallback_geometry",
+          computedAt: new Date(),
+        };
+      },
+    };
+
+    const cache = new RoutingCache();
+    const service = new RoutingService(fallbackProvider, cache);
+    const req: RouteRequest = {
+      origin: { latitude: 25.28, longitude: 82.98 },
+      destination: { latitude: 25.30, longitude: 83.00 },
+    };
+
+    const res1 = await service.computeRoute(req);
+    assert.strictEqual(res1.provider, "fallback_geometry");
+    assert.strictEqual(callCount, 1);
+
+    // Second call: provider called again because fallback_geometry was not cached
+    const res2 = await service.computeRoute(req);
+    assert.strictEqual(callCount, 2);
+    assert.strictEqual(res2.provider, "fallback_geometry");
+  });
 });

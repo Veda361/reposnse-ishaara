@@ -31,13 +31,14 @@ const ResolvedLocationSchema = new Schema<ResolvedLocation>(
     longitude: { type: Number, required: true },
     formattedAddress: { type: String, required: true },
     displayName: { type: String },
-    provider: { type: String, enum: ["google_maps", "serpapi"], required: true },
+    provider: { type: String, enum: ["google_maps", "serpapi", "google_geocoding"], required: true },
     googlePlaceId: { type: String },
     serpApiDataId: { type: String },
     serpApiDataCid: { type: String },
     city: { type: String },
     state: { type: String },
     country: { type: String },
+    postalCode: { type: String },
   },
   { _id: false }
 );

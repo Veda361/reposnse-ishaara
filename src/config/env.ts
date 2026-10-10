@@ -4,6 +4,26 @@ import { z } from "zod";
 // Load .env file
 dotenv.config();
 
+/**
+ * Schema for optional API keys that rejects whitespace-only strings
+ * while safely treating omitted or empty placeholder definitions as undefined.
+ */
+const optionalApiKeySchema = z
+  .string()
+  .superRefine((val, ctx) => {
+    if (val.length > 0 && val.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "API key must not be empty or whitespace-only",
+      });
+    }
+  })
+  .transform((val) => {
+    const trimmed = val.trim();
+    return trimmed.length > 0 ? trimmed : undefined;
+  })
+  .optional();
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -32,14 +52,31 @@ const envSchema = z
     RESEND_API_KEY: z.string().optional(),
     EMAIL_FROM: z.string().optional(),
 
+    // Google Maps Platform — Canonical Separate Server-Side Keys (Phase 01)
+    GOOGLE_PLACES_API_KEY: optionalApiKeySchema,
+    GOOGLE_ROUTES_API_KEY: optionalApiKeySchema,
+    GOOGLE_GEOCODING_API_KEY: optionalApiKeySchema,
+    GOOGLE_ROADS_API_KEY: optionalApiKeySchema,
+
+    // Backward-compatible aliases for developer local environment
+    GOOGLE_PLACES_API: optionalApiKeySchema,
+    GOOGLE_ROUTES_API: optionalApiKeySchema,
+    GOOGLE_GEOCODING_API: optionalApiKeySchema,
+    GOOGLE_ROADS_API: optionalApiKeySchema,
+
+    // Legacy universal Maps API key (deprecated, migration fallback)
+    GOOGLE_MAPS_API_KEY: optionalApiKeySchema,
+
     // Location System configuration (Phase 4)
-    GOOGLE_MAPS_API_KEY: z.string().optional(),
-    SERPAPI_API_KEY: z.string().optional(),
+    SERPAPI_API_KEY: optionalApiKeySchema,
     GOOGLE_MAPS_ENABLED: z.coerce.boolean().default(true),
     SERPAPI_ENABLED: z.coerce.boolean().default(true),
     LOCATION_PRIMARY_PROVIDER: z
       .enum(["google_maps", "serpapi"])
       .default("google_maps"),
+    LOCATION_FALLBACK_PROVIDER: z
+      .enum(["google_maps", "serpapi", "none"])
+      .default("serpapi"),
     LOCATION_TIMEOUT_MS: z.coerce.number().int().positive().default(5000),
     LOCATION_CACHE_TTL_SECONDS: z.coerce.number().int().positive().default(600),
 
@@ -354,6 +391,36 @@ export const validateEnv = (
     );
   }
 
+  // Deprecation warnings for Google Maps legacy keys & developer local aliases
+  if (
+    config.GOOGLE_MAPS_API_KEY &&
+    (!config.GOOGLE_PLACES_API_KEY || !config.GOOGLE_ROUTES_API_KEY)
+  ) {
+    console.warn(
+      "⚠️ DEPRECATION: GOOGLE_MAPS_API_KEY is deprecated. Migrate to separate server-side keys: GOOGLE_PLACES_API_KEY and GOOGLE_ROUTES_API_KEY.",
+    );
+  }
+  if (config.GOOGLE_PLACES_API && !config.GOOGLE_PLACES_API_KEY) {
+    console.warn(
+      "⚠️ DEPRECATION: GOOGLE_PLACES_API is deprecated. Rename to GOOGLE_PLACES_API_KEY.",
+    );
+  }
+  if (config.GOOGLE_ROUTES_API && !config.GOOGLE_ROUTES_API_KEY) {
+    console.warn(
+      "⚠️ DEPRECATION: GOOGLE_ROUTES_API is deprecated. Rename to GOOGLE_ROUTES_API_KEY.",
+    );
+  }
+  if (config.GOOGLE_GEOCODING_API && !config.GOOGLE_GEOCODING_API_KEY) {
+    console.warn(
+      "⚠️ DEPRECATION: GOOGLE_GEOCODING_API is deprecated. Rename to GOOGLE_GEOCODING_API_KEY.",
+    );
+  }
+  if (config.GOOGLE_ROADS_API && !config.GOOGLE_ROADS_API_KEY) {
+    console.warn(
+      "⚠️ DEPRECATION: GOOGLE_ROADS_API is deprecated. Rename to GOOGLE_ROADS_API_KEY.",
+    );
+  }
+
   // Fail-fast warning checks in production
   if (config.NODE_ENV === "production") {
     if (config.ADMIN_SECRET_KEY === "replace_with_secure_secret") {
@@ -367,10 +434,53 @@ export const validateEnv = (
     ) {
       console.warn("⚠️ WARNING: Production MONGODB_URI points to localhost!");
     }
+    if (
+      config.GOOGLE_MAPS_ENABLED &&
+      config.LOCATION_PRIMARY_PROVIDER === "google_maps" &&
+      !config.GOOGLE_PLACES_API_KEY &&
+      !config.GOOGLE_PLACES_API &&
+      !config.GOOGLE_MAPS_API_KEY &&
+      !config.SERPAPI_API_KEY
+    ) {
+      console.warn(
+        "⚠️ WARNING: Location search is set to google_maps in production, but neither GOOGLE_PLACES_API_KEY nor SERPAPI_API_KEY is configured!",
+      );
+    }
   }
 
   return Object.freeze(config);
 };
+
+// Readiness check helpers for Google Maps Platform server-side capabilities
+export const isPlacesConfigured = (cfg: EnvConfig = env): boolean =>
+  Boolean(
+    (
+      cfg.GOOGLE_PLACES_API_KEY ??
+      cfg.GOOGLE_PLACES_API ??
+      cfg.GOOGLE_MAPS_API_KEY ??
+      cfg.MAPS_API_KEY
+    )?.trim(),
+  );
+
+export const isRoutesConfigured = (cfg: EnvConfig = env): boolean =>
+  Boolean(
+    (
+      cfg.GOOGLE_ROUTES_API_KEY ??
+      cfg.GOOGLE_ROUTES_API ??
+      cfg.GOOGLE_MAPS_API_KEY ??
+      cfg.MAPS_API_KEY
+    )?.trim(),
+  );
+
+export const isGeocodingConfigured = (cfg: EnvConfig = env): boolean =>
+  Boolean(
+    (cfg.GOOGLE_GEOCODING_API_KEY ?? cfg.GOOGLE_GEOCODING_API)?.trim(),
+  );
+
+export const isRoadsConfigured = (cfg: EnvConfig = env): boolean =>
+  Boolean(
+    (cfg.GOOGLE_ROADS_API_KEY ?? cfg.GOOGLE_ROADS_API)?.trim(),
+  );
 
 export { envSchema };
 export const env: EnvConfig = validateEnv();

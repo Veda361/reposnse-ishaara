@@ -1,18 +1,18 @@
 import { ResolvedLocation, LocationSearchParams } from "./location.types";
 import { env } from "../../config/env";
 
-interface CacheEntry {
-  data: ResolvedLocation[];
+interface CacheEntry<T = unknown> {
+  data: T;
   expiresAt: number;
 }
 
 /**
- * Lightweight, bounded in-memory LRU cache with TTL for location search queries.
+ * Lightweight, bounded in-memory LRU cache with TTL for location search and geocoding queries.
  * Prevents redundant external API costs for frequent campus queries ("BHU", "Lanka", "Assi").
  * Does NOT use Redis (Phase 4 scope constraint).
  */
 export class LocationCache {
-  private cache = new Map<string, CacheEntry>();
+  private cache = new Map<string, CacheEntry<unknown>>();
   private readonly maxEntries: number;
   private readonly ttlMs: number;
 
@@ -34,10 +34,41 @@ export class LocationCache {
   }
 
   /**
+   * Generates a normalized deterministic cache key for forward geocoding.
+   */
+  public generateGeocodeKey(params: {
+    address: string;
+    languageCode?: string;
+    regionCode?: string;
+  }): string {
+    const norm = params.address.trim().toLowerCase();
+    const lang = (params.languageCode ?? "none").trim().toLowerCase();
+    const region = (params.regionCode ?? "none").trim().toLowerCase();
+    return `geocode:${norm}:${lang}:${region}`;
+  }
+
+  /**
+   * Generates a normalized deterministic cache key for reverse geocoding.
+   * Quantizes coordinates to 5 decimal places (~1.1 meter resolution at the equator).
+   */
+  public generateReverseGeocodeKey(params: {
+    latitude: number;
+    longitude: number;
+    languageCode?: string;
+    regionCode?: string;
+  }): string {
+    const lat = params.latitude.toFixed(5);
+    const lon = params.longitude.toFixed(5);
+    const lang = (params.languageCode ?? "none").trim().toLowerCase();
+    const region = (params.regionCode ?? "none").trim().toLowerCase();
+    return `reverse_geocode:${lat}:${lon}:${lang}:${region}`;
+  }
+
+  /**
    * Retrieves cached results if present and unexpired.
    */
-  public get(key: string): ResolvedLocation[] | null {
-    const entry = this.cache.get(key);
+  public get<T = ResolvedLocation[]>(key: string): T | null {
+    const entry = this.cache.get(key) as CacheEntry<T> | undefined;
     if (!entry) return null;
 
     if (Date.now() > entry.expiresAt) {
@@ -47,7 +78,7 @@ export class LocationCache {
 
     // Refresh LRU order: delete and re-insert
     this.cache.delete(key);
-    this.cache.set(key, entry);
+    this.cache.set(key, entry as CacheEntry<unknown>);
 
     return entry.data;
   }
@@ -55,7 +86,7 @@ export class LocationCache {
   /**
    * Stores results in the cache, evicting the oldest entry if capacity is exceeded.
    */
-  public set(key: string, data: ResolvedLocation[]): void {
+  public set<T = ResolvedLocation[]>(key: string, data: T): void {
     // If key already exists, delete it first to reset insertion order
     if (this.cache.has(key)) {
       this.cache.delete(key);

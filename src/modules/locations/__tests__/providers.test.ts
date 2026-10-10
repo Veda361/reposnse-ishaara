@@ -7,29 +7,68 @@ describe("Location Providers Unit Tests", () => {
   const originalFetch = globalThis.fetch;
 
   beforeEach(() => {
-    process.env.GOOGLE_MAPS_API_KEY = "mock_google_key";
+    process.env.GOOGLE_PLACES_API_KEY = "mock_places_key";
     process.env.SERPAPI_API_KEY = "mock_serpapi_key";
     process.env.GOOGLE_MAPS_ENABLED = "true";
     process.env.SERPAPI_ENABLED = "true";
+    delete process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.MAPS_API_KEY;
+    delete process.env.GOOGLE_ROUTES_API_KEY;
+    delete process.env.GOOGLE_ANDROID_SDK_API;
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    delete process.env.GOOGLE_PLACES_API_KEY;
+    delete process.env.GOOGLE_PLACES_API;
     delete process.env.GOOGLE_MAPS_API_KEY;
+    delete process.env.MAPS_API_KEY;
+    delete process.env.GOOGLE_ROUTES_API_KEY;
+    delete process.env.GOOGLE_ROUTES_API;
+    delete process.env.GOOGLE_ANDROID_SDK_API;
     delete process.env.SERPAPI_API_KEY;
     delete process.env.GOOGLE_MAPS_ENABLED;
     delete process.env.SERPAPI_ENABLED;
   });
 
   describe("GoogleMapsProvider", () => {
-    test("should report available when key is set and enabled", () => {
+    test("should report available when canonical GOOGLE_PLACES_API_KEY is set and enabled", () => {
       const provider = new GoogleMapsProvider();
       assert.equal(provider.isAvailable(), true);
     });
 
+    test("should report available via legacy GOOGLE_MAPS_API_KEY fallback", () => {
+      delete process.env.GOOGLE_PLACES_API_KEY;
+      process.env.GOOGLE_MAPS_API_KEY = "legacy_google_key";
+      const provider = new GoogleMapsProvider();
+      assert.equal(provider.isAvailable(), true);
+    });
+
+    test("should NOT be available if only GOOGLE_ROUTES_API_KEY is configured", () => {
+      process.env.GOOGLE_PLACES_API_KEY = "";
+      process.env.GOOGLE_PLACES_API = "";
+      process.env.GOOGLE_MAPS_API_KEY = "";
+      process.env.MAPS_API_KEY = "";
+      process.env.GOOGLE_ROUTES_API_KEY = "mock_routes_key";
+      const provider = new GoogleMapsProvider();
+      assert.equal(provider.isAvailable(), false);
+    });
+
+    test("should NOT be available if only client-side GOOGLE_ANDROID_SDK_API is configured", () => {
+      process.env.GOOGLE_PLACES_API_KEY = "";
+      process.env.GOOGLE_PLACES_API = "";
+      process.env.GOOGLE_MAPS_API_KEY = "";
+      process.env.MAPS_API_KEY = "";
+      process.env.GOOGLE_ANDROID_SDK_API = "android_client_sdk_key";
+      const provider = new GoogleMapsProvider();
+      assert.equal(provider.isAvailable(), false);
+    });
+
     test("should return empty array if unconfigured", async () => {
-      delete process.env.GOOGLE_MAPS_API_KEY;
-      delete process.env.MAPS_API_KEY;
+      process.env.GOOGLE_PLACES_API_KEY = "";
+      process.env.GOOGLE_PLACES_API = "";
+      process.env.GOOGLE_MAPS_API_KEY = "";
+      process.env.MAPS_API_KEY = "";
       const provider = new GoogleMapsProvider({ enabled: false, apiKey: undefined });
       assert.equal(provider.isAvailable(), false);
       const results = await provider.searchPlaces({ query: "Assi Ghat" });

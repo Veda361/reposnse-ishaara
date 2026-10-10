@@ -31,18 +31,33 @@ export class LocationOrchestrator {
     );
   }
 
+  private get fallbackProviderName(): "google_maps" | "serpapi" | "none" {
+    const configured =
+      (process.env.LOCATION_FALLBACK_PROVIDER as "google_maps" | "serpapi" | "none") ??
+      env.LOCATION_FALLBACK_PROVIDER;
+    if (configured) {
+      return configured;
+    }
+    return this.primaryProviderName === "serpapi" ? "google_maps" : "serpapi";
+  }
+
   /**
    * Resolves places using primary provider with automatic fallback and cost control.
    * If primary returns results, secondary provider is never called.
    */
   async resolvePlaces(params: LocationSearchParams): Promise<ResolvedLocation[]> {
     const primaryName = this.primaryProviderName;
+    const fallbackName = this.fallbackProviderName;
     const limit = params.limit ?? 5;
 
     const primaryProvider =
       primaryName === "serpapi" ? this.serpApiProvider : this.googleMapsProvider;
     const fallbackProvider =
-      primaryName === "serpapi" ? this.googleMapsProvider : this.serpApiProvider;
+      fallbackName === "none"
+        ? null
+        : fallbackName === "google_maps"
+          ? this.googleMapsProvider
+          : this.serpApiProvider;
 
     // 1. Try Primary Provider if available
     if (primaryProvider.isAvailable()) {
@@ -69,7 +84,7 @@ export class LocationOrchestrator {
     }
 
     // 2. Try Fallback Provider if primary returned 0 results or failed
-    if (fallbackProvider.isAvailable()) {
+    if (fallbackProvider && fallbackProvider.isAvailable()) {
       try {
         const fallbackResults = await fallbackProvider.searchPlaces(params);
         if (fallbackResults.length > 0) {
@@ -88,7 +103,7 @@ export class LocationOrchestrator {
       }
     } else {
       logger.debug("Fallback location provider is not available or unconfigured", {
-        provider: fallbackProvider.name,
+        provider: fallbackProvider ? fallbackProvider.name : "none",
       });
     }
 

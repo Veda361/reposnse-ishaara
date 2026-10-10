@@ -39,13 +39,61 @@ export class GoogleMapsProvider implements ILocationProvider {
   }
 
   private get apiKey(): string | undefined {
-    return (
-      this.config?.apiKey ??
-      env.GOOGLE_MAPS_API_KEY ??
-      process.env.GOOGLE_MAPS_API_KEY ??
-      env.MAPS_API_KEY ??
-      process.env.MAPS_API_KEY
-    );
+    if (this.config?.apiKey) {
+      return this.config.apiKey;
+    }
+
+    // 1. Canonical provider key (Phase 01)
+    if (process.env.GOOGLE_PLACES_API_KEY !== undefined) {
+      const key = process.env.GOOGLE_PLACES_API_KEY.trim();
+      if (key.length > 0) return key;
+    } else if (env.GOOGLE_PLACES_API_KEY) {
+      return env.GOOGLE_PLACES_API_KEY;
+    }
+
+    // 2. Developer local alias fallback
+    if (process.env.GOOGLE_PLACES_API !== undefined) {
+      const alias = process.env.GOOGLE_PLACES_API.trim();
+      if (alias.length > 0) {
+        logger.warn(
+          "⚠️ DEPRECATION: GOOGLE_PLACES_API is deprecated. Migrate to GOOGLE_PLACES_API_KEY.",
+        );
+        return alias;
+      }
+    } else if ((env as any).GOOGLE_PLACES_API) {
+      logger.warn(
+        "⚠️ DEPRECATION: GOOGLE_PLACES_API is deprecated. Migrate to GOOGLE_PLACES_API_KEY.",
+      );
+      return (env as any).GOOGLE_PLACES_API;
+    }
+
+    // 3. Temporary migration fallback for legacy GOOGLE_MAPS_API_KEY
+    // Removal criteria: Scheduled for removal in Phase 04 during Places API (New) migration
+    if (
+      process.env.GOOGLE_MAPS_API_KEY !== undefined ||
+      process.env.MAPS_API_KEY !== undefined
+    ) {
+      const legacy = (
+        process.env.GOOGLE_MAPS_API_KEY ??
+        process.env.MAPS_API_KEY ??
+        ""
+      ).trim();
+      if (legacy.length > 0) {
+        logger.warn(
+          "⚠️ DEPRECATION: GOOGLE_MAPS_API_KEY is deprecated for Places. Set GOOGLE_PLACES_API_KEY explicitly.",
+        );
+        return legacy;
+      }
+    }
+    const legacyKey = env.GOOGLE_MAPS_API_KEY ?? env.MAPS_API_KEY;
+    if (legacyKey) {
+      logger.warn(
+        "⚠️ DEPRECATION: GOOGLE_MAPS_API_KEY is deprecated for Places. Set GOOGLE_PLACES_API_KEY explicitly.",
+      );
+      return legacyKey;
+    }
+
+    return undefined;
   }
 
   isAvailable(): boolean {

@@ -35,8 +35,10 @@ export class RoutingService {
       durationMs,
     });
 
-    // 3. Cache result
-    this.cache.set(request, result);
+    // 3. Cache result (skip degraded fallback geometry to allow automatic recovery)
+    if (result.provider !== "fallback_geometry") {
+      this.cache.set(request, result);
+    }
 
     return result;
   }

@@ -1,9 +1,49 @@
 import { RoutingProvider, RouteRequest, RouteResult } from "../routing.types";
-import { calculateDistanceMeters } from "../../trips/trip.service";
 import { env } from "../../../config/env";
 import { logger } from "../../../config/logger";
 import { AppError } from "../../../shared/errors/app-error";
 import { ERROR_CODES } from "../../../shared/errors/error-codes";
+
+/**
+ * Computes direct spherical distance between two coordinates in meters.
+ */
+function calculateDirectDistanceMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const R = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRad(lat1)) *
+      Math.cos(toRad(lat2)) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+/**
+ * Safely parses duration strings from Google Routes API (e.g. "300s", "300.5s") into whole seconds.
+ */
+export function parseDurationSeconds(durationStr: unknown): number | null {
+  if (typeof durationStr !== "string") {
+    return null;
+  }
+  const match = durationStr.trim().match(/^([0-9]+(?:\.[0-9]+)?)s$/);
+  if (!match) {
+    return null;
+  }
+  const seconds = parseFloat(match[1]);
+  if (!Number.isFinite(seconds) || seconds < 0) {
+    return null;
+  }
+  return Math.round(seconds);
+}
 
 /**
  * Decodes Google's Encoded Polyline Algorithm Format into GeoJSON canonical [longitude, latitude] points.
@@ -62,27 +102,88 @@ export function createFallbackLineString(
   return points;
 }
 
+export interface GoogleRoutesProviderConfig {
+  apiKey?: string;
+  enabled?: boolean;
+}
+
 export class GoogleRoutesProvider implements RoutingProvider {
   readonly name = "google_routes";
+  private config?: GoogleRoutesProviderConfig;
+
+  constructor(config?: GoogleRoutesProviderConfig) {
+    this.config = config;
+  }
 
   private get apiKey(): string | undefined {
-    return (
-      env.GOOGLE_MAPS_API_KEY ??
-      process.env.GOOGLE_MAPS_API_KEY ??
-      env.MAPS_API_KEY ??
-      process.env.MAPS_API_KEY
-    );
+    if (this.config?.apiKey) {
+      return this.config.apiKey;
+    }
+
+    // 1. Canonical provider key (Phase 01)
+    if (process.env.GOOGLE_ROUTES_API_KEY !== undefined) {
+      const key = process.env.GOOGLE_ROUTES_API_KEY.trim();
+      if (key.length > 0) return key;
+    } else if (env.GOOGLE_ROUTES_API_KEY) {
+      return env.GOOGLE_ROUTES_API_KEY;
+    }
+
+    // 2. Developer local alias fallback
+    if (process.env.GOOGLE_ROUTES_API !== undefined) {
+      const alias = process.env.GOOGLE_ROUTES_API.trim();
+      if (alias.length > 0) {
+        logger.warn(
+          "⚠️ DEPRECATION: GOOGLE_ROUTES_API is deprecated. Migrate to GOOGLE_ROUTES_API_KEY.",
+        );
+        return alias;
+      }
+    } else if ((env as any).GOOGLE_ROUTES_API) {
+      logger.warn(
+        "⚠️ DEPRECATION: GOOGLE_ROUTES_API is deprecated. Migrate to GOOGLE_ROUTES_API_KEY.",
+      );
+      return (env as any).GOOGLE_ROUTES_API;
+    }
+
+    // 3. Temporary migration fallback for legacy GOOGLE_MAPS_API_KEY
+    // Removal criteria: Scheduled for removal in Phase 03 during Google Routes API v2 migration
+    if (
+      process.env.GOOGLE_MAPS_API_KEY !== undefined ||
+      process.env.MAPS_API_KEY !== undefined
+    ) {
+      const legacy = (
+        process.env.GOOGLE_MAPS_API_KEY ??
+        process.env.MAPS_API_KEY ??
+        ""
+      ).trim();
+      if (legacy.length > 0) {
+        logger.warn(
+          "⚠️ DEPRECATION: GOOGLE_MAPS_API_KEY is deprecated for Routes. Set GOOGLE_ROUTES_API_KEY explicitly.",
+        );
+        return legacy;
+      }
+    } else {
+      const legacyKey = env.GOOGLE_MAPS_API_KEY ?? env.MAPS_API_KEY;
+      if (legacyKey) {
+        logger.warn(
+          "⚠️ DEPRECATION: GOOGLE_MAPS_API_KEY is deprecated for Routes. Set GOOGLE_ROUTES_API_KEY explicitly.",
+        );
+        return legacyKey;
+      }
+    }
+
+    return undefined;
   }
 
   isAvailable(): boolean {
-    return Boolean(this.apiKey && this.apiKey.trim().length > 0);
+    const isEnabled = this.config?.enabled ?? true;
+    return Boolean(isEnabled && this.apiKey && this.apiKey.trim().length > 0);
   }
 
   async computeRoute(request: RouteRequest): Promise<RouteResult> {
     const { origin, destination } = request;
 
     // Haversine baseline calculation
-    const directDistanceMeters = calculateDistanceMeters(
+    const directDistanceMeters = calculateDirectDistanceMeters(
       origin.latitude,
       origin.longitude,
       destination.latitude,
@@ -109,27 +210,93 @@ export class GoogleRoutesProvider implements RoutingProvider {
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
-      const url =
-        `https://maps.googleapis.com/maps/api/directions/json` +
-        `?origin=${origin.latitude},${origin.longitude}` +
-        `&destination=${destination.latitude},${destination.longitude}` +
-        `&mode=driving` +
-        `&key=${this.apiKey}`;
+      const travelMode =
+        request.mode === "TWO_WHEELER" ? "TWO_WHEELER" : "DRIVE";
+      const requestBody: Record<string, any> = {
+        origin: {
+          location: {
+            latLng: {
+              latitude: origin.latitude,
+              longitude: origin.longitude,
+            },
+          },
+        },
+        destination: {
+          location: {
+            latLng: {
+              latitude: destination.latitude,
+              longitude: destination.longitude,
+            },
+          },
+        },
+        travelMode,
+      };
 
-      const response = await fetch(url, { signal: controller.signal });
+      if (travelMode === "DRIVE") {
+        requestBody.routingPreference = "TRAFFIC_UNAWARE";
+      }
+
+      const response = await fetch(
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": this.apiKey!,
+            "X-Goog-FieldMask":
+              "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
+          },
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+        }
+      );
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        let errorDetail = `HTTP ${response.status}`;
+        try {
+          const errData: any = await response.json();
+          if (errData?.error?.message) {
+            errorDetail = `${response.status} - ${errData.error.message}`;
+          }
+        } catch {
+          // Ignore JSON parse error on non-200 responses
+        }
+
+        if (response.status === 400) {
+          logger.warn("Google Routes API 400 Bad Request", {
+            error: errorDetail,
+          });
+        } else if (response.status === 401 || response.status === 403) {
+          logger.error("Google Routes API authentication failed", {
+            status: response.status,
+          });
+        } else if (response.status === 429) {
+          logger.warn("Google Routes API rate limited / quota exceeded (429)", {
+            error: errorDetail,
+          });
+        } else {
+          logger.warn("Google Routes API server error", {
+            status: response.status,
+            error: errorDetail,
+          });
+        }
+
         throw new AppError(
           ERROR_CODES.MATCHING_PROVIDER_UNAVAILABLE,
-          `Google Directions API HTTP ${response.status}`,
-          502
+          `Google Routes API error: ${errorDetail}`,
+          response.status >= 500 ? 502 : response.status
         );
       }
 
       const data: any = await response.json();
 
-      if (data.status === "ZERO_RESULTS" || !data.routes || data.routes.length === 0) {
+      if (
+        !data.routes ||
+        !Array.isArray(data.routes) ||
+        data.routes.length === 0
+      ) {
+        logger.warn("Google Routes API returned empty routes array");
         throw new AppError(
           ERROR_CODES.MATCHING_NO_RESULTS,
           "No drivable route found between origin and destination.",
@@ -137,25 +304,64 @@ export class GoogleRoutesProvider implements RoutingProvider {
         );
       }
 
-      if (data.status !== "OK") {
-        throw new AppError(
-          ERROR_CODES.MATCHING_PROVIDER_UNAVAILABLE,
-          `Google Directions error: ${data.status} - ${data.error_message || ""}`,
-          502
+      const route = data.routes[0];
+
+      // Validate distanceMeters
+      if (
+        typeof route.distanceMeters !== "number" ||
+        !Number.isFinite(route.distanceMeters) ||
+        route.distanceMeters < 0
+      ) {
+        throw new Error(
+          "Google Routes API response missing valid distanceMeters"
+        );
+      }
+      const distanceMeters = Math.round(route.distanceMeters);
+
+      // Validate and parse duration
+      const durationSeconds = parseDurationSeconds(route.duration);
+      if (
+        durationSeconds === null ||
+        !Number.isFinite(durationSeconds) ||
+        durationSeconds < 0
+      ) {
+        throw new Error(
+          `Google Routes API response missing valid duration: ${route.duration}`
         );
       }
 
-      const route = data.routes[0];
-      const leg = route.legs?.[0];
-      const distanceMeters = leg?.distance?.value ?? Math.round(directDistanceMeters * 1.3);
-      const durationSeconds = leg?.duration?.value ?? Math.round(distanceMeters / 8.33);
-      const encodedPolyline = route.overview_polyline?.points;
+      // Validate encoded polyline
+      const encodedPolyline = route.polyline?.encodedPolyline;
+      if (
+        typeof encodedPolyline !== "string" ||
+        encodedPolyline.trim().length === 0
+      ) {
+        throw new Error(
+          "Google Routes API response missing valid encodedPolyline"
+        );
+      }
 
-      let coordinates: Array<[number, number]>;
-      if (encodedPolyline) {
-        coordinates = decodePolyline(encodedPolyline);
-      } else {
-        coordinates = createFallbackLineString(origin, destination);
+      const coordinates = decodePolyline(encodedPolyline);
+      if (!Array.isArray(coordinates) || coordinates.length < 2) {
+        throw new Error("Decoded polyline contains fewer than 2 coordinates");
+      }
+
+      // Validate coordinate bounds
+      const areCoordsValid = coordinates.every(
+        (c) =>
+          Array.isArray(c) &&
+          c.length === 2 &&
+          Number.isFinite(c[0]) &&
+          Number.isFinite(c[1]) &&
+          c[0] >= -180 &&
+          c[0] <= 180 &&
+          c[1] >= -90 &&
+          c[1] <= 90
+      );
+      if (!areCoordsValid) {
+        throw new Error(
+          "Decoded polyline contains coordinates outside valid geographic range"
+        );
       }
 
       return {
@@ -173,13 +379,16 @@ export class GoogleRoutesProvider implements RoutingProvider {
       clearTimeout(timeoutId);
 
       if (err.name === "AbortError") {
-        logger.warn("Google Directions API timed out, using fallback geometry", {
+        logger.warn("Google Routes API timed out, using fallback geometry", {
           timeoutMs,
         });
       } else {
-        logger.warn("Google Directions API request failed, using fallback geometry", {
-          error: err.message,
-        });
+        logger.warn(
+          "Google Routes API request failed, using fallback geometry",
+          {
+            error: err.message,
+          }
+        );
       }
 
       // Safe fallback to prevent trip creation or discovery crashes
