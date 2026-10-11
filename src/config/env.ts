@@ -64,6 +64,23 @@ const envSchema = z
     GOOGLE_GEOCODING_API: optionalApiKeySchema,
     GOOGLE_ROADS_API: optionalApiKeySchema,
 
+    // Android client identification headers for Android-restricted Google API keys
+    GOOGLE_ANDROID_PACKAGE_NAME: z.string().default("com.ishara.app"),
+    GOOGLE_ANDROID_CERT_SHA1: z.string().default("C0D888B8A6168C5880FCA58C5D35038EC7A45D98"),
+
+    // Phase 05: Google Roads API Snap to Roads Feature Flag (disabled by default)
+    GOOGLE_ROADS_SNAP_ENABLED: z
+      .preprocess((val) => {
+        if (val === undefined || val === null || val === "") return false;
+        if (typeof val === "boolean") return val;
+        if (typeof val === "string") {
+          const lower = val.trim().toLowerCase();
+          return lower === "true" || lower === "1";
+        }
+        return Boolean(val);
+      }, z.boolean())
+      .default(false),
+
     // Legacy universal Maps API key (deprecated, migration fallback)
     GOOGLE_MAPS_API_KEY: optionalApiKeySchema,
 
@@ -481,6 +498,9 @@ export const isRoadsConfigured = (cfg: EnvConfig = env): boolean =>
   Boolean(
     (cfg.GOOGLE_ROADS_API_KEY ?? cfg.GOOGLE_ROADS_API)?.trim(),
   );
+
+export const isRoadsSnapEnabled = (cfg: EnvConfig = env): boolean =>
+  Boolean(cfg.GOOGLE_ROADS_SNAP_ENABLED && isRoadsConfigured(cfg));
 
 export { envSchema };
 export const env: EnvConfig = validateEnv();

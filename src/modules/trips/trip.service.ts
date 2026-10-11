@@ -39,6 +39,7 @@ import { logger } from "../../config/logger";
 import { routingService } from "../routing/routing.service";
 import { tripDiscoveryChangeSource } from "../realtime/trip-discovery-change.source";
 import { driverPresenceService } from "../drivers/driver-presence.service";
+import { locationService } from "../locations/location.service";
 
 /**
  * Computes great-circle distance between two geographic coordinates in meters
@@ -96,6 +97,154 @@ export class TripService {
     }
 
     return agency;
+  }
+
+  /**
+   * Validates geographical consistency between user-provided place label/address and physical coordinates.
+   * Defensible Policy:
+   * 1. Preserves legitimate custom locations and rural destinations (if place cannot be resolved via geocoding/search, coordinates are trusted).
+   * 2. If the place name matches a well-known authoritative place, asserts that the provided coordinates do not severely contradict
+   *    the resolved place (> 75 km discrepancy, e.g. claiming (25.28, 83.00) in Varanasi is "Jhansi" which is 450 km away).
+   */
+  async validateLocationGeographicConsistency(
+    location: { name?: string; formattedAddress: string; latitude: number; longitude: number },
+    fieldLabel: "origin" | "destination"
+  ): Promise<void> {
+    const rawLabel = (location.name || location.formattedAddress || "").trim();
+    if (rawLabel.length < 3) return;
+
+    // Check venue or street keywords - if it's a specific street address, shop, college, or venue,
+    // do not attempt broad city-level discrepancy checks that could false-flag local venues
+    const norm = rawLabel.toLowerCase();
+    const venueOrStreetKeywords = [
+      "road", "marg", "street", "lane", "gali", "colony", "nagar", "ward",
+      "sector", "block", "flat", "plot", "house", "gate", "ghat", "temple",
+      "mandir", "masjid", "church", "hospital", "college", "school", "university",
+      "campus", "hostel", "mess", "canteen", "hotel", "restaurant", "store", "shop"
+    ];
+    if (venueOrStreetKeywords.some((w) => norm.includes(w))) {
+      return;
+    }
+
+    try {
+      const candidates = await locationService.search({ q: rawLabel, limit: 5 });
+      if (!candidates || candidates.length === 0) {
+        // Legitimate custom or rural location not indexed in gazetteers -> Preserve custom location
+        return;
+      }
+
+      // If any candidate is within 50 km of the provided coordinates, accept as valid local entity
+      const hasLocalMatch = candidates.some((c) => {
+        const d = calculateDistanceMeters(
+          location.latitude,
+          location.longitude,
+          c.latitude,
+          c.longitude
+        );
+        return d <= 50_000;
+      });
+
+      if (hasLocalMatch) {
+        return;
+      }
+
+      const strongMatch = candidates[0];
+      const discrepancyMeters = calculateDistanceMeters(
+        location.latitude,
+        location.longitude,
+        strongMatch.latitude,
+        strongMatch.longitude
+      );
+
+      const cName = (strongMatch.displayName || strongMatch.formattedAddress || "").toLowerCase();
+      const isExactRegionalMatch =
+        cName.startsWith(norm) || norm.startsWith(cName) || cName.split(",")[0].trim() === norm;
+
+      if (isExactRegionalMatch && discrepancyMeters > 100_000) {
+        const discrepancyKm = (discrepancyMeters / 1000).toFixed(1);
+        logger.warn("Geographical inconsistency rejected during trip validation", {
+          field: fieldLabel,
+          label: rawLabel,
+          providedCoords: [location.latitude, location.longitude],
+          resolvedCoords: [strongMatch.latitude, strongMatch.longitude],
+          discrepancyKm,
+        });
+
+        throw new BadRequestError(
+          `Provided ${fieldLabel} coordinates (${location.latitude}, ${location.longitude}) are geographically inconsistent with place '${rawLabel}' (${discrepancyKm} km away from ${strongMatch.displayName || strongMatch.formattedAddress}). Please check your coordinates or select from location search.`,
+          ERROR_CODES.LOCATION_INVALID_COORDINATES
+        );
+      }
+    } catch (err: any) {
+      if (err instanceof BadRequestError) {
+        throw err;
+      }
+      logger.debug("Skipping geographic consistency check due to search error", {
+        err: err.message,
+      });
+    }
+  }
+
+  /**
+   * Validates that two distinct regional destinations (e.g., Jhansi and Varanasi)
+   * are not falsely assigned coordinates that resolve both endpoints to the same local area.
+   */
+  validateOriginDestinationConsistency(
+    origin: { name?: string; formattedAddress: string; latitude: number; longitude: number },
+    destination: { name?: string; formattedAddress: string; latitude: number; longitude: number }
+  ): void {
+    const origName = (origin.name || origin.formattedAddress || "").toLowerCase().trim();
+    const destName = (destination.name || destination.formattedAddress || "").toLowerCase().trim();
+
+    const distanceMeters = calculateDistanceMeters(
+      origin.latitude,
+      origin.longitude,
+      destination.latitude,
+      destination.longitude
+    );
+
+    // If endpoints are < 10 km apart:
+    if (distanceMeters < 10_000) {
+      const venueKeywords = [
+        "sweet", "hotel", "restaurant", "store", "shop", "dhaba", "bazaar", "bazar",
+        "market", "marg", "road", "colony", "nagar", "ward", "lane", "gali", "point",
+        "stand", "stall", "corner", "center", "centre", "cafe", "hospital", "cinema"
+      ];
+      const hasVenueKeyword = (s: string) => venueKeywords.some((w) => s.includes(w));
+
+      const isMajorCity = (s: string, city: string) => {
+        if (hasVenueKeyword(s)) return false;
+        const cleaned = s.replace(/[^a-z0-9\s]/g, " ").replace(/\s+/g, " ").trim();
+        const words = cleaned.split(" ");
+        return (
+          words.length <= 4 &&
+          words.includes(city) &&
+          !words.some((w) => venueKeywords.includes(w))
+        );
+      };
+
+      const distantCityPairs = [
+        ["jhansi", "varanasi"],
+        ["delhi", "mumbai"],
+        ["lucknow", "varanasi"],
+        ["kanpur", "varanasi"],
+        ["delhi", "varanasi"],
+        ["bangalore", "delhi"],
+      ];
+
+      for (const [c1, c2] of distantCityPairs) {
+        const isPair =
+          (isMajorCity(origName, c1) && isMajorCity(destName, c2)) ||
+          (isMajorCity(origName, c2) && isMajorCity(destName, c1));
+
+        if (isPair) {
+          throw new BadRequestError(
+            `Contradictory trip endpoints: Origin '${origin.formattedAddress}' and Destination '${destination.formattedAddress}' represent distant geographical regions, but provided coordinates are only ${(distanceMeters / 1000).toFixed(1)} km apart. Both endpoints must not resolve to the same local area.`,
+            ERROR_CODES.LOCATION_INVALID_COORDINATES
+          );
+        }
+      }
+    }
   }
 
   /**
@@ -228,7 +377,11 @@ export class TripService {
     const driverId = new Types.ObjectId(driverProfileId);
     const vehicleId = new Types.ObjectId(input.vehicleId);
 
-    // 1. Geographic separation check (>= 50 meters)
+    // 1. Geographic separation and consistency check
+    this.validateOriginDestinationConsistency(input.origin, input.destination);
+    await this.validateLocationGeographicConsistency(input.origin, "origin");
+    await this.validateLocationGeographicConsistency(input.destination, "destination");
+
     const separation = calculateDistanceMeters(
       input.origin.latitude,
       input.origin.longitude,
@@ -308,7 +461,48 @@ export class TripService {
       }
     }
 
-    // 5. Persist Trip in CREATED status
+    // 5. Compute authoritative road route if not supplied by client
+    let initialRoute = input.route
+      ? {
+          geometry: input.route.geometry
+            ? {
+                type: "LineString" as const,
+                coordinates: input.route.geometry.coordinates,
+              }
+            : undefined,
+          distanceMeters: input.route.distanceMeters,
+          durationSeconds: input.route.durationSeconds,
+          provider: input.route.provider,
+        }
+      : null;
+
+    if (!initialRoute) {
+      try {
+        const computed = await routingService.computeRoute({
+          origin: {
+            latitude: input.origin.latitude,
+            longitude: input.origin.longitude,
+          },
+          destination: {
+            latitude: input.destination.latitude,
+            longitude: input.destination.longitude,
+          },
+        });
+        initialRoute = {
+          geometry: computed.geometry,
+          distanceMeters: computed.distanceMeters,
+          durationSeconds: computed.durationSeconds,
+          provider: computed.provider,
+        };
+      } catch (routeErr: any) {
+        logger.warn(
+          "Route computation unavailable during trip creation, creating trip without cached route",
+          { error: routeErr.message }
+        );
+      }
+    }
+
+    // 6. Persist Trip in CREATED status
     const scheduledAt = input.scheduledDepartureAt
       ? new Date(input.scheduledDepartureAt)
       : null;
@@ -341,19 +535,7 @@ export class TripService {
         googlePlaceId: input.destination.googlePlaceId,
         serpApiDataId: input.destination.serpApiDataId,
       },
-      route: input.route
-        ? {
-            geometry: input.route.geometry
-              ? {
-                  type: "LineString",
-                  coordinates: input.route.geometry.coordinates,
-                }
-              : undefined,
-            distanceMeters: input.route.distanceMeters,
-            durationSeconds: input.route.durationSeconds,
-            provider: input.route.provider,
-          }
-        : null,
+      route: initialRoute,
       status: TripStatus.CREATED,
       scheduledDepartureAt: scheduledAt,
       startedAt: null,
@@ -394,7 +576,11 @@ export class TripService {
     const driverId = new Types.ObjectId(input.driverId);
     const vehicleId = new Types.ObjectId(input.vehicleId);
 
-    // 1. Geographic separation check
+    // 1. Geographic separation and consistency check
+    this.validateOriginDestinationConsistency(input.origin, input.destination);
+    await this.validateLocationGeographicConsistency(input.origin, "origin");
+    await this.validateLocationGeographicConsistency(input.destination, "destination");
+
     const separation = calculateDistanceMeters(
       input.origin.latitude,
       input.origin.longitude,
@@ -437,6 +623,47 @@ export class TripService {
       );
     }
 
+    // 4. Compute authoritative road route if not supplied by dispatch
+    let initialRoute = input.route
+      ? {
+          geometry: input.route.geometry
+            ? {
+                type: "LineString" as const,
+                coordinates: input.route.geometry.coordinates,
+              }
+            : undefined,
+          distanceMeters: input.route.distanceMeters,
+          durationSeconds: input.route.durationSeconds,
+          provider: input.route.provider,
+        }
+      : null;
+
+    if (!initialRoute) {
+      try {
+        const computed = await routingService.computeRoute({
+          origin: {
+            latitude: input.origin.latitude,
+            longitude: input.origin.longitude,
+          },
+          destination: {
+            latitude: input.destination.latitude,
+            longitude: input.destination.longitude,
+          },
+        });
+        initialRoute = {
+          geometry: computed.geometry,
+          distanceMeters: computed.distanceMeters,
+          durationSeconds: computed.durationSeconds,
+          provider: computed.provider,
+        };
+      } catch (routeErr: any) {
+        logger.warn(
+          "Route computation unavailable during agency trip creation, creating trip without cached route",
+          { error: routeErr.message }
+        );
+      }
+    }
+
     const scheduledAt = input.scheduledDepartureAt
       ? new Date(input.scheduledDepartureAt)
       : null;
@@ -473,19 +700,7 @@ export class TripService {
         googlePlaceId: input.destination.googlePlaceId,
         serpApiDataId: input.destination.serpApiDataId,
       },
-      route: input.route
-        ? {
-            geometry: input.route.geometry
-              ? {
-                  type: "LineString",
-                  coordinates: input.route.geometry.coordinates,
-                }
-              : undefined,
-            distanceMeters: input.route.distanceMeters,
-            durationSeconds: input.route.durationSeconds,
-            provider: input.route.provider,
-          }
-        : null,
+      route: initialRoute,
       status: initialStatus,
       scheduledDepartureAt: scheduledAt,
       startedAt: null,
@@ -789,7 +1004,7 @@ export class TripService {
         };
       } catch (routeErr: any) {
         logger.warn(
-          "Route computation failed during trip start, using fallback geometry",
+          "Route computation unavailable during trip start, proceeding without road route",
           {
             tripId,
             error: routeErr.message,

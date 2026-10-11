@@ -155,7 +155,7 @@ export class DriverPresenceService {
         isSuspended: { $ne: true },
         status: DriverStatus.OFFLINE,
       },
-      { $set: { status: DriverStatus.ONLINE } },
+      { $set: { status: DriverStatus.ONLINE, lastHeartbeatAt: new Date() } },
     );
 
     if (result.modifiedCount > 0) {

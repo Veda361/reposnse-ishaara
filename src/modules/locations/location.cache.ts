@@ -28,9 +28,10 @@ export class LocationCache {
     const normalizedQuery = params.query.trim().toLowerCase();
     const lat = params.latitude !== undefined ? params.latitude.toFixed(2) : "none";
     const lon = params.longitude !== undefined ? params.longitude.toFixed(2) : "none";
+    const radius = params.radius !== undefined ? Math.round(params.radius) : "none";
     const limit = params.limit || 5;
 
-    return `${normalizedQuery}:${lat}:${lon}:${limit}`;
+    return `${normalizedQuery}:${lat}:${lon}:${radius}:${limit}`;
   }
 
   /**

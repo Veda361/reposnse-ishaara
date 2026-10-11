@@ -65,12 +65,13 @@ describe("Location System & GPS Integration Tests", () => {
 
   beforeEach(() => {
     locationCache.clear();
-    process.env.GOOGLE_MAPS_API_KEY = "mock_key";
+    process.env.GOOGLE_PLACES_API_KEY = "mock_places_key";
     process.env.GOOGLE_MAPS_ENABLED = "true";
   });
 
   afterEach(() => {
     globalThis.fetch = originalFetch;
+    delete process.env.GOOGLE_PLACES_API_KEY;
     delete process.env.GOOGLE_MAPS_API_KEY;
     delete process.env.GOOGLE_MAPS_ENABLED;
     locationCache.clear();
@@ -161,15 +162,12 @@ describe("Location System & GPS Integration Tests", () => {
         networkCalls++;
         return new Response(
           JSON.stringify({
-            status: "OK",
-            results: [
+            places: [
               {
-                place_id: "ChIJ_assi_vns",
-                name: "Assi Ghat",
-                formatted_address: "Assi Ghat, Varanasi, UP",
-                geometry: {
-                  location: { lat: 25.2899, lng: 83.0068 },
-                },
+                id: "ChIJ_assi_vns",
+                displayName: { text: "Assi Ghat", languageCode: "en" },
+                formattedAddress: "Assi Ghat, Varanasi, UP",
+                location: { latitude: 25.2899, longitude: 83.0068 },
               },
             ],
           }),

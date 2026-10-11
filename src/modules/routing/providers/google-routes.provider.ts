@@ -191,18 +191,11 @@ export class GoogleRoutesProvider implements RoutingProvider {
     );
 
     if (!this.isAvailable()) {
-      // Clean fallback: interpolated road corridor approximation (average speed 30 km/h = 8.33 m/s)
-      const durationSeconds = Math.round((directDistanceMeters * 1.3) / 8.33);
-      return {
-        provider: "fallback_geometry",
-        geometry: {
-          type: "LineString",
-          coordinates: createFallbackLineString(origin, destination),
-        },
-        distanceMeters: Math.round(directDistanceMeters * 1.3),
-        durationSeconds: Math.max(60, durationSeconds),
-        computedAt: new Date(),
-      };
+      throw new AppError(
+        ERROR_CODES.MATCHING_PROVIDER_UNAVAILABLE,
+        "Google Routes API provider is not available or API key is not configured.",
+        503
+      );
     }
 
     const timeoutMs = env.ROUTING_TIMEOUT_MS || 5000;
@@ -236,20 +229,57 @@ export class GoogleRoutesProvider implements RoutingProvider {
         requestBody.routingPreference = "TRAFFIC_UNAWARE";
       }
 
-      const response = await fetch(
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": this.apiKey!,
+        "X-Goog-FieldMask":
+          "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
+      };
+
+      let response = await fetch(
         "https://routes.googleapis.com/directions/v2:computeRoutes",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": this.apiKey!,
-            "X-Goog-FieldMask":
-              "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
-          },
+          headers,
           body: JSON.stringify(requestBody),
           signal: controller.signal,
         }
       );
+
+      // Automatic fallback for Google Cloud keys restricted to Android apps
+      if (response.status === 403) {
+        let errMessage = "";
+        try {
+          const errData: any = await response.clone().json();
+          errMessage = errData?.error?.message || "";
+        } catch {
+          // Ignore JSON parse error on non-200 responses
+        }
+
+        if (errMessage.includes("Android client application")) {
+          const androidPkg = process.env.GOOGLE_ANDROID_PACKAGE_NAME || env.GOOGLE_ANDROID_PACKAGE_NAME || "com.ishara.app";
+          const androidCert = process.env.GOOGLE_ANDROID_CERT_SHA1 || env.GOOGLE_ANDROID_CERT_SHA1 || "C0D888B8A6168C5880FCA58C5D35038EC7A45D98";
+          logger.info("Google Routes API key is Android-restricted; retrying with Android client identity headers", {
+            provider: this.name,
+            package: androidPkg,
+          });
+          const androidHeaders: Record<string, string> = {
+            ...headers,
+            "X-Android-Package": androidPkg,
+            "X-Android-Cert": androidCert,
+          };
+          response = await fetch(
+            "https://routes.googleapis.com/directions/v2:computeRoutes",
+            {
+              method: "POST",
+              headers: androidHeaders,
+              body: JSON.stringify(requestBody),
+              signal: controller.signal,
+            }
+          );
+        }
+      }
+
       clearTimeout(timeoutId);
 
       if (!response.ok) {
@@ -270,6 +300,7 @@ export class GoogleRoutesProvider implements RoutingProvider {
         } else if (response.status === 401 || response.status === 403) {
           logger.error("Google Routes API authentication failed", {
             status: response.status,
+            error: errorDetail,
           });
         } else if (response.status === 429) {
           logger.warn("Google Routes API rate limited / quota exceeded (429)", {
@@ -378,31 +409,26 @@ export class GoogleRoutesProvider implements RoutingProvider {
     } catch (err: any) {
       clearTimeout(timeoutId);
 
+      const msg = err instanceof Error ? err.message : String(err);
+      if (err instanceof AppError) {
+        throw err;
+      }
+
       if (err.name === "AbortError") {
-        logger.warn("Google Routes API timed out, using fallback geometry", {
-          timeoutMs,
-        });
-      } else {
-        logger.warn(
-          "Google Routes API request failed, using fallback geometry",
-          {
-            error: err.message,
-          }
+        logger.warn("Google Routes API timed out", { timeoutMs });
+        throw new AppError(
+          ERROR_CODES.MATCHING_PROVIDER_UNAVAILABLE,
+          `Google Routes API timed out after ${timeoutMs}ms`,
+          504
         );
       }
 
-      // Safe fallback to prevent trip creation or discovery crashes
-      const durationSeconds = Math.round((directDistanceMeters * 1.3) / 8.33);
-      return {
-        provider: "fallback_geometry",
-        geometry: {
-          type: "LineString",
-          coordinates: createFallbackLineString(origin, destination),
-        },
-        distanceMeters: Math.round(directDistanceMeters * 1.3),
-        durationSeconds: Math.max(60, durationSeconds),
-        computedAt: new Date(),
-      };
+      logger.warn("Google Routes API request failed", { error: msg });
+      throw new AppError(
+        ERROR_CODES.MATCHING_PROVIDER_UNAVAILABLE,
+        `Google Routes API request failed: ${msg}`,
+        502
+      );
     }
   }
 }

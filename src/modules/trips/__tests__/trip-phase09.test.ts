@@ -1,4 +1,4 @@
-import { describe, it, before, after } from "node:test";
+import { describe, it, before, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import mongoose from "mongoose";
@@ -532,6 +532,24 @@ describe("Phase 09: Trip + Dispatch + Operational Lifecycle Foundation Tests", (
   // ============================================================
   describe("3. Trip Execution, Operational Transitions & Concurrency", () => {
     let activeTripId: string;
+
+    before(async () => {
+      await DriverProfileModel.findByIdAndUpdate(driver1ProfileId, {
+        status: DriverStatus.ONLINE,
+      });
+    });
+
+    beforeEach(async () => {
+      await DriverProfileModel.findByIdAndUpdate(driver1ProfileId, {
+        currentLocation: {
+          type: "Point",
+          coordinates: [82.9995, 25.2799],
+          recordedAt: new Date(),
+          receivedAt: new Date(),
+        },
+        lastHeartbeatAt: new Date(),
+      });
+    });
 
     it("12. Driver 1 starts assigned trip (200 OK, status -> ACTIVE, driver -> ON_RIDE)", async () => {
       const createRes = await request(app)

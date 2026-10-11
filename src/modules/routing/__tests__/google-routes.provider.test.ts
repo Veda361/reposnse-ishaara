@@ -224,13 +224,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
     });
   });
 
-  describe("Error Handling & Fallback Behavior", () => {
+  describe("Error Handling & Failure Integrity (No Fake Road Fallback)", () => {
     const sampleRequest: RouteRequest = {
       origin: { latitude: 25.28, longitude: 82.98 },
       destination: { latitude: 25.30, longitude: 83.00 },
     };
 
-    test("should use fallback_geometry without throwing when unconfigured", async () => {
+    test("should throw AppError when unconfigured", async () => {
       process.env.GOOGLE_ROUTES_API_KEY = "";
       process.env.GOOGLE_ROUTES_API = "";
       process.env.GOOGLE_MAPS_API_KEY = "";
@@ -238,15 +238,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
       const provider = new GoogleRoutesProvider();
       assert.strictEqual(provider.isAvailable(), false);
 
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
-      assert.ok(result.distanceMeters > 0);
-      assert.ok(result.durationSeconds > 0);
-      assert.strictEqual(result.geometry.type, "LineString");
-      assert.ok(result.geometry.coordinates.length >= 2);
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on HTTP 400 Bad Request", async () => {
+    test("should throw AppError on HTTP 400 Bad Request without generating fake straight-line", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({ error: { code: 400, message: "Invalid argument: latLng out of bounds" } }),
@@ -254,12 +252,55 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
-      assert.ok(result.distanceMeters > 0);
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on HTTP 401 Unauthorized / 403 Forbidden", async () => {
+    test("should retry with Android headers when HTTP 403 indicates Android client restriction", async () => {
+      let callCount = 0;
+      let secondCallHeaders: Record<string, string> = {};
+
+      globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+        callCount++;
+        if (callCount === 1) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 403,
+                message: "Requests from this Android client application <empty> are blocked",
+              },
+            }),
+            { status: 403 }
+          );
+        }
+        secondCallHeaders = (init?.headers as Record<string, string>) || {};
+        return new Response(
+          JSON.stringify({
+            routes: [
+              {
+                distanceMeters: 530376,
+                duration: "33381s",
+                polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" },
+              },
+            ],
+          }),
+          { status: 200 }
+        );
+      };
+
+      const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
+      const result = await provider.computeRoute(sampleRequest);
+
+      assert.strictEqual(callCount, 2);
+      assert.strictEqual(secondCallHeaders["X-Android-Package"], "com.ishara.app");
+      assert.ok(secondCallHeaders["X-Android-Cert"]);
+      assert.strictEqual(result.distanceMeters, 530376);
+      assert.strictEqual(result.durationSeconds, 33381);
+    });
+
+    test("should throw on HTTP 401 / 403 when retry also fails", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({ error: { code: 403, message: "API key expired or restricted" } }),
@@ -267,11 +308,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on HTTP 429 Quota Exceeded", async () => {
+    test("should throw on HTTP 429 Quota Exceeded", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({ error: { code: 429, message: "Resource exhausted" } }),
@@ -279,11 +322,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on HTTP 500 Server Error", async () => {
+    test("should throw on HTTP 500 Server Error", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({ error: { code: 500, message: "Internal server error" } }),
@@ -291,21 +336,25 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on network failure", async () => {
+    test("should throw on network failure", async () => {
       globalThis.fetch = async () => {
         throw new TypeError("Failed to fetch: network unreachable");
       };
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on timeout", async () => {
+    test("should throw on timeout", async () => {
       globalThis.fetch = async () => {
         const error = new Error("The operation was aborted");
         error.name = "AbortError";
@@ -313,29 +362,24 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
       };
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on malformed JSON response", async () => {
-      globalThis.fetch = async () =>
-        new Response("<!DOCTYPE html><html><body>Error</body></html>", { status: 200 });
-
-      const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
-    });
-
-    test("should activate fallback_geometry on empty routes array", async () => {
+    test("should throw MATCHING_NO_RESULTS on empty routes array", async () => {
       globalThis.fetch = async () =>
         new Response(JSON.stringify({ routes: [] }), { status: 200 });
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_NO_RESULTS"
+      );
     });
 
-    test("should activate fallback_geometry on missing distance or duration", async () => {
+    test("should throw when missing distance or duration", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({
@@ -349,11 +393,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on invalid duration string", async () => {
+    test("should throw on invalid duration string", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({
@@ -369,11 +415,13 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
 
-    test("should activate fallback_geometry on undecodable polyline", async () => {
+    test("should throw on undecodable polyline", async () => {
       globalThis.fetch = async () =>
         new Response(
           JSON.stringify({
@@ -389,8 +437,10 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
         );
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-      assert.strictEqual(result.provider, "fallback_geometry");
+      await assert.rejects(
+        async () => provider.computeRoute(sampleRequest),
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+      );
     });
   });
 });

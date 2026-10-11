@@ -3,7 +3,11 @@
  * Encapsulates canonical Google place identifiers and SerpApi discovery metadata
  * without exposing raw external provider JSON.
  */
-export type LocationProviderName = "google_maps" | "serpapi" | "google_geocoding";
+export type LocationProviderName =
+  | "google_maps"
+  | "serpapi"
+  | "google_geocoding"
+  | "google_roads";
 
 export interface ResolvedLocation {
   latitude: number;
@@ -66,5 +70,50 @@ export interface IGeocodingProvider {
   readonly name: "google_geocoding";
   geocode(params: GeocodeParams): Promise<ResolvedLocation[]>;
   reverseGeocode(params: ReverseGeocodeParams): Promise<ResolvedLocation | null>;
+  isAvailable(): boolean;
+}
+
+/**
+ * Single geographic coordinate pair for Roads API processing.
+ */
+export interface LatLngPoint {
+  latitude: number;
+  longitude: number;
+}
+
+/**
+ * Snapped road coordinate returned from Google Roads API.
+ */
+export interface SnappedPoint {
+  latitude: number;
+  longitude: number;
+  placeId?: string;
+  originalIndex?: number;
+}
+
+/**
+ * Parameters for snapToRoads requests.
+ */
+export interface SnapToRoadsParams {
+  points: LatLngPoint[];
+  interpolate?: boolean;
+}
+
+/**
+ * Normalized result from Google Roads API snapToRoads.
+ */
+export interface SnapToRoadsResult {
+  snappedPoints: SnappedPoint[];
+  provider: "google_roads";
+  computedAt: string;
+  warningMessage?: string;
+}
+
+/**
+ * Interface contract for external Roads API providers.
+ */
+export interface IRoadsProvider {
+  readonly name: "google_roads";
+  snapToRoads(params: SnapToRoadsParams): Promise<SnapToRoadsResult>;
   isAvailable(): boolean;
 }

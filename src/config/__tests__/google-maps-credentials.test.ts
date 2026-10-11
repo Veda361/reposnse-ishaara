@@ -6,6 +6,7 @@ import {
   isRoutesConfigured,
   isGeocodingConfigured,
   isRoadsConfigured,
+  isRoadsSnapEnabled,
 } from "../env";
 
 describe("Google Maps Platform Credential Architecture Tests (Phase 01)", () => {
@@ -110,5 +111,35 @@ describe("Google Maps Platform Credential Architecture Tests (Phase 01)", () => 
     assert.strictEqual(config.GOOGLE_ROADS_API_KEY, undefined);
     assert.strictEqual(isPlacesConfigured(config), false);
     assert.strictEqual(isRoutesConfigured(config), false);
+    assert.strictEqual(config.GOOGLE_ROADS_SNAP_ENABLED, false);
+    assert.strictEqual(isRoadsSnapEnabled(config), false);
+  });
+
+  it("should evaluate isRoadsSnapEnabled correctly when flag and key are configured", () => {
+    const envDisabledWithKey = {
+      ...baseValidDevEnv,
+      GOOGLE_ROADS_API_KEY: "roads_key_xyz",
+      GOOGLE_ROADS_SNAP_ENABLED: "false",
+    };
+    const configDisabled = validateEnv(envDisabledWithKey);
+    assert.strictEqual(configDisabled.GOOGLE_ROADS_SNAP_ENABLED, false);
+    assert.strictEqual(isRoadsSnapEnabled(configDisabled), false);
+
+    const envEnabledWithKey = {
+      ...baseValidDevEnv,
+      GOOGLE_ROADS_API_KEY: "roads_key_xyz",
+      GOOGLE_ROADS_SNAP_ENABLED: "true",
+    };
+    const configEnabled = validateEnv(envEnabledWithKey);
+    assert.strictEqual(configEnabled.GOOGLE_ROADS_SNAP_ENABLED, true);
+    assert.strictEqual(isRoadsSnapEnabled(configEnabled), true);
+
+    const envEnabledNoKey = {
+      ...baseValidDevEnv,
+      GOOGLE_ROADS_SNAP_ENABLED: "true",
+    };
+    const configNoKey = validateEnv(envEnabledNoKey);
+    assert.strictEqual(configNoKey.GOOGLE_ROADS_SNAP_ENABLED, true);
+    assert.strictEqual(isRoadsSnapEnabled(configNoKey), false);
   });
 });

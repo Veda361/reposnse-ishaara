@@ -222,6 +222,7 @@ export class DriverService {
     }
 
     profile.status = DriverStatus.ONLINE;
+    profile.lastHeartbeatAt = new Date();
     await profile.save();
 
     logger.info("Driver went ONLINE:", {
