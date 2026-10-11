@@ -17,6 +17,7 @@
     "test:phase16": "NODE_ENV=test tsx --test src/modules/drivers/__tests__/phase16-driver-earnings.test.ts",
     "test:phase17": "NODE_ENV=test tsx --test src/modules/payments/__tests__/phase17-settlement-engine.test.ts src/modules/payments/__tests__/phase17-qr-settlement.test.ts",
     "start": "node dist/server.js",
+    "check-env": "tsx src/config/check-env.ts",
     "lint:check": "echo 'Lint: ESLint is not configured in this project. TypeScript strict-mode compilation (tsc --noEmit) serves as the static analysis gate. Run: npm run typecheck' && exit 0",
     "typecheck": "tsc --noEmit"
   },

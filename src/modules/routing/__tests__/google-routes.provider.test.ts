@@ -258,60 +258,27 @@ describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", (
       );
     });
 
-    test("should retry with Android headers when HTTP 403 indicates Android client restriction", async () => {
+    test("should immediately throw MATCHING_PROVIDER_UNAVAILABLE on HTTP 403 without spoofing Android headers", async () => {
       let callCount = 0;
-      let secondCallHeaders: Record<string, string> = {};
-
-      globalThis.fetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+      globalThis.fetch = async () => {
         callCount++;
-        if (callCount === 1) {
-          return new Response(
-            JSON.stringify({
-              error: {
-                code: 403,
-                message: "Requests from this Android client application <empty> are blocked",
-              },
-            }),
-            { status: 403 }
-          );
-        }
-        secondCallHeaders = (init?.headers as Record<string, string>) || {};
         return new Response(
           JSON.stringify({
-            routes: [
-              {
-                distanceMeters: 530376,
-                duration: "33381s",
-                polyline: { encodedPolyline: "_p~iF~ps|U_ulLnnqC_mqNvxq`@" },
-              },
-            ],
+            error: {
+              code: 403,
+              message: "Requests from this Android client application <empty> are blocked",
+            },
           }),
-          { status: 200 }
+          { status: 403 }
         );
       };
 
       const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
-      const result = await provider.computeRoute(sampleRequest);
-
-      assert.strictEqual(callCount, 2);
-      assert.strictEqual(secondCallHeaders["X-Android-Package"], "com.ishara.app");
-      assert.ok(secondCallHeaders["X-Android-Cert"]);
-      assert.strictEqual(result.distanceMeters, 530376);
-      assert.strictEqual(result.durationSeconds, 33381);
-    });
-
-    test("should throw on HTTP 401 / 403 when retry also fails", async () => {
-      globalThis.fetch = async () =>
-        new Response(
-          JSON.stringify({ error: { code: 403, message: "API key expired or restricted" } }),
-          { status: 403 }
-        );
-
-      const provider = new GoogleRoutesProvider({ apiKey: "test_key" });
       await assert.rejects(
         async () => provider.computeRoute(sampleRequest),
-        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE"
+        (err: any) => err.code === "MATCHING_PROVIDER_UNAVAILABLE" && err.statusCode === 403
       );
+      assert.strictEqual(callCount, 1, "Should not make a second spoofed request");
     });
 
     test("should throw on HTTP 429 Quota Exceeded", async () => {

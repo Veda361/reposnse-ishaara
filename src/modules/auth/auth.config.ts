@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { MongoClient } from "mongodb";
-import { env } from "../../config/env";
+import { env, parseClientUrls } from "../../config/env";
 import { logger } from "../../config/logger";
 import { emailService } from "./email.service";
 
@@ -16,8 +16,7 @@ const authDb = mongoAuthClient.db();
 
 // Origins allowed to interact with authentication endpoints & cookies
 const trustedOrigins: string[] = [
-  env.CLIENT_URL,
-  env.CLIENT_URL.replace(/\/$/, ""),
+  ...parseClientUrls(env.CLIENT_URL),
   ...(env.NODE_ENV !== "production"
     ? [
         "http://localhost:3000",

@@ -236,7 +236,7 @@ export class GoogleRoutesProvider implements RoutingProvider {
           "routes.distanceMeters,routes.duration,routes.polyline.encodedPolyline",
       };
 
-      let response = await fetch(
+      const response = await fetch(
         "https://routes.googleapis.com/directions/v2:computeRoutes",
         {
           method: "POST",
@@ -245,40 +245,6 @@ export class GoogleRoutesProvider implements RoutingProvider {
           signal: controller.signal,
         }
       );
-
-      // Automatic fallback for Google Cloud keys restricted to Android apps
-      if (response.status === 403) {
-        let errMessage = "";
-        try {
-          const errData: any = await response.clone().json();
-          errMessage = errData?.error?.message || "";
-        } catch {
-          // Ignore JSON parse error on non-200 responses
-        }
-
-        if (errMessage.includes("Android client application")) {
-          const androidPkg = process.env.GOOGLE_ANDROID_PACKAGE_NAME || env.GOOGLE_ANDROID_PACKAGE_NAME || "com.ishara.app";
-          const androidCert = process.env.GOOGLE_ANDROID_CERT_SHA1 || env.GOOGLE_ANDROID_CERT_SHA1 || "C0D888B8A6168C5880FCA58C5D35038EC7A45D98";
-          logger.info("Google Routes API key is Android-restricted; retrying with Android client identity headers", {
-            provider: this.name,
-            package: androidPkg,
-          });
-          const androidHeaders: Record<string, string> = {
-            ...headers,
-            "X-Android-Package": androidPkg,
-            "X-Android-Cert": androidCert,
-          };
-          response = await fetch(
-            "https://routes.googleapis.com/directions/v2:computeRoutes",
-            {
-              method: "POST",
-              headers: androidHeaders,
-              body: JSON.stringify(requestBody),
-              signal: controller.signal,
-            }
-          );
-        }
-      }
 
       clearTimeout(timeoutId);
 

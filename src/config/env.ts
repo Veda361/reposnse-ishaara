@@ -24,6 +24,39 @@ const optionalApiKeySchema = z
   })
   .optional();
 
+/**
+ * Safely parses and normalizes CLIENT_URL, which may be configured as a single URL,
+ * comma-separated URLs, or double-pipe ("||") separated URLs (e.g. from local development overrides).
+ * Validates that each element is a valid HTTP/HTTPS URL, strips trailing slashes,
+ * rejects malformed URLs safely without crashing, and ensures wildcards/invalids are rejected.
+ */
+export function parseClientUrls(rawUrlString?: string): string[] {
+  if (!rawUrlString || typeof rawUrlString !== "string") {
+    return [];
+  }
+
+  const rawParts = rawUrlString.split(/(?:\|\||,)/);
+  const validOrigins: string[] = [];
+
+  for (const part of rawParts) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        const normalized = parsed.origin.replace(/\/$/, "");
+        if (!validOrigins.includes(normalized)) {
+          validOrigins.push(normalized);
+        }
+      }
+    } catch {
+      // Ignored: invalid URL string is safely discarded without crashing or wildcard fallback
+    }
+  }
+
+  return validOrigins;
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z
@@ -375,6 +408,16 @@ const envSchema = z
           path: ["EMAIL_FROM"],
           message:
             "EMAIL_FROM is required in production for Resend OTP email delivery",
+        });
+      }
+
+      const clientOrigins = parseClientUrls(data.CLIENT_URL);
+      if (clientOrigins.length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["CLIENT_URL"],
+          message:
+            "CLIENT_URL must contain at least one valid HTTP or HTTPS origin in production",
         });
       }
     }

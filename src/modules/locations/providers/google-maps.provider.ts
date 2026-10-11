@@ -133,41 +133,12 @@ export class GoogleMapsProvider implements ILocationProvider {
           "places.id,places.displayName,places.formattedAddress,places.location,places.types,places.addressComponents",
       };
 
-      let response = await fetch(endpoint, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body: JSON.stringify(requestBody),
         signal: AbortSignal.timeout(env.LOCATION_TIMEOUT_MS),
       });
-
-      if (response.status === 403) {
-        let errMessage = "";
-        try {
-          const errData: any = await response.clone().json();
-          errMessage = errData?.error?.message || "";
-        } catch {
-          // ignore
-        }
-
-        if (errMessage.includes("Android client application")) {
-          const androidPkg = process.env.GOOGLE_ANDROID_PACKAGE_NAME || env.GOOGLE_ANDROID_PACKAGE_NAME || "com.ishara.app";
-          const androidCert = process.env.GOOGLE_ANDROID_CERT_SHA1 || env.GOOGLE_ANDROID_CERT_SHA1 || "C0D888B8A6168C5880FCA58C5D35038EC7A45D98";
-          logger.info("Google Places API key is Android-restricted; retrying with Android client identity headers", {
-            provider: this.name,
-            package: androidPkg,
-          });
-          response = await fetch(endpoint, {
-            method: "POST",
-            headers: {
-              ...headers,
-              "X-Android-Package": androidPkg,
-              "X-Android-Cert": androidCert,
-            },
-            body: JSON.stringify(requestBody),
-            signal: AbortSignal.timeout(env.LOCATION_TIMEOUT_MS),
-          });
-        }
-      }
 
       if (!response.ok) {
         this.handleHttpError(response.status);

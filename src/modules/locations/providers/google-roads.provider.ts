@@ -216,39 +216,11 @@ export class GoogleRoadsProvider implements IRoadsProvider {
         "X-Goog-Api-Key": apiKey,
       };
 
-      let response = await fetch(requestUrl, {
+      const response = await fetch(requestUrl, {
         method: "GET",
         headers,
         signal: controller.signal,
       });
-
-      if (response.status === 403) {
-        let errMessage = "";
-        try {
-          const errData: any = await response.clone().json();
-          errMessage = errData?.error?.message || "";
-        } catch {
-          // ignore
-        }
-
-        if (errMessage.includes("Android client application")) {
-          const androidPkg = process.env.GOOGLE_ANDROID_PACKAGE_NAME || env.GOOGLE_ANDROID_PACKAGE_NAME || "com.ishara.app";
-          const androidCert = process.env.GOOGLE_ANDROID_CERT_SHA1 || env.GOOGLE_ANDROID_CERT_SHA1 || "C0D888B8A6168C5880FCA58C5D35038EC7A45D98";
-          logger.info("Google Roads API key is Android-restricted; retrying with Android client identity headers", {
-            provider: this.name,
-            package: androidPkg,
-          });
-          response = await fetch(requestUrl, {
-            method: "GET",
-            headers: {
-              ...headers,
-              "X-Android-Package": androidPkg,
-              "X-Android-Cert": androidCert,
-            },
-            signal: controller.signal,
-          });
-        }
-      }
 
       if (!response.ok) {
         this.handleHttpError(response.status);

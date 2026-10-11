@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
-import { env } from "./config/env";
+import { env, parseClientUrls } from "./config/env";
 import { logger } from "./config/logger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config";
@@ -31,14 +31,14 @@ export const createApp = (options?: CreateAppOptions): Express => {
   app.use(helmet());
 
   /**
-   * CORS Configuration able for all the origins
-   * In development: allows configured CLIENT_URL and standard localhost origins.
-   * In production: restricts strictly to configured CLIENT_URL.
+   * CORS Configuration
+   * In development: allows configured CLIENT_URL origins and standard localhost origins.
+   * In production: restricts strictly to configured CLIENT_URL origins.
    */
+  const parsedClientOrigins = parseClientUrls(env.CLIENT_URL);
   const allowedOrigins = new Set<string>(
     [
-      env.CLIENT_URL,
-      env.CLIENT_URL.replace(/\/$/, ""),
+      ...parsedClientOrigins,
       env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined,
       env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : undefined,
       env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined,

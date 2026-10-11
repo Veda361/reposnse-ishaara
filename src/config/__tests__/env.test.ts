@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { validateEnv, envSchema } from "../env";
+import { validateEnv, envSchema, parseClientUrls } from "../env";
+import { auditEnvironmentVariables } from "../env-diagnostic";
 
 describe("Environment Configuration & Validation Tests", () => {
   const baseValidDevEnv: Record<string, string> = {
@@ -191,10 +192,71 @@ describe("Environment Configuration & Validation Tests", () => {
         () =>
           validateEnv({
             ...baseValidDevEnv,
-            SPEECH_FALLBACK_PROVIDER: "unknown_provider",
+            SPEECH_PRIMARY_PROVIDER: "unknown_provider",
           }),
         /Invalid environment configuration/
       );
+    });
+  });
+
+  describe("CLIENT_URL Multi-Origin & CORS Parsing Tests", () => {
+    it("should parse single URL without trailing slash", () => {
+      const origins = parseClientUrls("https://ishaara-web-dashboard.vercel.app/");
+      assert.deepStrictEqual(origins, ["https://ishaara-web-dashboard.vercel.app"]);
+    });
+
+    it("should parse double-pipe delimited URLs (production dashboard and local dev)", () => {
+      const origins = parseClientUrls("https://ishaara-web-dashboard.vercel.app || http://localhost:3000");
+      assert.deepStrictEqual(origins, [
+        "https://ishaara-web-dashboard.vercel.app",
+        "http://localhost:3000",
+      ]);
+    });
+
+    it("should parse comma-separated URLs", () => {
+      const origins = parseClientUrls("https://app1.isahara.app, https://app2.isahara.app/");
+      assert.deepStrictEqual(origins, [
+        "https://app1.isahara.app",
+        "https://app2.isahara.app",
+      ]);
+    });
+
+    it("should safely ignore malformed URLs and non-HTTP protocols without throwing", () => {
+      const origins = parseClientUrls("not-a-valid-url, ftp://files.isahara.app, https://valid.isahara.app");
+      assert.deepStrictEqual(origins, ["https://valid.isahara.app"]);
+    });
+
+    it("should return empty array for empty, undefined, or whitespace-only input", () => {
+      assert.deepStrictEqual(parseClientUrls(""), []);
+      assert.deepStrictEqual(parseClientUrls("   "), []);
+      assert.deepStrictEqual(parseClientUrls(undefined), []);
+    });
+
+    it("should reject production configuration when CLIENT_URL has no valid origins", () => {
+      assert.throws(
+        () =>
+          validateEnv({
+            ...baseValidProdEnv,
+            CLIENT_URL: "invalid-url-string",
+          }),
+        /CLIENT_URL must contain at least one valid HTTP or HTTPS origin in production/
+      );
+    });
+  });
+
+  describe("Zero-Exposure Environment Diagnostic Tests", () => {
+    it("should produce structured report without exposing secret values", () => {
+      const items = auditEnvironmentVariables(baseValidProdEnv);
+      assert.ok(items.length >= 15);
+      for (const item of items) {
+        assert.ok(item.variable);
+        assert.strictEqual(typeof item.isSet, "boolean");
+        assert.strictEqual(typeof item.isValidFormat, "boolean");
+        assert.strictEqual(typeof item.isRequiredInProduction, "boolean");
+        assert.strictEqual(typeof item.featureEnabled, "boolean");
+        // Ensure no item contains actual secret values
+        assert.strictEqual((item as any).value, undefined);
+      }
     });
   });
 });
