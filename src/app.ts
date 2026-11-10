@@ -43,6 +43,7 @@ export const createApp = (options?: CreateAppOptions): Express => {
       env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : undefined,
       env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined,
       env.NODE_ENV !== "production" ? "http://127.0.0.1:5173" : undefined,
+      env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined,
     ].filter((origin): origin is string => Boolean(origin))
   );
 

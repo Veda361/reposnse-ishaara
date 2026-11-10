@@ -313,4 +313,93 @@ describe("Phase 01-B: GPS Telemetry Rate Limiting & Exemption Test Suite", () =>
       assert.ok(gpsLocationRateLimiter, "gpsLocationRateLimiter must be defined");
     });
   });
+
+  describe("Driver Identity Rate Limit Isolation & NAT Protection", () => {
+    // Construct isolated app with keyGenerator rate limiter
+    const testApp = express();
+    testApp.set("trust proxy", 1);
+    testApp.use(express.json());
+
+    const perDriverGpsLimiter = createRateLimiter({
+      windowMs: 60 * 1000,
+      max: 3,
+      enableInTest: true,
+      message: "Driver location update rate limit exceeded. Please throttle telemetry frequency.",
+      keyGenerator: (req: any) => {
+        return req.auth?.applicationUserId || req.auth?.userId || req.ip || "127.0.0.1";
+      },
+    });
+
+    // Mock route with dynamic auth injection
+    testApp.post(
+      "/api/v1/drivers/me/location",
+      (req: any, _res, next) => {
+        const driverId = req.headers["x-test-driver-id"] as string;
+        if (driverId) {
+          req.auth = { applicationUserId: driverId };
+        }
+        next();
+      },
+      perDriverGpsLimiter,
+      (_req, res) => {
+        res.json({ success: true, telemetry: "accepted" });
+      }
+    );
+
+    it("should isolate rate limits per authenticated driver ID on the same shared IP", async () => {
+      const sharedIp = "198.51.100.42"; // Carrier NAT IP
+
+      // Driver A exhausts their quota (3 requests)
+      for (let i = 0; i < 3; i++) {
+        const res = await request(testApp)
+          .post("/api/v1/drivers/me/location")
+          .set("X-Forwarded-For", sharedIp)
+          .set("x-test-driver-id", "driver_alpha_111")
+          .send({ latitude: 25.2677, longitude: 82.9913 });
+        assert.strictEqual(res.status, 200);
+      }
+
+      // Driver A 4th request must be rate limited (429)
+      const driverABlocked = await request(testApp)
+        .post("/api/v1/drivers/me/location")
+        .set("X-Forwarded-For", sharedIp)
+        .set("x-test-driver-id", "driver_alpha_111")
+        .send({ latitude: 25.2677, longitude: 82.9913 });
+      assert.strictEqual(driverABlocked.status, HTTP_STATUS.TOO_MANY_REQUESTS);
+      assert.strictEqual(driverABlocked.body.error.code, ERROR_CODES.RATE_LIMIT_EXCEEDED);
+      assert.ok(
+        driverABlocked.headers["retry-after"] || driverABlocked.headers["ratelimit-reset"],
+        "Must provide rate limit reset or retry-after timing header"
+      );
+
+      // Driver B on the EXACT SAME IP must NOT be blocked
+      const driverBRes = await request(testApp)
+        .post("/api/v1/drivers/me/location")
+        .set("X-Forwarded-For", sharedIp)
+        .set("x-test-driver-id", "driver_beta_222")
+        .send({ latitude: 25.2677, longitude: 82.9913 });
+      assert.strictEqual(driverBRes.status, 200, "Driver B must not be starved by Driver A on same IP");
+      assert.strictEqual(driverBRes.body.success, true);
+    });
+
+    it("should fall back to client IP when no authenticated session is present", async () => {
+      const unauthIp = "203.0.113.88";
+
+      // Send 3 requests without auth header
+      for (let i = 0; i < 3; i++) {
+        const res = await request(testApp)
+          .post("/api/v1/drivers/me/location")
+          .set("X-Forwarded-For", unauthIp)
+          .send({ latitude: 25.2677, longitude: 82.9913 });
+        assert.strictEqual(res.status, 200);
+      }
+
+      // 4th unauth request must be blocked
+      const blockedRes = await request(testApp)
+        .post("/api/v1/drivers/me/location")
+        .set("X-Forwarded-For", unauthIp)
+        .send({ latitude: 25.2677, longitude: 82.9913 });
+      assert.strictEqual(blockedRes.status, HTTP_STATUS.TOO_MANY_REQUESTS);
+    });
+  });
 });

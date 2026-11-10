@@ -2,7 +2,8 @@
                      ISHARA BACKEND - COMPLETE API REFERENCE
 ================================================================================
 Base URL (Development) : http://localhost:5000
-Base URL (Production)  : https://<your-render-domain>.onrender.com
+Base URL (Production)  : https://reposnse-ishaara.onrender.com
+WebSocket (Production) : wss://reposnse-ishaara.onrender.com
 API Version Prefix     : /api/v1
 Authentication Type    : Bearer Token (Authorization: Bearer <session-token>)
 Admin Route Header     : x-admin-key: <ADMIN_SECRET_KEY>

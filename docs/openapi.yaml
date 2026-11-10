@@ -9,10 +9,10 @@ info:
   contact:
     name: Ishara Engineering Team
 servers:
-- url: http://localhost:5000
-  description: Local Development Server
-- url: https://ishara-backend.onrender.com
-  description: Production Server (Render)
+  - url: https://reposnse-ishaara.onrender.com
+    description: Production Server (Render)
+  - url: http://localhost:5000
+    description: Local Development Server
 tags:
 - name: Health
   description: Platform health check and probe endpoints

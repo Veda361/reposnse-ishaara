@@ -10,6 +10,7 @@ export interface RateLimiterOptions {
   message?: string;
   skip?: (req: Request, res: Response) => boolean;
   enableInTest?: boolean;
+  keyGenerator?: (req: Request, res: Response) => string | Promise<string>;
 }
 
 /**
@@ -45,11 +46,13 @@ export const createRateLimiter = (options: RateLimiterOptions = {}) => {
     message = "Too many requests from this IP address, please try again later.",
     skip,
     enableInTest = false,
+    keyGenerator,
   } = options;
 
   return rateLimit({
     windowMs,
     max,
+    ...(keyGenerator ? { keyGenerator } : {}),
     skip: (req: Request, res: Response) => {
       // If a dedicated skip predicate is configured and matches, skip this limiter
       if (skip && skip(req, res)) {
@@ -156,6 +159,10 @@ export const gpsLocationRateLimiter = createRateLimiter({
   windowMs: 1 * 60 * 1000, // 1 minute
   max: 120, // 120 requests per minute (allows updates every 1-2 seconds with buffer)
   message: "Driver location update rate limit exceeded. Please throttle telemetry frequency.",
+  keyGenerator: (req: any) => {
+    // Isolated rate limiting per authenticated driver; falls back to client IP
+    return req.auth?.applicationUserId || req.auth?.userId || req.ip;
+  },
 });
 
 /**

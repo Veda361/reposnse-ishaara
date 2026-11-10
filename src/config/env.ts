@@ -35,7 +35,7 @@ export function parseClientUrls(rawUrlString?: string): string[] {
     return [];
   }
 
-  const rawParts = rawUrlString.split(/(?:\|\||,)/);
+  const rawParts = rawUrlString.split(/(?:\|\||\||,)/);
   const validOrigins: string[] = [];
 
   for (const part of rawParts) {

@@ -1,6 +1,10 @@
 # ISHAARA BACKEND — COMPLETE AUTHORITATIVE API REFERENCE
 
 **Platform Version:** 1.0.0 (Production)  
+**Production Base URL:** `https://reposnse-ishaara.onrender.com`  
+**Development Base URL:** `http://localhost:5000`  
+**Production WebSocket URL:** `wss://reposnse-ishaara.onrender.com`  
+**Development WebSocket URL:** `ws://localhost:5000`  
 **API Prefix:** `/api/v1`  
 **Authentication Header:** `Authorization: Bearer <session_token>`  
 **Platform Admin Secret Header:** `x-admin-key: <ADMIN_SECRET_KEY>`  
