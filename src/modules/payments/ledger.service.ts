@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import {
   LedgerTransactionModel,
   LedgerEntryModel,
@@ -101,7 +101,7 @@ export class LedgerService {
       return this.getTransactionByTransactionId(existingTx.transactionId);
     }
 
-    const transactionId = uuidv4();
+    const transactionId = randomUUID();
     const postedAt = new Date();
 
     const createdTx = await LedgerTransactionModel.create({
@@ -115,7 +115,7 @@ export class LedgerService {
     });
 
     const entryDocs = entries.map((e) => ({
-      entryId: uuidv4(),
+      entryId: randomUUID(),
       transactionId,
       account: e.account,
       direction: e.direction,

@@ -1,4 +1,4 @@
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import { Types } from "mongoose";
 import { PaymentModel, IPaymentDocument, toPaymentResponse } from "./payment.model.js";
 import {
@@ -304,7 +304,7 @@ export class PaymentService {
 
     // 8. Publish Outbox Event for order creation
     await outboxService.createEvent({
-      eventId: uuidv4(),
+      eventId: randomUUID(),
       type: DOMAIN_EVENT_TYPES.PAYMENT_ORDER_CREATED,
       aggregateType: "Payment",
       aggregateId: paymentDoc._id.toString(),
@@ -475,7 +475,7 @@ export class PaymentService {
 
     // Emit domain event to outbox
     await outboxService.createEvent({
-      eventId: uuidv4(),
+      eventId: randomUUID(),
       type: DOMAIN_EVENT_TYPES.PAYMENT_CAPTURED,
       aggregateType: "Payment",
       aggregateId: updatedPayment._id.toString(),
@@ -707,7 +707,7 @@ export class PaymentService {
 
     // Emit refund event to outbox
     await outboxService.createEvent({
-      eventId: uuidv4(),
+      eventId: randomUUID(),
       type: DOMAIN_EVENT_TYPES.REFUND_PROCESSED,
       aggregateType: "Refund",
       aggregateId: refundDoc._id.toString(),

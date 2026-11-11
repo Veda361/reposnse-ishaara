@@ -1,5 +1,4 @@
-import crypto from "crypto";
-import { v4 as uuidv4 } from "uuid";
+import crypto, { randomUUID } from "node:crypto";
 import { PaymentWebhookEventModel } from "./webhook-event.model.js";
 import { PaymentModel } from "./payment.model.js";
 import {
@@ -264,7 +263,7 @@ export class PaymentWebhookService {
 
         // Publish Outbox domain event
         await outboxService.createEvent({
-          eventId: uuidv4(),
+          eventId: randomUUID(),
           type: DOMAIN_EVENT_TYPES.PAYMENT_CAPTURED,
           aggregateType: "Payment",
           aggregateId: updatedPayment._id.toString(),
@@ -306,7 +305,7 @@ export class PaymentWebhookService {
         await payment.save();
 
         await outboxService.createEvent({
-          eventId: uuidv4(),
+          eventId: randomUUID(),
           type: DOMAIN_EVENT_TYPES.PAYMENT_FAILED,
           aggregateType: "Payment",
           aggregateId: payment._id.toString(),
@@ -394,7 +393,7 @@ export class PaymentWebhookService {
         });
 
         await outboxService.createEvent({
-          eventId: uuidv4(),
+          eventId: randomUUID(),
           type: DOMAIN_EVENT_TYPES.REFUND_PROCESSED,
           aggregateType: "Refund",
           aggregateId: refundDoc._id.toString(),

@@ -1,5 +1,5 @@
 import mongoose, { Types } from "mongoose";
-import { v4 as uuidv4 } from "uuid";
+import { randomUUID } from "node:crypto";
 import { SettlementModel, ISettlementDocument, toSettlementResponse } from "./settlement.model.js";
 import { IPaymentDocument, PaymentModel } from "./payment.model.js";
 import { RideModel } from "../rides/ride.model.js";
@@ -301,7 +301,7 @@ export class SettlementService {
 
       // 6. Outbox Domain Event
       await outboxService.createEvent({
-        eventId: uuidv4(),
+        eventId: randomUUID(),
         type: DOMAIN_EVENT_TYPES.SETTLEMENT_PROCESSED,
         aggregateType: "Settlement",
         aggregateId: settlement._id.toString(),

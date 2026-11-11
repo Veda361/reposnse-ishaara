@@ -1,5 +1,4 @@
-import crypto from "crypto";
-import { v4 as uuidv4 } from "uuid";
+import crypto, { randomUUID } from "node:crypto";
 import Razorpay from "razorpay";
 import { env } from "../../../config/env.js";
 import { logger } from "../../../config/logger.js";
@@ -51,7 +50,7 @@ export class RazorpayProvider implements PaymentProvider {
    */
   async createOrder(input: CreateProviderOrderInput): Promise<ProviderOrder> {
     if (this.isMockMode || !this.razorpayClient) {
-      const mockOrderId = `order_mock_${uuidv4().replace(/-/g, "").slice(0, 14)}`;
+      const mockOrderId = `order_mock_${randomUUID().replace(/-/g, "").slice(0, 14)}`;
       return {
         id: mockOrderId,
         amountMinor: input.amountMinor,
@@ -165,7 +164,7 @@ export class RazorpayProvider implements PaymentProvider {
     input: CreateProviderRefundInput
   ): Promise<ProviderRefundDetails> {
     if (this.isMockMode || !this.razorpayClient) {
-      const mockRefundId = `rfnd_mock_${uuidv4().replace(/-/g, "").slice(0, 14)}`;
+      const mockRefundId = `rfnd_mock_${randomUUID().replace(/-/g, "").slice(0, 14)}`;
       return {
         id: mockRefundId,
         paymentId: input.paymentId,
@@ -230,7 +229,7 @@ export class RazorpayProvider implements PaymentProvider {
     }
 
     if (this.isMockMode || !this.razorpayClient) {
-      const mockTransferId = `trf_mock_${uuidv4().replace(/-/g, "").slice(0, 14)}`;
+      const mockTransferId = `trf_mock_${randomUUID().replace(/-/g, "").slice(0, 14)}`;
       const transferDetails: ProviderTransferDetails & {
         notes?: Record<string, string>;
       } = {
