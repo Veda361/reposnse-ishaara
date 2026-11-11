@@ -167,3 +167,4 @@ The Google OAuth multi-client authentication logic remains 100% intact:
 - Multi-web client ID splitting on `[,;\s|]+` in `src/modules/auth/auth.config.ts`.
 - Multi-origin URL parsing for `CLIENT_URL` in `src/config/env.ts`.
 - Verified passing in test suite: 10/10 tests passed against mock token endpoints and Bearer session verification.
+
