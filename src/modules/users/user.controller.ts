@@ -1,11 +1,11 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { userService } from "./user.service";
-import { toCleanUserResponse } from "./user.model";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { OnboardingInput, UpdateProfileInput } from "./user.schema";
-import { UnauthorizedError } from "../../shared/errors/app-error";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { userService } from "./user.service.js";
+import { toCleanUserResponse } from "./user.model.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { OnboardingInput, UpdateProfileInput } from "./user.schema.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
 
 export class UserController {
   /**

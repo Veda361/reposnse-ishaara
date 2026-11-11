@@ -1,5 +1,5 @@
 import { Document, Types } from "mongoose";
-import { UserRole } from "../../shared/constants/roles.constants";
+import { UserRole } from "../../shared/constants/roles.constants.js";
 
 /**
  * Core Isahara Application User interface.

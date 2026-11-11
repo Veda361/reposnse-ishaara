@@ -1,11 +1,11 @@
-import { SpeechToTextProvider } from "../../speech.provider";
+import { SpeechToTextProvider } from "../../speech.provider.js";
 import {
   SpeechProviderName,
   AudioInput,
   TranscriptionOptions,
   TranscriptionResult,
   ProviderHealthStatus,
-} from "../../voice.types";
+} from "../../voice.types.js";
 
 /**
  * Pseudo-provider representing client-side Android SpeechRecognizer transcripts.

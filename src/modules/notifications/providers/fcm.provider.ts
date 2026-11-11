@@ -5,9 +5,9 @@ import {
   PushMessage,
   PushDeliveryResult,
   PushErrorType,
-} from "./push-provider.interface";
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
+} from "./push-provider.interface.js";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
 
 export class FcmPushProvider implements PushNotificationProvider {
   private messaging: Messaging | null = null;

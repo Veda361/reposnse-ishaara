@@ -1,21 +1,21 @@
 import { Router } from "express";
-import { rideController } from "./ride.controller";
-import { trackingController } from "../tracking/tracking.controller";
-import { paymentController } from "../payments/payment.controller";
-import { ratingController } from "../ratings/rating.controller";
-import { safetyController } from "../safety/safety.controller";
+import { rideController } from "./ride.controller.js";
+import { trackingController } from "../tracking/tracking.controller.js";
+import { paymentController } from "../payments/payment.controller.js";
+import { ratingController } from "../ratings/rating.controller.js";
+import { safetyController } from "../safety/safety.controller.js";
 import {
   requireAuth,
   requireUser,
   requireDriverConductor,
-} from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
-import { cancelRideSchema, listRidesQuerySchema } from "./ride.schema";
-import { submitRatingSchema } from "../ratings/rating.schema";
-import { createPaymentOrderSchema } from "../payments/payment.schema";
-import { createSosSchema, cancelSosSchema } from "../safety/safety.schema";
-import { rideRateLimiter, paymentRateLimiter, ratingRateLimiter, sosRateLimiter } from "../../middleware/rate-limit";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
+import { cancelRideSchema, listRidesQuerySchema } from "./ride.schema.js";
+import { submitRatingSchema } from "../ratings/rating.schema.js";
+import { createPaymentOrderSchema } from "../payments/payment.schema.js";
+import { createSosSchema, cancelSosSchema } from "../safety/safety.schema.js";
+import { rideRateLimiter, paymentRateLimiter, ratingRateLimiter, sosRateLimiter } from "../../middleware/rate-limit.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

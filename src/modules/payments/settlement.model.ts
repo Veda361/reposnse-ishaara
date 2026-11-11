@@ -2,8 +2,8 @@ import mongoose, { Schema, Document, Model } from "mongoose";
 import {
   SETTLEMENT_STATUS,
   SettlementStatus,
-} from "./payment.constants";
-import { SettlementRecord } from "./payment.types";
+} from "./payment.constants.js";
+import { SettlementRecord } from "./payment.types.js";
 
 export interface ISettlementDocument extends Document {
   paymentId: mongoose.Types.ObjectId;

@@ -6,27 +6,27 @@ import {
   VoiceTripDraftStatus,
   VoiceTripDraftResponse,
   ConfirmDraftResult,
-} from "./voice.types";
-import { SpeechOrchestrator, speechOrchestrator } from "./speech.orchestrator";
-import { IntentService, intentService } from "./intent/intent.service";
-import { LocationService, locationService } from "../locations/location.service";
-import { TripService, calculateDistanceMeters } from "../trips/trip.service";
-import { CleanTripResponse } from "../trips/trip.types";
+} from "./voice.types.js";
+import { SpeechOrchestrator, speechOrchestrator } from "./speech.orchestrator.js";
+import { IntentService, intentService } from "./intent/intent.service.js";
+import { LocationService, locationService } from "../locations/location.service.js";
+import { TripService, calculateDistanceMeters } from "../trips/trip.service.js";
+import { CleanTripResponse } from "../trips/trip.types.js";
 import {
   VoiceTripDraftModel,
   IVoiceTripDraft,
   toCleanVoiceDraftResponse,
-} from "./drafts/voice-trip-draft.model";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+} from "./drafts/voice-trip-draft.model.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 import {
   NotFoundError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class VoiceService {
   private orchestrator: SpeechOrchestrator;

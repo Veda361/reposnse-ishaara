@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { validateEnv, envSchema, parseClientUrls } from "../env";
-import { auditEnvironmentVariables } from "../env-diagnostic";
+import { validateEnv, envSchema, parseClientUrls } from "../env.js";
+import { auditEnvironmentVariables } from "../env-diagnostic.js";
 
 describe("Environment Configuration & Validation Tests", () => {
   const baseValidDevEnv: Record<string, string> = {

@@ -6,7 +6,7 @@ import {
   LedgerAccount,
   LedgerDirection,
   LedgerTransactionType,
-} from "./payment.constants";
+} from "./payment.constants.js";
 
 export interface ILedgerTransactionDocument extends Document {
   transactionId: string;

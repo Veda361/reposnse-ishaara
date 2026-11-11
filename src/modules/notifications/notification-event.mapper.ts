@@ -1,13 +1,13 @@
 import { Types } from "mongoose";
-import { DomainEvent, DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
-import { NotificationSpec } from "./notification.types";
+import { DomainEvent, DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
+import { NotificationSpec } from "./notification.types.js";
 import {
   NOTIFICATION_CATEGORY,
   NOTIFICATION_PRIORITY,
-} from "./notification.constants";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { ROLES } from "../../shared/constants/roles.constants";
-import { logger } from "../../config/logger";
+} from "./notification.constants.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { ROLES } from "../../shared/constants/roles.constants.js";
+import { logger } from "../../config/logger.js";
 
 export class NotificationEventMapper {
   /**

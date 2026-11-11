@@ -1,38 +1,38 @@
 import mongoose, { Types, ClientSession } from "mongoose";
-import { RideRequestModel, toRideRequestResponse } from "./ride-request.model";
+import { RideRequestModel, toRideRequestResponse } from "./ride-request.model.js";
 import {
   RideRequestResponse,
   ListRideRequestsQuery,
   PaginatedRideRequestsResponse,
-} from "./ride-request.types";
-import { CreateRideRequestInput } from "./ride-request.schema";
-import { RideRequestStatus } from "./ride-request.constants";
-import { TripModel } from "../trips/trip.model";
-import { TripStatus } from "../trips/trip.types";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { DriverStatus, VerificationStatus } from "../drivers/driver.types";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { UserModel } from "../users/user.model";
-import { driverService } from "../drivers/driver.service";
-import { rideService } from "../rides/ride.service";
+} from "./ride-request.types.js";
+import { CreateRideRequestInput } from "./ride-request.schema.js";
+import { RideRequestStatus } from "./ride-request.constants.js";
+import { TripModel } from "../trips/trip.model.js";
+import { TripStatus } from "../trips/trip.types.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { DriverStatus, VerificationStatus } from "../drivers/driver.types.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { UserModel } from "../users/user.model.js";
+import { driverService } from "../drivers/driver.service.js";
+import { rideService } from "../rides/ride.service.js";
 import {
   RideRequestEventPublisher,
   rideRequestEventPublisher,
-} from "./ride-request-event.publisher";
-import { OutboxService, outboxService } from "../events/outbox.service";
-import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
-import { DiscoverySessionModel } from "../matching/discovery-session.model";
+} from "./ride-request-event.publisher.js";
+import { OutboxService, outboxService } from "../events/outbox.service.js";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
+import { DiscoverySessionModel } from "../matching/discovery-session.model.js";
 import {
   NotFoundError,
   ConflictError,
   BadRequestError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { driverPresenceService } from "../drivers/driver-presence.service";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { driverPresenceService } from "../drivers/driver-presence.service.js";
 
 /**
  * Calculates great-circle distance between two coordinates in meters (Haversine formula).

@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { distanceService } from "../distance.service";
+import { distanceService } from "../distance.service.js";
 
 describe("DistanceService Unit Tests", () => {
   describe("distanceBetweenCoordinates", () => {

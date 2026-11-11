@@ -1,15 +1,15 @@
 import { Types } from "mongoose";
-import { DeviceTokenModel, IDeviceTokenDocument } from "./device-token.model";
-import { RegisterPushTokenInput } from "./notification.types";
-import { DEVICE_PLATFORM } from "./notification.constants";
+import { DeviceTokenModel, IDeviceTokenDocument } from "./device-token.model.js";
+import { RegisterPushTokenInput } from "./notification.types.js";
+import { DEVICE_PLATFORM } from "./notification.constants.js";
 import {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export class DeviceTokenService {
   /**

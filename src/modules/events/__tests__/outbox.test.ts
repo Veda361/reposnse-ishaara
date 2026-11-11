@@ -1,12 +1,12 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { OutboxModel, OUTBOX_STATUS } from "../outbox.model";
-import { OutboxService } from "../outbox.service";
-import { OutboxWorker } from "../outbox.worker";
-import { DOMAIN_EVENT_TYPES } from "../domain-event.types";
-import { NotificationOrchestrator } from "../../notifications/notification.orchestrator";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { OutboxModel, OUTBOX_STATUS } from "../outbox.model.js";
+import { OutboxService } from "../outbox.service.js";
+import { OutboxWorker } from "../outbox.worker.js";
+import { DOMAIN_EVENT_TYPES } from "../domain-event.types.js";
+import { NotificationOrchestrator } from "../../notifications/notification.orchestrator.js";
 
 describe("Phase 12: Domain Events & Outbox Processing Tests", () => {
   let outboxService: OutboxService;

@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { RoutingService } from "../routing.service";
-import { RoutingCache } from "../routing.cache";
-import { RoutingProvider, RouteRequest, RouteResult } from "../routing.types";
+import { RoutingService } from "../routing.service.js";
+import { RoutingCache } from "../routing.cache.js";
+import { RoutingProvider, RouteRequest, RouteResult } from "../routing.types.js";
 
 describe("RoutingService Unit Tests", () => {
   it("should compute route from provider and cache the result", async () => {

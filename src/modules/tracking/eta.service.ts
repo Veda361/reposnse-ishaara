@@ -1,5 +1,5 @@
-import { TrackingFreshness, TrackingETAInfo } from "./tracking.types";
-import { env } from "../../config/env";
+import { TrackingFreshness, TrackingETAInfo } from "./tracking.types.js";
+import { env } from "../../config/env.js";
 
 export interface ETAInput {
   remainingDistanceMeters: number;

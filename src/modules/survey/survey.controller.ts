@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { surveyService } from "./survey.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { surveyService } from "./survey.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 
 export class SurveyController {
   /**

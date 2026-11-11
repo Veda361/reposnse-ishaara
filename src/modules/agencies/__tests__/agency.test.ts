@@ -2,12 +2,12 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { AgencyModel } from "../agency.model";
-import { BusOperatorModel } from "../../operators/operator.model";
-import { emailService } from "../../auth/email.service";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { AgencyModel } from "../agency.model.js";
+import { BusOperatorModel } from "../../operators/operator.model.js";
+import { emailService } from "../../auth/email.service.js";
 
 describe("Phase 03: Agency Domain Foundation Tests", () => {
   const app = createApp();

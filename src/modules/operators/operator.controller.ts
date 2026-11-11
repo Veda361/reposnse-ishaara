@@ -1,13 +1,13 @@
 import { Request, Response, NextFunction } from "express";
-import { busOperatorService } from "./operator.service";
-import { BusOperatorModel } from "./operator.model";
-import { settlementService } from "../payments/settlement.service";
-import { UserModel } from "../users/user.model";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { AppError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { env } from "../../config/env";
+import { busOperatorService } from "./operator.service.js";
+import { BusOperatorModel } from "./operator.model.js";
+import { settlementService } from "../payments/settlement.service.js";
+import { UserModel } from "../users/user.model.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { env } from "../../config/env.js";
 
 export class BusOperatorController {
   async createOperator(req: Request, res: Response, next: NextFunction): Promise<void> {

@@ -1,19 +1,19 @@
 import { Router } from "express";
-import { rideRequestController } from "./ride-request.controller";
+import { rideRequestController } from "./ride-request.controller.js";
 import {
   requireAuth,
   requireUser,
   requireDriverConductor,
-} from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
+} from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
 import {
   createRideRequestSchema,
   cancelRideRequestSchema,
   rejectRideRequestSchema,
   listRideRequestsQuerySchema,
-} from "./ride-request.schema";
-import { rideRequestRateLimiter } from "../../middleware/rate-limit";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "./ride-request.schema.js";
+import { rideRequestRateLimiter } from "../../middleware/rate-limit.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

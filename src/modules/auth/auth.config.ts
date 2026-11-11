@@ -2,9 +2,9 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { MongoClient } from "mongodb";
-import { env, parseClientUrls, resolveAllowedOrigins } from "../../config/env";
-import { logger } from "../../config/logger";
-import { emailService } from "./email.service";
+import { env, parseClientUrls, resolveAllowedOrigins } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { emailService } from "./email.service.js";
 
 // Native MongoDB client for Better Auth adapter, sharing the configured database with bounded timeouts
 export const mongoAuthClient = new MongoClient(env.MONGODB_URI, {

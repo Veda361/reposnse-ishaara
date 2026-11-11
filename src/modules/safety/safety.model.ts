@@ -3,8 +3,8 @@ import {
   IEmergencyEventDocument,
   EmergencyEventResponse,
   LocationSnapshot,
-} from "./safety.types";
-import { EmergencyStatus, EmergencyType } from "./safety.constants";
+} from "./safety.types.js";
+import { EmergencyStatus, EmergencyType } from "./safety.constants.js";
 
 const locationSnapshotSchema = new Schema<LocationSnapshot>(
   {

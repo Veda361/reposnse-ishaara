@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TripStatus } from "./trip.types";
+import { TripStatus } from "./trip.types.js";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 

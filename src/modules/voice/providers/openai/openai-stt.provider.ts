@@ -1,15 +1,15 @@
-import { SpeechToTextProvider } from "../../speech.provider";
+import { SpeechToTextProvider } from "../../speech.provider.js";
 import {
   SpeechProviderName,
   AudioInput,
   TranscriptionOptions,
   TranscriptionResult,
   ProviderHealthStatus,
-} from "../../voice.types";
-import { env } from "../../../../config/env";
-import { logger } from "../../../../config/logger";
-import { AppError } from "../../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../../shared/errors/error-codes";
+} from "../../voice.types.js";
+import { env } from "../../../../config/env.js";
+import { logger } from "../../../../config/logger.js";
+import { AppError } from "../../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../../shared/errors/error-codes.js";
 
 /**
  * Adapter for OpenAI Audio Transcriptions API (Whisper).

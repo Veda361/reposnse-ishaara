@@ -1,14 +1,14 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { ledgerService } from "../ledger.service";
-import { LedgerTransactionModel, LedgerEntryModel } from "../ledger.model";
+import { ledgerService } from "../ledger.service.js";
+import { LedgerTransactionModel, LedgerEntryModel } from "../ledger.model.js";
 import {
   LEDGER_ACCOUNT,
   LEDGER_DIRECTION,
   LEDGER_TRANSACTION_TYPE,
-} from "../payment.constants";
-import { env } from "../../../config/env";
+} from "../payment.constants.js";
+import { env } from "../../../config/env.js";
 
 describe("Phase 13: Double-Entry Ledger Service & Balancing Invariant", () => {
   before(async () => {

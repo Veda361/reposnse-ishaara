@@ -2,7 +2,7 @@ import mongoose, { Schema, Model } from "mongoose";
 import {
   IDriverRatingSummaryDocument,
   DriverRatingSummaryResponse,
-} from "./rating.types";
+} from "./rating.types.js";
 
 /**
  * Phase 14: DriverRatingSummary — denormalized aggregate for efficient rating reads.

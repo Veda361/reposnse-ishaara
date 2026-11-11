@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { UserRole } from "../../shared/constants/roles.constants";
+import { UserRole } from "../../shared/constants/roles.constants.js";
 
 /**
  * Validation schema for the body of POST /api/v1/users/me/onboarding.

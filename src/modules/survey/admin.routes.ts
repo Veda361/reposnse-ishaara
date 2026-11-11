@@ -1,8 +1,8 @@
 import { Router } from "express";
-import { adminController } from "./admin.controller";
-import adminDriverRoutes from "../drivers/admin-driver.routes";
-import { requireAdminKey } from "../../middleware/authorization";
-import { asyncHandler } from "../../shared/utils/async-handler";
+import { adminController } from "./admin.controller.js";
+import adminDriverRoutes from "../drivers/admin-driver.routes.js";
+import { requireAdminKey } from "../../middleware/authorization.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

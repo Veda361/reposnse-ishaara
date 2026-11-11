@@ -1,16 +1,16 @@
 import { Types } from "mongoose";
-import { BusOperatorModel, toCleanBusOperatorResponse } from "./operator.model";
+import { BusOperatorModel, toCleanBusOperatorResponse } from "./operator.model.js";
 import {
   CreateBusOperatorDTO,
   UpdateBusOperatorDTO,
   CleanBusOperatorResponse,
   IBusOperatorDocument,
-} from "./operator.types";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { AppError } from "../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "./operator.types.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export class BusOperatorService {
   /**

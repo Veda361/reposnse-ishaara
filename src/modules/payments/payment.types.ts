@@ -6,7 +6,7 @@ import {
   LedgerTransactionType,
   SettlementStatus,
   RefundStatus,
-} from "./payment.constants";
+} from "./payment.constants.js";
 
 export interface FareBreakdown {
   grossAmountMinor: number;

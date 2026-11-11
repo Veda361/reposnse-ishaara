@@ -1,36 +1,36 @@
 import { Types } from "mongoose";
 import crypto from "crypto";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { EmergencyEventModel, toEmergencyEventResponse } from "./safety.model";
-import { SafetyAuditEventModel } from "./safety-audit.model";
-import { EmergencyContactModel } from "./emergency-contact.model";
-import { safetyEventPublisher } from "./safety-event.publisher";
-import { trackingService } from "../tracking/tracking.service";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { EmergencyEventModel, toEmergencyEventResponse } from "./safety.model.js";
+import { SafetyAuditEventModel } from "./safety-audit.model.js";
+import { EmergencyContactModel } from "./emergency-contact.model.js";
+import { safetyEventPublisher } from "./safety-event.publisher.js";
+import { trackingService } from "../tracking/tracking.service.js";
 import {
   EmergencyStatus,
   EmergencyType,
   ELIGIBLE_SOS_RIDE_STATUSES,
   TERMINAL_SAFETY_STATUSES,
   SAFETY_EVENT_ID_PREFIX,
-} from "./safety.constants";
-import { ROLES } from "../../shared/constants/roles.constants";
+} from "./safety.constants.js";
+import { ROLES } from "../../shared/constants/roles.constants.js";
 import {
   EmergencyEventResponse,
   IEmergencyEventDocument,
   LocationSnapshot,
-} from "./safety.types";
-import { CreateSosInput, CancelSosInput } from "./safety.schema";
+} from "./safety.types.js";
+import { CreateSosInput, CancelSosInput } from "./safety.schema.js";
 import {
   NotFoundError,
   ForbiddenError,
   BadRequestError,
   ConflictError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
-import { env } from "../../config/env";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
+import { env } from "../../config/env.js";
 
 export class SafetyService {
   /**

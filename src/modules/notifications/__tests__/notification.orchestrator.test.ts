@@ -1,20 +1,20 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { NotificationModel } from "../notification.model";
-import { NotificationPreferenceModel } from "../notification-preference.model";
-import { DeviceTokenModel } from "../device-token.model";
-import { NotificationOrchestrator } from "../notification.orchestrator";
-import { NotificationEventMapper } from "../notification-event.mapper";
-import { DeviceTokenService } from "../device-token.service";
-import { PushNotificationProvider, PushDeliveryResult } from "../providers/push-provider.interface";
-import { DOMAIN_EVENT_TYPES, DomainEvent } from "../../events/domain-event.types";
-import { UserRole, ROLES } from "../../../shared/constants/roles.constants";
-import { VerificationStatus, DriverStatus } from "../../drivers/driver.types";
-import { NOTIFICATION_CATEGORY } from "../notification.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { NotificationModel } from "../notification.model.js";
+import { NotificationPreferenceModel } from "../notification-preference.model.js";
+import { DeviceTokenModel } from "../device-token.model.js";
+import { NotificationOrchestrator } from "../notification.orchestrator.js";
+import { NotificationEventMapper } from "../notification-event.mapper.js";
+import { DeviceTokenService } from "../device-token.service.js";
+import { PushNotificationProvider, PushDeliveryResult } from "../providers/push-provider.interface.js";
+import { DOMAIN_EVENT_TYPES, DomainEvent } from "../../events/domain-event.types.js";
+import { UserRole, ROLES } from "../../../shared/constants/roles.constants.js";
+import { VerificationStatus, DriverStatus } from "../../drivers/driver.types.js";
+import { NOTIFICATION_CATEGORY } from "../notification.constants.js";
 
 describe("Phase 12: Notification Mapping, Preferences & Orchestration Tests", () => {
   const TEST_PREFIX = `notif_orch_${Date.now()}_`;

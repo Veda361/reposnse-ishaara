@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { DriverProfileModel } from "./driver.model";
+import { DriverProfileModel } from "./driver.model.js";
 import {
   IDriverProfileDocument,
   UpdateDriverLocationDto,
@@ -7,23 +7,23 @@ import {
   RideDriverLocationResponse,
   LocationFreshnessStatus,
   DriverStatus,
-} from "./driver.types";
-import { UpdateDriverLocationInput } from "./driver.schema";
+} from "./driver.types.js";
+import { UpdateDriverLocationInput } from "./driver.schema.js";
 
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway";
-import { DriverLocationUpdatedPayload } from "../realtime/realtime.types";
-import { trackingEventPublisher } from "../tracking/tracking-event.publisher";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { driverPresenceService } from "./driver-presence.service";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway.js";
+import { DriverLocationUpdatedPayload } from "../realtime/realtime.types.js";
+import { trackingEventPublisher } from "../tracking/tracking-event.publisher.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { driverPresenceService } from "./driver-presence.service.js";
 import {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class DriverLocationService {
   private gateway: RealtimeGateway;

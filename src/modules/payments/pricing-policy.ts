@@ -1,5 +1,5 @@
-import { env } from "../../config/env";
-import { PricingPolicy } from "./fare.types";
+import { env } from "../../config/env.js";
+import { PricingPolicy } from "./fare.types.js";
 
 /**
  * Registry of versioned pricing policies.

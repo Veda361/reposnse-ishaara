@@ -1,16 +1,16 @@
-import { UserModel } from "./user.model";
-import { IUserDocument } from "./user.types";
-import { UserRole } from "../../shared/constants/roles.constants";
-import { BetterAuthUser } from "../auth/auth.types";
+import { UserModel } from "./user.model.js";
+import { IUserDocument } from "./user.types.js";
+import { UserRole } from "../../shared/constants/roles.constants.js";
+import { BetterAuthUser } from "../auth/auth.types.js";
 import {
   AppError,
   NotFoundError,
   ConflictError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
-import { UpdateProfileInput } from "./user.schema";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
+import { UpdateProfileInput } from "./user.schema.js";
 
 export class UserService {
   /**

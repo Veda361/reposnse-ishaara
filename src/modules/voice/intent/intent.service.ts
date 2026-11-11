@@ -1,15 +1,15 @@
-import { TextNormalizer } from "./normalizer";
-import { DeterministicEntityExtractor } from "./entity-extractor";
-import { IntentExtractionProvider, OpenAILlmIntentProvider } from "./llm-intent.provider";
+import { TextNormalizer } from "./normalizer.js";
+import { DeterministicEntityExtractor } from "./entity-extractor.js";
+import { IntentExtractionProvider, OpenAILlmIntentProvider } from "./llm-intent.provider.js";
 import {
   VoiceIntentResult,
   VoiceIntentType,
   IntentContext,
-} from "../voice.types";
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
-import { BadRequestError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+} from "../voice.types.js";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
+import { BadRequestError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 export interface IntentServiceResult {
   normalizedTranscript: string;

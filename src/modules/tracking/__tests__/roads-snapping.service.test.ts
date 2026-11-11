@@ -2,8 +2,8 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   RoadsSnappingService,
-} from "../roads-snapping.service";
-import { LatLngPoint } from "../../locations/location.types";
+} from "../roads-snapping.service.js";
+import { LatLngPoint } from "../../locations/location.types.js";
 
 describe("RoadsSnappingService Unit Tests (Phase 05 Tracking Integration)", () => {
   const originalEnv = { ...process.env };

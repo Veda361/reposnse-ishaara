@@ -1,4 +1,4 @@
-import { MATCHING_CONSTANTS } from "./matching.constants";
+import { MATCHING_CONSTANTS } from "./matching.constants.js";
 
 export class DirectionService {
   /**

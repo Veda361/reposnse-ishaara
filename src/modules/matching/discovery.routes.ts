@@ -1,10 +1,10 @@
 import { Router } from "express";
-import { discoveryController } from "./discovery.controller";
-import { requireAuth } from "../../middleware/authorization";
-import { discoveryRateLimiter } from "../../middleware/rate-limit";
-import { validateBody } from "../../middleware/validation";
-import { DiscoverySearchInputSchema } from "./discovery.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+import { discoveryController } from "./discovery.controller.js";
+import { requireAuth } from "../../middleware/authorization.js";
+import { discoveryRateLimiter } from "../../middleware/rate-limit.js";
+import { validateBody } from "../../middleware/validation.js";
+import { DiscoverySearchInputSchema } from "./discovery.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

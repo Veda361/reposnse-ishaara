@@ -1,5 +1,5 @@
-import { TextNormalizer } from "./normalizer";
-import { VoiceIntentResult, VoiceIntentType } from "../voice.types";
+import { TextNormalizer } from "./normalizer.js";
+import { VoiceIntentResult, VoiceIntentType } from "../voice.types.js";
 
 interface PatternRule {
   name: string;

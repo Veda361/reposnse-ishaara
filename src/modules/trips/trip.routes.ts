@@ -1,24 +1,24 @@
 import { Router, Response, NextFunction } from "express";
-import { tripController } from "./trip.controller";
+import { tripController } from "./trip.controller.js";
 import {
   requireAuth,
   requireDriverConductor,
   verifyAdminKey,
-} from "../../middleware/authorization";
+} from "../../middleware/authorization.js";
 import {
   validateBody,
   validateParams,
   validateQuery,
-} from "../../middleware/validation";
+} from "../../middleware/validation.js";
 import {
   createTripSchema,
   tripIdParamSchema,
   activeTripsQuerySchema,
   assignTripSchema,
   cancelTripSchema,
-} from "./trip.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
+} from "./trip.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
 
 const router = Router();
 

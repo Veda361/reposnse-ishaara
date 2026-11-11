@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { safetyController } from "./safety.controller";
-import { requireAuth } from "../../middleware/authorization";
-import { validateBody } from "../../middleware/validation";
-import { cancelSosSchema } from "./safety.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+import { safetyController } from "./safety.controller.js";
+import { requireAuth } from "../../middleware/authorization.js";
+import { validateBody } from "../../middleware/validation.js";
+import { cancelSosSchema } from "./safety.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

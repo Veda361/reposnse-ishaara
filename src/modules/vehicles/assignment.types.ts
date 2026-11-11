@@ -1,5 +1,5 @@
 import { Types, Document } from "mongoose";
-import { CleanVehicleResponse } from "./vehicle.types";
+import { CleanVehicleResponse } from "./vehicle.types.js";
 
 export type AssignmentStatus = "ACTIVE" | "ENDED";
 export type AssignmentActorRole = "AGENCY_OWNER" | "ADMIN" | "DRIVER";

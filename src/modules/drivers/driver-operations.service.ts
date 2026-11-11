@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { DriverProfileModel, maskLicenseNumber } from "./driver.model";
+import { DriverProfileModel, maskLicenseNumber } from "./driver.model.js";
 import {
   DriverStatus,
   VerificationStatus,
@@ -7,17 +7,17 @@ import {
   DriverOperationalReadinessResponse,
   DriverReadinessStatus,
   DriverReadinessReasonCode,
-} from "./driver.types";
-import { VehicleModel, toCleanVehicleResponse } from "../vehicles/vehicle.model";
-import { vehicleAssignmentService } from "../vehicles/vehicle-assignment.service";
-import { TripModel, toCleanTripResponse } from "../trips/trip.model";
-import { TripStatus } from "../trips/trip.types";
-import { RideModel, toRideResponse } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { AgencyMembershipModel } from "../agencies/agency-membership.model";
-import { AgencyMembershipStatus } from "../agencies/agency-membership.types";
-import { NotFoundError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./driver.types.js";
+import { VehicleModel, toCleanVehicleResponse } from "../vehicles/vehicle.model.js";
+import { vehicleAssignmentService } from "../vehicles/vehicle-assignment.service.js";
+import { TripModel, toCleanTripResponse } from "../trips/trip.model.js";
+import { TripStatus } from "../trips/trip.types.js";
+import { RideModel, toRideResponse } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { AgencyMembershipModel } from "../agencies/agency-membership.model.js";
+import { AgencyMembershipStatus } from "../agencies/agency-membership.types.js";
+import { NotFoundError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 /**
  * Calculates start and end of day in a specific IANA timezone.

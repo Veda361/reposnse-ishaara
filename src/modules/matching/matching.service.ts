@@ -1,34 +1,34 @@
 import { Types } from "mongoose";
 import { randomUUID } from "crypto";
-import { TripModel } from "../trips/trip.model";
-import { TripStatus, ITripDocument } from "../trips/trip.types";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { UserModel } from "../users/user.model";
+import { TripModel } from "../trips/trip.model.js";
+import { TripStatus, ITripDocument } from "../trips/trip.types.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { UserModel } from "../users/user.model.js";
 import {
   RouteMatchingService,
   routeMatchingService,
-} from "./route-matching.service";
+} from "./route-matching.service.js";
 import {
   RankingService,
   rankingService,
   CandidateEvaluation,
-} from "./ranking.service";
+} from "./ranking.service.js";
 import {
   DiscoverySearchRequest,
   DiscoveryResponse,
   DiscoveryItemDto,
   RouteMatchResult,
-} from "./matching.types";
-import { MATCHING_CONSTANTS } from "./matching.constants";
+} from "./matching.types.js";
+import { MATCHING_CONSTANTS } from "./matching.constants.js";
 import {
   DiscoverySessionModel,
   IDiscoverySession,
-} from "./discovery-session.model";
-import { logger } from "../../config/logger";
-import { BadRequestError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { driverPresenceService } from "../drivers/driver-presence.service";
+} from "./discovery-session.model.js";
+import { logger } from "../../config/logger.js";
+import { BadRequestError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { driverPresenceService } from "../drivers/driver-presence.service.js";
 
 export class MatchingService {
   private routeMatchSvc: RouteMatchingService;

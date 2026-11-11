@@ -1,21 +1,21 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { driverService } from "./driver.service";
-import { toCleanDriverProfileResponse } from "./driver.model";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { driverService } from "./driver.service.js";
+import { toCleanDriverProfileResponse } from "./driver.model.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 import {
   CreateDriverProfileInput,
   UpdateDriverProfileInput,
   UpdateDriverLocationInput,
   SubmitDriverVerificationInput,
-} from "./driver.schema";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { driverLocationService } from "./driver-location.service";
-import { driverOperationsService } from "./driver-operations.service";
-import { driverEarningsService } from "./driver-earnings.service";
-import { DriverEarningsQueryInput } from "./driver-operations.schema";
-import { settlementService } from "../payments/settlement.service";
+} from "./driver.schema.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { driverLocationService } from "./driver-location.service.js";
+import { driverOperationsService } from "./driver-operations.service.js";
+import { driverEarningsService } from "./driver-earnings.service.js";
+import { DriverEarningsQueryInput } from "./driver-operations.schema.js";
+import { settlementService } from "../payments/settlement.service.js";
 
 export class DriverController {
   /**

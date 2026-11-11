@@ -1,13 +1,13 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { OutboxModel, OUTBOX_STATUS } from "../../events/outbox.model";
-import { OutboxService } from "../../events/outbox.service";
-import { NotificationModel } from "../notification.model";
-import { DeviceTokenModel } from "../device-token.model";
-import { DeviceTokenService } from "../device-token.service";
-import { DOMAIN_EVENT_TYPES } from "../../events/domain-event.types";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { OutboxModel, OUTBOX_STATUS } from "../../events/outbox.model.js";
+import { OutboxService } from "../../events/outbox.service.js";
+import { NotificationModel } from "../notification.model.js";
+import { DeviceTokenModel } from "../device-token.model.js";
+import { DeviceTokenService } from "../device-token.service.js";
+import { DOMAIN_EVENT_TYPES } from "../../events/domain-event.types.js";
 
 describe("Phase 12: Notification & Outbox Concurrency Tests", () => {
   const TEST_PREFIX = `notif_conc_${Date.now()}_`;

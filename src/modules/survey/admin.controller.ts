@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { Parser } from "json2csv";
-import { surveyService } from "./survey.service";
-import { analyticsService } from "./analytics.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { NotFoundError } from "../../shared/errors/app-error";
+import { surveyService } from "./survey.service.js";
+import { analyticsService } from "./analytics.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { NotFoundError } from "../../shared/errors/app-error.js";
 
 export class AdminController {
   /**

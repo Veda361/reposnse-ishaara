@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { VehicleType } from "../../shared/constants/vehicle.constants";
+import { VehicleType } from "../../shared/constants/vehicle.constants.js";
 
 /**
  * Validation schema for POST /api/v1/vehicles.

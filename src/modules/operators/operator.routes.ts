@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { busOperatorController } from "./operator.controller";
-import { requireAuth, requireAdminKey } from "../../middleware/authorization";
+import { busOperatorController } from "./operator.controller.js";
+import { requireAuth, requireAdminKey } from "../../middleware/authorization.js";
 
 const router = Router();
 

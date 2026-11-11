@@ -1,12 +1,12 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
-import { createApp } from "../../../app";
-import { emailService, maskEmail } from "../email.service";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { logger } from "../../../config/logger";
+import { createApp } from "../../../app.js";
+import { emailService, maskEmail } from "../email.service.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { logger } from "../../../config/logger.js";
 import { Resend } from "resend";
-import { mongoAuthClient } from "../auth.config";
+import { mongoAuthClient } from "../auth.config.js";
 
 describe("Resend Email OTP & Security Verification Tests (Phase 10)", () => {
   const app = createApp();

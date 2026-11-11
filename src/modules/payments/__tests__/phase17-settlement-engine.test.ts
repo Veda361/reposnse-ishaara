@@ -1,32 +1,32 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideModel } from "../../rides/ride.model";
-import { PaymentModel } from "../payment.model";
-import { SettlementModel } from "../settlement.model";
-import { LedgerTransactionModel, LedgerEntryModel } from "../ledger.model";
-import { BusOperatorModel } from "../../operators/operator.model";
-import { AgencyModel } from "../../agencies/agency.model";
-import { busOperatorService } from "../../operators/operator.service";
-import { settlementService } from "../settlement.service";
-import { settlementReconciliationService } from "../settlement-reconciliation.service";
-import { paymentService } from "../payment.service";
-import { paymentProvider } from "../payment-provider/razorpay.provider";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VehicleType } from "../../../shared/constants/vehicle.constants";
-import { RideStatus } from "../../rides/ride.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { PaymentModel } from "../payment.model.js";
+import { SettlementModel } from "../settlement.model.js";
+import { LedgerTransactionModel, LedgerEntryModel } from "../ledger.model.js";
+import { BusOperatorModel } from "../../operators/operator.model.js";
+import { AgencyModel } from "../../agencies/agency.model.js";
+import { busOperatorService } from "../../operators/operator.service.js";
+import { settlementService } from "../settlement.service.js";
+import { settlementReconciliationService } from "../settlement-reconciliation.service.js";
+import { paymentService } from "../payment.service.js";
+import { paymentProvider } from "../payment-provider/razorpay.provider.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VehicleType } from "../../../shared/constants/vehicle.constants.js";
+import { RideStatus } from "../../rides/ride.constants.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_PROVIDER,
   SETTLEMENT_STATUS,
   LEDGER_ACCOUNT,
   LEDGER_DIRECTION,
-} from "../payment.constants";
+} from "../payment.constants.js";
 
 describe("Phase 17: Comprehensive Settlement, Payouts & Financial Reconciliation Engine", () => {
   const TEST_PREFIX = `p17_engine_${Date.now()}_`;

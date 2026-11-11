@@ -1,27 +1,27 @@
 import { Router, Response, NextFunction } from "express";
-import { agencyController } from "./agency.controller";
-import { agencyMembershipController } from "./agency-membership.controller";
-import { requireAuth, verifyAdminKey } from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
+import { agencyController } from "./agency.controller.js";
+import { agencyMembershipController } from "./agency-membership.controller.js";
+import { requireAuth, verifyAdminKey } from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
 import {
   createAgencySchema,
   updateAgencySchema,
   listAgenciesQuerySchema,
-} from "./agency.schema";
+} from "./agency.schema.js";
 import {
   listAgencyMembershipsQuerySchema,
   approveAgencyMembershipBodySchema,
   rejectAgencyMembershipBodySchema,
-} from "./agency-membership.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { tripController } from "../trips/trip.controller";
+} from "./agency-membership.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { tripController } from "../trips/trip.controller.js";
 import {
   agencyCreateTripSchema,
   listAgencyTripsQuerySchema,
   assignTripSchema,
   cancelTripSchema,
-} from "../trips/trip.schema";
+} from "../trips/trip.schema.js";
 
 const router = Router();
 
@@ -151,14 +151,14 @@ router.post(
   asyncHandler((req, res) => agencyMembershipController.rejectMembership(req, res))
 );
 
-import { vehicleController } from "../vehicles/vehicle.controller";
+import { vehicleController } from "../vehicles/vehicle.controller.js";
 import {
   createVehicleSchema,
   updateVehicleSchema,
   assignVehicleSchema,
   unassignVehicleSchema,
   listAgencyVehiclesQuerySchema,
-} from "../vehicles/vehicle.schema";
+} from "../vehicles/vehicle.schema.js";
 
 /**
  * ============================================================

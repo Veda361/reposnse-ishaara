@@ -3,8 +3,8 @@ import {
   NotificationPriority,
   DevicePlatform,
   NotificationCategory,
-} from "./notification.constants";
-import { DomainEventType } from "../events/domain-event.types";
+} from "./notification.constants.js";
+import { DomainEventType } from "../events/domain-event.types.js";
 
 export interface NotificationResponse {
   id: string;

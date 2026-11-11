@@ -2,12 +2,12 @@ import {
   RealtimeSpeechProvider,
   RealtimeSpeechEvent,
   RealtimeSessionOptions,
-} from "../../realtime-speech.provider";
-import { SpeechOrchestrator, speechOrchestrator } from "../../speech.orchestrator";
-import { env } from "../../../../config/env";
-import { logger } from "../../../../config/logger";
-import { AppError } from "../../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../../shared/errors/error-codes";
+} from "../../realtime-speech.provider.js";
+import { SpeechOrchestrator, speechOrchestrator } from "../../speech.orchestrator.js";
+import { env } from "../../../../config/env.js";
+import { logger } from "../../../../config/logger.js";
+import { AppError } from "../../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../../shared/errors/error-codes.js";
 
 /**
  * Buffered Streaming Speech Adapter.

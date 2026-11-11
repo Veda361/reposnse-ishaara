@@ -4,7 +4,7 @@ import {
   AgencyStatus,
   CleanPublicAgencyResponse,
   CleanPrivateAgencyResponse,
-} from "./agency.types";
+} from "./agency.types.js";
 
 /**
  * Masks contact phone number for public agency discovery.

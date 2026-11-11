@@ -1,10 +1,10 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { matchingService } from "./matching.service";
-import { DiscoverySearchInputSchema } from "./discovery.schema";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { matchingService } from "./matching.service.js";
+import { DiscoverySearchInputSchema } from "./discovery.schema.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
 
 export class DiscoveryController {
   /**

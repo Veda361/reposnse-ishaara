@@ -1,7 +1,7 @@
-import { PAYMENT_STATUS, PaymentStatus } from "./payment.constants";
-import { AppError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { PAYMENT_STATUS, PaymentStatus } from "./payment.constants.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 
 /**
  * Phase 13 Authoritative Payment State Machine

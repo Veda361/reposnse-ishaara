@@ -1,8 +1,8 @@
 import rateLimit, { Options } from "express-rate-limit";
 import { Request, Response } from "express";
-import { sendError } from "../shared/responses/api-response";
-import { HTTP_STATUS } from "../shared/constants/api.constants";
-import { ERROR_CODES } from "../shared/errors/error-codes";
+import { sendError } from "../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../shared/errors/error-codes.js";
 
 export interface RateLimiterOptions {
   windowMs?: number;

@@ -1,20 +1,20 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { voiceService } from "./voice.service";
-import { driverService } from "../drivers/driver.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError, BadRequestError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { voiceService } from "./voice.service.js";
+import { driverService } from "../drivers/driver.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError, BadRequestError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 import {
   DeviceTranscriptInputSchema,
   ConfirmDraftInputSchema,
   DraftIdParamSchema,
   CreateVoiceSessionInputSchema,
-} from "./voice.schema";
-import { InputMode, AudioInput } from "./voice.types";
-import { realtimeSessionService } from "../realtime/realtime.session.service";
-import { toCleanVoiceSessionResponse } from "./sessions/voice-session.model";
+} from "./voice.schema.js";
+import { InputMode, AudioInput } from "./voice.types.js";
+import { realtimeSessionService } from "../realtime/realtime.session.service.js";
+import { toCleanVoiceSessionResponse } from "./sessions/voice-session.model.js";
 
 export class VoiceController {
   /**

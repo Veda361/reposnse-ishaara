@@ -1,20 +1,20 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideRequestModel } from "../ride-request.model";
-import { rideRequestService } from "../ride-request.service";
-import { RideRequestStatus } from "../ride-request.constants";
-import { UserRole, ROLES } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { VehicleType } from "../../vehicles/vehicle.types";
-import { TripStatus } from "../../trips/trip.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
-import { AppError } from "../../../shared/errors/app-error";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideRequestModel } from "../ride-request.model.js";
+import { rideRequestService } from "../ride-request.service.js";
+import { RideRequestStatus } from "../ride-request.constants.js";
+import { UserRole, ROLES } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { VehicleType } from "../../vehicles/vehicle.types.js";
+import { TripStatus } from "../../trips/trip.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
+import { AppError } from "../../../shared/errors/app-error.js";
 
 describe("RideRequestService Unit & Domain Logic Tests", () => {
   const TEST_PREFIX = `rreq_svc_${Date.now()}_`;

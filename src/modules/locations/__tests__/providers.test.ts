@@ -1,7 +1,7 @@
 import test, { describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { GoogleMapsProvider } from "../providers/google-maps.provider";
-import { SerpApiProvider } from "../providers/serpapi.provider";
+import { GoogleMapsProvider } from "../providers/google-maps.provider.js";
+import { SerpApiProvider } from "../providers/serpapi.provider.js";
 
 describe("Location Providers Unit Tests", () => {
   const originalFetch = globalThis.fetch;

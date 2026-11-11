@@ -3,32 +3,32 @@ import {
   DriverProfileModel,
   maskLicenseNumber,
   toCleanDriverProfileResponse,
-} from "./driver.model";
+} from "./driver.model.js";
 import {
   VerificationStatus,
   DriverStatus,
   IDriverProfileDocument,
-} from "./driver.types";
-import { UserModel } from "../users/user.model";
-import { UserRole } from "../../shared/constants/roles.constants";
+} from "./driver.types.js";
+import { UserModel } from "../users/user.model.js";
+import { UserRole } from "../../shared/constants/roles.constants.js";
 import {
   VehicleModel,
   toCleanVehicleResponse,
-} from "../vehicles/vehicle.model";
-import { DriverVehicleAssignmentModel } from "../vehicles/assignment.model";
-import { TripModel } from "../trips/trip.model";
-import { TripStatus } from "../trips/trip.types";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { BusOperatorModel } from "../operators/operator.model";
+} from "../vehicles/vehicle.model.js";
+import { DriverVehicleAssignmentModel } from "../vehicles/assignment.model.js";
+import { TripModel } from "../trips/trip.model.js";
+import { TripStatus } from "../trips/trip.types.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { BusOperatorModel } from "../operators/operator.model.js";
 import {
   NotFoundError,
   ConflictError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
-import { realtimeGateway } from "../realtime/realtime.gateway";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
+import { realtimeGateway } from "../realtime/realtime.gateway.js";
 
 export interface SafePendingDriverItem {
   driverId: string;

@@ -4,10 +4,10 @@ import {
   NotificationStatus,
   NOTIFICATION_PRIORITY,
   NotificationPriority,
-} from "./notification.constants";
-import { DomainEventType, DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
-import { NotificationResponse } from "./notification.types";
-import { env } from "../../config/env";
+} from "./notification.constants.js";
+import { DomainEventType, DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
+import { NotificationResponse } from "./notification.types.js";
+import { env } from "../../config/env.js";
 
 export interface INotificationDocument extends Document {
   _id: Types.ObjectId;

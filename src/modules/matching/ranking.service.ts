@@ -1,6 +1,6 @@
-import { DiscoveryItemDto, RouteMatchResult, DiscoveryPagination } from "./matching.types";
-import { ITripDocument } from "../trips/trip.types";
-import { fareService } from "../payments/fare.service";
+import { DiscoveryItemDto, RouteMatchResult, DiscoveryPagination } from "./matching.types.js";
+import { ITripDocument } from "../trips/trip.types.js";
+import { fareService } from "../payments/fare.service.js";
 
 export interface CandidateEvaluation {
   trip: ITripDocument;

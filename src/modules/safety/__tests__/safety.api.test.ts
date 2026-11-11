@@ -15,16 +15,16 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import mongoose, { Types } from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { RideModel } from "../../rides/ride.model";
-import { EmergencyEventModel } from "../safety.model";
-import { EmergencyStatus } from "../safety.constants";
-import { RideStatus } from "../../rides/ride.constants";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VerificationStatus, DriverStatus } from "../../drivers/driver.types";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { EmergencyEventModel } from "../safety.model.js";
+import { EmergencyStatus } from "../safety.constants.js";
+import { RideStatus } from "../../rides/ride.constants.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VerificationStatus, DriverStatus } from "../../drivers/driver.types.js";
 
 /**
  * Creates an app with preRouterMiddleware that injects authenticated user.

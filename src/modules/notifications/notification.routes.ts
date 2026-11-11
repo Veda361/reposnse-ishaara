@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { notificationController } from "./notification.controller";
-import { requireAuth } from "../../middleware/auth";
-import { notificationRateLimiter } from "../../middleware/rate-limit";
+import { notificationController } from "./notification.controller.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { notificationRateLimiter } from "../../middleware/rate-limit.js";
 
 const router = Router();
 

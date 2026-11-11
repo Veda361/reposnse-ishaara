@@ -1,18 +1,18 @@
-import { ITripDocument } from "../trips/trip.types";
+import { ITripDocument } from "../trips/trip.types.js";
 import {
   discoverySubscriptionIndex,
   DiscoverySubscriptionIndex,
-} from "./discovery-subscription.index";
+} from "./discovery-subscription.index.js";
 import {
   routeMatchingService,
   RouteMatchingService,
-} from "../matching/route-matching.service";
-import { rankingService, RankingService } from "../matching/ranking.service";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { UserModel } from "../users/user.model";
-import { RealtimeEventBuilder } from "./realtime.events";
-import { logger } from "../../config/logger";
+} from "../matching/route-matching.service.js";
+import { rankingService, RankingService } from "../matching/ranking.service.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { UserModel } from "../users/user.model.js";
+import { RealtimeEventBuilder } from "./realtime.events.js";
+import { logger } from "../../config/logger.js";
 
 export type TripChangeType = "ACTIVATED" | "COMPLETED" | "CANCELLED" | "UPDATED";
 

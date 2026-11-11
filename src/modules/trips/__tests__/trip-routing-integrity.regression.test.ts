@@ -1,10 +1,10 @@
 import test, { describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { tripService } from "../trip.service";
-import { routingService } from "../../routing/routing.service";
-import { GoogleRoutesProvider } from "../../routing/providers/google-routes.provider";
-import { BadRequestError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { tripService } from "../trip.service.js";
+import { routingService } from "../../routing/routing.service.js";
+import { GoogleRoutesProvider } from "../../routing/providers/google-routes.provider.js";
+import { BadRequestError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Production Regression Suite: Coordinate Integrity & Road Routing", () => {
   describe("1. Geographic and Place Name Consistency Validation", () => {

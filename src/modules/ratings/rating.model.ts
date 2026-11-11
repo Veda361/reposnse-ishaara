@@ -1,6 +1,6 @@
 import mongoose, { Schema, Model } from "mongoose";
-import { IRatingDocument, RatingResponse } from "./rating.types";
-import { RATING_ROLE, MIN_RATING_SCORE, MAX_RATING_SCORE } from "./rating.constants";
+import { IRatingDocument, RatingResponse } from "./rating.types.js";
+import { RATING_ROLE, MIN_RATING_SCORE, MAX_RATING_SCORE } from "./rating.constants.js";
 
 /**
  * Phase 14: Rating collection schema.

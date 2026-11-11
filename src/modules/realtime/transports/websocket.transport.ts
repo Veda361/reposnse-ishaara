@@ -1,7 +1,7 @@
 import { WebSocket } from "ws";
-import { RealtimeEnvelope, ServerMessageType } from "../realtime.types";
-import { RealtimeEventBuilder } from "../realtime.events";
-import { logger } from "../../../config/logger";
+import { RealtimeEnvelope, ServerMessageType } from "../realtime.types.js";
+import { RealtimeEventBuilder } from "../realtime.events.js";
+import { logger } from "../../../config/logger.js";
 
 export class WebSocketTransport {
   private socket: WebSocket;

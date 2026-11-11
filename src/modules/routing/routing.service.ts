@@ -1,8 +1,8 @@
-import { RoutingProvider, RouteRequest, RouteResult } from "./routing.types";
-import { GoogleRoutesProvider } from "./providers/google-routes.provider";
-import { RoutingCache, routingCache } from "./routing.cache";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+import { RoutingProvider, RouteRequest, RouteResult } from "./routing.types.js";
+import { GoogleRoutesProvider } from "./providers/google-routes.provider.js";
+import { RoutingCache, routingCache } from "./routing.cache.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export class RoutingService {
   private provider: RoutingProvider;

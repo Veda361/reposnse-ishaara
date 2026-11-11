@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
 import { ClientSession } from "mongoose";
-import { OutboxModel, IOutboxEventDocument, OUTBOX_STATUS } from "./outbox.model";
-import { DomainEvent, DomainEventType } from "./domain-event.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+import { OutboxModel, IOutboxEventDocument, OUTBOX_STATUS } from "./outbox.model.js";
+import { DomainEvent, DomainEventType } from "./domain-event.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export interface CreateEventParams<T = Record<string, unknown>> {
   eventId?: string;

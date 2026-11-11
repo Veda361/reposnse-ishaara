@@ -1,11 +1,11 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { DeviceTokenModel } from "../device-token.model";
-import { DeviceTokenService } from "../device-token.service";
-import { DEVICE_PLATFORM } from "../notification.constants";
-import { ForbiddenError, BadRequestError } from "../../../shared/errors/app-error";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { DeviceTokenModel } from "../device-token.model.js";
+import { DeviceTokenService } from "../device-token.service.js";
+import { DEVICE_PLATFORM } from "../notification.constants.js";
+import { ForbiddenError, BadRequestError } from "../../../shared/errors/app-error.js";
 
 describe("Phase 12: Device Push Token Management Tests", () => {
   let tokenService: DeviceTokenService;

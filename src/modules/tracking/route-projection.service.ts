@@ -1,6 +1,6 @@
-import { distanceService } from "../matching/distance.service";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+import { distanceService } from "../matching/distance.service.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export interface RouteProjectionResult {
   nearestPoint: [number, number]; // [longitude, latitude]

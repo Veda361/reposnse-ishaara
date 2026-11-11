@@ -1,8 +1,8 @@
-import { connectDatabase, disconnectDatabase } from "../config/database";
-import { outboxWorker } from "../modules/events/outbox.worker";
-import { rideRequestService } from "../modules/ride-requests/ride-request.service";
-import { env } from "../config/env";
-import { logger } from "../config/logger";
+import { connectDatabase, disconnectDatabase } from "../config/database.js";
+import { outboxWorker } from "../modules/events/outbox.worker.js";
+import { rideRequestService } from "../modules/ride-requests/ride-request.service.js";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
 
 let expiryTimer: NodeJS.Timeout | null = null;
 

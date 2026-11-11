@@ -1,18 +1,18 @@
 import { Types } from "mongoose";
-import { PaymentModel } from "../payments/payment.model";
-import { PAYMENT_STATUS } from "../payments/payment.constants";
-import { SettlementModel } from "../payments/settlement.model";
-import { SETTLEMENT_STATUS } from "../payments/payment.constants";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
+import { PaymentModel } from "../payments/payment.model.js";
+import { PAYMENT_STATUS } from "../payments/payment.constants.js";
+import { SettlementModel } from "../payments/settlement.model.js";
+import { SETTLEMENT_STATUS } from "../payments/payment.constants.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
 import {
   DriverEarningsResponse,
   DriverRideEarningsItem,
   DriverSettlementSummary,
-} from "./driver.types";
-import { DriverEarningsQueryInput } from "./driver-operations.schema";
-import { getTimezoneDayBounds } from "./driver-operations.service";
-import { env } from "../../config/env";
+} from "./driver.types.js";
+import { DriverEarningsQueryInput } from "./driver-operations.schema.js";
+import { getTimezoneDayBounds } from "./driver-operations.service.js";
+import { env } from "../../config/env.js";
 
 export interface ResolvedPeriod {
   period: "today" | "week" | "month" | "custom";

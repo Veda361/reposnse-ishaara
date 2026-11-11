@@ -1,5 +1,5 @@
 import { Schema, model, Document, Types } from "mongoose";
-import { InputMode } from "../voice.types";
+import { InputMode } from "../voice.types.js";
 
 export enum VoiceSessionStatus {
   CREATED = "CREATED",

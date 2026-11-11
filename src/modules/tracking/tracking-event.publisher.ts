@@ -1,12 +1,12 @@
-import { IDriverProfileDocument } from "../drivers/driver.types";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { TripModel } from "../trips/trip.model";
-import { trackingService } from "./tracking.service";
-import { RideTrackingUpdatedPayload } from "./tracking.types";
-import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { TripModel } from "../trips/trip.model.js";
+import { trackingService } from "./tracking.service.js";
+import { RideTrackingUpdatedPayload } from "./tracking.types.js";
+import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export class TrackingEventPublisher {
   private gateway: RealtimeGateway;

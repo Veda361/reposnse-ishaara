@@ -1,13 +1,13 @@
 import { IncomingMessage } from "http";
-import { authService } from "../auth/auth.service";
-import { userService } from "../users/user.service";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { ROLES } from "../../shared/constants/roles.constants";
-import { AppError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
-import { IUserDocument } from "../users/user.types";
-import { IDriverProfileDocument } from "../drivers/driver.types";
+import { authService } from "../auth/auth.service.js";
+import { userService } from "../users/user.service.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { ROLES } from "../../shared/constants/roles.constants.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
+import { IUserDocument } from "../users/user.types.js";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
 
 export interface AuthenticatedDriverContext {
   user: IUserDocument;

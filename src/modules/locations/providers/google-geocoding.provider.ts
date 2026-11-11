@@ -1,11 +1,11 @@
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
 import {
   GeocodeParams,
   IGeocodingProvider,
   ResolvedLocation,
   ReverseGeocodeParams,
-} from "../location.types";
+} from "../location.types.js";
 
 /**
  * Expected JSON payload shape from Google Maps Geocoding API v4.

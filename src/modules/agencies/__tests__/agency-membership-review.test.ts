@@ -2,16 +2,16 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { AgencyModel } from "../agency.model";
-import { AgencyMembershipModel } from "../agency-membership.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { BusOperatorModel } from "../../operators/operator.model";
-import { emailService } from "../../auth/email.service";
-import { AgencyMembershipStatus } from "../agency-membership.types";
-import { VerificationStatus, DriverStatus } from "../../drivers/driver.types";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { AgencyModel } from "../agency.model.js";
+import { AgencyMembershipModel } from "../agency-membership.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { BusOperatorModel } from "../../operators/operator.model.js";
+import { emailService } from "../../auth/email.service.js";
+import { AgencyMembershipStatus } from "../agency-membership.types.js";
+import { VerificationStatus, DriverStatus } from "../../drivers/driver.types.js";
 
 describe("Phase 05: Agency Driver Membership Approval & Rejection Tests", () => {
   const app = createApp();

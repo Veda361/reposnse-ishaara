@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { routeMatchingService } from "../route-matching.service";
+import { routeMatchingService } from "../route-matching.service.js";
 
 describe("RouteMatchingService Unit Tests", () => {
   // A straight route from West to East along latitude 25.0 from lon 82.0 to 83.0 (~100km)

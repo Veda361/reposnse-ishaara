@@ -1,5 +1,5 @@
 import { Types, Document } from "mongoose";
-import { RatingRole } from "./rating.constants";
+import { RatingRole } from "./rating.constants.js";
 
 // ─── Rating Domain ───────────────────────────────────────────────────────────
 

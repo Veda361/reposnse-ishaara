@@ -1,24 +1,24 @@
 import { Router } from "express";
-import { paymentController } from "./payment.controller";
-import { paymentWebhookController } from "./payment-webhook.controller";
+import { paymentController } from "./payment.controller.js";
+import { paymentWebhookController } from "./payment-webhook.controller.js";
 import {
   requireAuth,
   requireUser,
   requireAdminKey,
-} from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
+} from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
 import {
   createPaymentOrderSchema,
   verifyPaymentSchema,
   refundPaymentSchema,
   listSettlementsQuerySchema,
   retrySettlementSchema,
-} from "./payment.schema";
+} from "./payment.schema.js";
 import {
   paymentRateLimiter,
   webhookRateLimiter,
-} from "../../middleware/rate-limit";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "../../middleware/rate-limit.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

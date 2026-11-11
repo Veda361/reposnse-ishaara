@@ -1,18 +1,18 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { GoogleSpeechProvider } from "../providers/google/google-stt.provider";
-import { OpenAISpeechProvider } from "../providers/openai/openai-stt.provider";
-import { WhisperSpeechProvider } from "../providers/whisper/whisper-stt.provider";
-import { DeviceSpeechProvider } from "../providers/device/device-stt.provider";
-import { SpeechOrchestrator } from "../speech.orchestrator";
+import { GoogleSpeechProvider } from "../providers/google/google-stt.provider.js";
+import { OpenAISpeechProvider } from "../providers/openai/openai-stt.provider.js";
+import { WhisperSpeechProvider } from "../providers/whisper/whisper-stt.provider.js";
+import { DeviceSpeechProvider } from "../providers/device/device-stt.provider.js";
+import { SpeechOrchestrator } from "../speech.orchestrator.js";
 import {
   SpeechProviderName,
   AudioInput,
   ProviderHealthStatus,
-} from "../voice.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
-import { AppError } from "../../../shared/errors/app-error";
-import { validateEnv } from "../../../config/env";
+} from "../voice.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
+import { AppError } from "../../../shared/errors/app-error.js";
+import { validateEnv } from "../../../config/env.js";
 
 describe("Speech Provider Layer Unit Tests", () => {
   const dummyAudio: AudioInput = {

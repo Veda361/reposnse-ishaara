@@ -1,15 +1,15 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { VoiceService } from "../voice.service";
-import { VoiceTripDraftModel } from "../drafts/voice-trip-draft.model";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { VoiceTripDraftStatus } from "../voice.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { VoiceService } from "../voice.service.js";
+import { VoiceTripDraftModel } from "../drafts/voice-trip-draft.model.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { VoiceTripDraftStatus } from "../voice.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("VoiceTripDraft Domain & Service Unit/Integration Tests", () => {
   const TEST_PREFIX = `v_draft_${Date.now()}_`;

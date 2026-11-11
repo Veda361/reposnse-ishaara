@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { isDatabaseConnected } from "../../config/database";
-import { env } from "../../config/env";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { isDatabaseConnected } from "../../config/database.js";
+import { env } from "../../config/env.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 
 export class HealthController {
   /**

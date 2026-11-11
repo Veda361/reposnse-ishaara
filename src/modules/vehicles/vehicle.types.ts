@@ -1,5 +1,5 @@
 import { Types, Document } from "mongoose";
-import { VehicleType } from "../../shared/constants/vehicle.constants";
+import { VehicleType } from "../../shared/constants/vehicle.constants.js";
 
 export { VehicleType };
 

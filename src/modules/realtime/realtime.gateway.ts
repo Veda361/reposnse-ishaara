@@ -1,39 +1,39 @@
 import { Server as HttpServer, IncomingMessage } from "http";
 import { WebSocketServer, WebSocket } from "ws";
-import { RealtimeAuthService, realtimeAuthService, AuthenticatedDriverContext } from "./realtime.auth";
-import { RealtimeSessionService, realtimeSessionService } from "./realtime.session.service";
-import { RealtimeSpeechOrchestrator, realtimeSpeechOrchestrator } from "../voice/realtime-speech.orchestrator";
-import { RealtimeSpeechProvider } from "../voice/realtime-speech.provider";
-import { VoiceService, voiceService } from "../voice/voice.service";
-import { WebSocketTransport } from "./transports/websocket.transport";
-import { RealtimeEventBuilder } from "./realtime.events";
+import { RealtimeAuthService, realtimeAuthService, AuthenticatedDriverContext } from "./realtime.auth.js";
+import { RealtimeSessionService, realtimeSessionService } from "./realtime.session.service.js";
+import { RealtimeSpeechOrchestrator, realtimeSpeechOrchestrator } from "../voice/realtime-speech.orchestrator.js";
+import { RealtimeSpeechProvider } from "../voice/realtime-speech.provider.js";
+import { VoiceService, voiceService } from "../voice/voice.service.js";
+import { WebSocketTransport } from "./transports/websocket.transport.js";
+import { RealtimeEventBuilder } from "./realtime.events.js";
 import {
   RealtimeEnvelope,
   SessionStartPayload,
   AudioChunkPayload,
   SessionEndedPayload,
   ServerMessageType,
-} from "./realtime.types";
-import { VoiceSessionStatus } from "../voice/sessions/voice-session.model";
-import { InputMode } from "../voice/voice.types";
-import { IUserDocument } from "../users/user.types";
-import { DiscoverySessionModel } from "../matching/discovery-session.model";
-import { discoverySubscriptionIndex } from "./discovery-subscription.index";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./realtime.types.js";
+import { VoiceSessionStatus } from "../voice/sessions/voice-session.model.js";
+import { InputMode } from "../voice/voice.types.js";
+import { IUserDocument } from "../users/user.types.js";
+import { DiscoverySessionModel } from "../matching/discovery-session.model.js";
+import { discoverySubscriptionIndex } from "./discovery-subscription.index.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 import { randomUUID } from "crypto";
-import { IDriverProfileDocument } from "../drivers/driver.types";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
 import {
   DriverLocationUpdatedPayload,
   RideTrackingUpdatedPayload,
   RideTrackingEndedPayload,
-} from "./realtime.types";
-import { trackingService } from "../tracking/tracking.service";
-import { ROLES } from "../../shared/constants/roles.constants";
+} from "./realtime.types.js";
+import { trackingService } from "../tracking/tracking.service.js";
+import { ROLES } from "../../shared/constants/roles.constants.js";
 
 interface ActiveSessionContext {
   transport: WebSocketTransport;

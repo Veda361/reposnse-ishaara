@@ -1,39 +1,39 @@
 import { Types, ClientSession } from "mongoose";
-import { RideModel, toRideResponse } from "./ride.model";
+import { RideModel, toRideResponse } from "./ride.model.js";
 import {
   RideResponse,
   ListRidesQuery,
   PaginatedRidesResponse,
-} from "./ride.types";
-import { RideStatus, TERMINAL_RIDE_STATUSES } from "./ride.constants";
-import { RideRequestModel } from "../ride-requests/ride-request.model";
-import { IRideRequestDocument } from "../ride-requests/ride-request.types";
-import { RideRequestStatus } from "../ride-requests/ride-request.constants";
-import { TripModel } from "../trips/trip.model";
-import { UserModel } from "../users/user.model";
-import { DriverProfileModel } from "../drivers/driver.model";
+} from "./ride.types.js";
+import { RideStatus, TERMINAL_RIDE_STATUSES } from "./ride.constants.js";
+import { RideRequestModel } from "../ride-requests/ride-request.model.js";
+import { IRideRequestDocument } from "../ride-requests/ride-request.types.js";
+import { RideRequestStatus } from "../ride-requests/ride-request.constants.js";
+import { TripModel } from "../trips/trip.model.js";
+import { UserModel } from "../users/user.model.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
 import {
   RideEventPublisher,
   rideEventPublisher,
-} from "./ride-event.publisher";
-import { OutboxService, outboxService } from "../events/outbox.service";
-import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
+} from "./ride-event.publisher.js";
+import { OutboxService, outboxService } from "../events/outbox.service.js";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
 import {
   NotFoundError,
   ConflictError,
   BadRequestError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
-import { logger } from "../../config/logger";
-import { RatingModel } from "../ratings/rating.model";
-import { PaymentModel } from "../payments/payment.model";
-import { SettlementModel } from "../payments/settlement.model";
-import { resolveEarningsPeriodBounds } from "../drivers/driver-earnings.service";
-import { fareService } from "../payments/fare.service";
-import { distanceService } from "../matching/distance.service";
-import { RideFareResponse } from "../payments/fare.types";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
+import { logger } from "../../config/logger.js";
+import { RatingModel } from "../ratings/rating.model.js";
+import { PaymentModel } from "../payments/payment.model.js";
+import { SettlementModel } from "../payments/settlement.model.js";
+import { resolveEarningsPeriodBounds } from "../drivers/driver-earnings.service.js";
+import { fareService } from "../payments/fare.service.js";
+import { distanceService } from "../matching/distance.service.js";
+import { RideFareResponse } from "../payments/fare.types.js";
 
 export class RideService {
   private eventPublisher: RideEventPublisher;

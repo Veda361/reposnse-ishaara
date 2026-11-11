@@ -1,14 +1,14 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { RatingService, ratingService } from "./rating.service";
-import { RatingSummaryService, ratingSummaryService } from "./rating-summary.service";
-import { driverService } from "../drivers/driver.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
-import { SubmitRatingInput } from "./rating.schema";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { RatingService, ratingService } from "./rating.service.js";
+import { RatingSummaryService, ratingSummaryService } from "./rating-summary.service.js";
+import { driverService } from "../drivers/driver.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
+import { SubmitRatingInput } from "./rating.schema.js";
 
 /**
  * Phase 14: RatingController

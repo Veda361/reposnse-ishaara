@@ -1,12 +1,12 @@
 import { Router } from "express";
-import { adminDriverController } from "./admin-driver.controller";
-import { requireAdminKey } from "../../middleware/authorization";
-import { adminRateLimiter } from "../../middleware/rate-limit";
+import { adminDriverController } from "./admin-driver.controller.js";
+import { requireAdminKey } from "../../middleware/authorization.js";
+import { adminRateLimiter } from "../../middleware/rate-limit.js";
 import {
   validateBody,
   validateParams,
   validateQuery,
-} from "../../middleware/validation";
+} from "../../middleware/validation.js";
 import {
   adminDriverIdParamSchema,
   listPendingDriversQuerySchema,
@@ -16,8 +16,8 @@ import {
   unassignVehicleBodySchema,
   suspendDriverBodySchema,
   unsuspendDriverBodySchema,
-} from "./admin-driver.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "./admin-driver.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

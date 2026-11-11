@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RideStatus } from "./ride.constants";
+import { RideStatus } from "./ride.constants.js";
 
 export const cancelRideSchema = z
   .object({

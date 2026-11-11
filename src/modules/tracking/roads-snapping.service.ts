@@ -1,14 +1,14 @@
-import { env, isRoadsSnapEnabled } from "../../config/env";
-import { logger } from "../../config/logger";
+import { env, isRoadsSnapEnabled } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 import {
   googleRoadsProvider,
   GoogleRoadsProvider,
-} from "../locations/providers/google-roads.provider";
+} from "../locations/providers/google-roads.provider.js";
 import {
   LatLngPoint,
   SnappedPoint,
   SnapToRoadsParams,
-} from "../locations/location.types";
+} from "../locations/location.types.js";
 
 export interface RoadsSnappingServiceOptions {
   interpolate?: boolean;

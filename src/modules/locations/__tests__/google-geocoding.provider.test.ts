@@ -1,6 +1,6 @@
 import test, { describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { GoogleGeocodingProvider } from "../providers/google-geocoding.provider";
+import { GoogleGeocodingProvider } from "../providers/google-geocoding.provider.js";
 
 describe("GoogleGeocodingProvider Unit Tests (Phase 02 Geocoding Integration)", () => {
   const originalFetch = globalThis.fetch;

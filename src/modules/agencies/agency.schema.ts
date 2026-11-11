@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AgencyStatus } from "./agency.types";
+import { AgencyStatus } from "./agency.types.js";
 
 const agencyAddressInputSchema = z
   .object({

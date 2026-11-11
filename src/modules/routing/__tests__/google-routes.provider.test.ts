@@ -4,8 +4,8 @@ import {
   GoogleRoutesProvider,
   parseDurationSeconds,
   decodePolyline,
-} from "../providers/google-routes.provider";
-import { RouteRequest } from "../routing.types";
+} from "../providers/google-routes.provider.js";
+import { RouteRequest } from "../routing.types.js";
 
 describe("GoogleRoutesProvider Unit Tests (Phase 03 Routes API v2 Migration)", () => {
   const originalFetch = globalThis.fetch;

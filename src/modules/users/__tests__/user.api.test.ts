@@ -1,11 +1,11 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../user.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../user.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Users & Authentication API Integration Tests", () => {
   const app = createApp();

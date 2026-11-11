@@ -1,8 +1,8 @@
-import { RoutingProvider, RouteRequest, RouteResult } from "../routing.types";
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
-import { AppError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { RoutingProvider, RouteRequest, RouteResult } from "../routing.types.js";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
+import { AppError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 /**
  * Computes direct spherical distance between two coordinates in meters.

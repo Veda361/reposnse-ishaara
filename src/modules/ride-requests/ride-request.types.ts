@@ -1,6 +1,6 @@
 import { Types, Document } from "mongoose";
-import { RideRequestStatus } from "./ride-request.constants";
-import { GeoJSONPoint } from "../drivers/driver.types";
+import { RideRequestStatus } from "./ride-request.constants.js";
+import { GeoJSONPoint } from "../drivers/driver.types.js";
 
 /**
  * Normalized physical waypoint for ride request pickup/destination.

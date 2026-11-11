@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { RideRequestStatus } from "./ride-request.constants";
-import { locationInputSchema } from "../trips/trip.schema";
+import { RideRequestStatus } from "./ride-request.constants.js";
+import { locationInputSchema } from "../trips/trip.schema.js";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 

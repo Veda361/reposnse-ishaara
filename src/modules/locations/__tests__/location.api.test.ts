@@ -2,14 +2,14 @@ import { describe, it, before, after, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
-import { locationCache } from "../location.cache";
-import { env } from "../../../config/env";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
+import { locationCache } from "../location.cache.js";
+import { env } from "../../../config/env.js";
 
 describe("Location System & GPS Integration Tests", () => {
   const TEST_PREFIX = `loc_api_${Date.now()}_`;

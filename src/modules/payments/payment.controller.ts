@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import { paymentService } from "./payment.service";
-import { settlementService } from "./settlement.service";
-import { settlementReconciliationService } from "./settlement-reconciliation.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { verifyAdminKey } from "../../middleware/authorization";
+import { paymentService } from "./payment.service.js";
+import { settlementService } from "./settlement.service.js";
+import { settlementReconciliationService } from "./settlement-reconciliation.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { verifyAdminKey } from "../../middleware/authorization.js";
 
 export class PaymentController {
   /**

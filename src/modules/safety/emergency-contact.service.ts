@@ -1,22 +1,22 @@
 import { Types } from "mongoose";
-import { EmergencyContactModel, toEmergencyContactResponse } from "./emergency-contact.model";
+import { EmergencyContactModel, toEmergencyContactResponse } from "./emergency-contact.model.js";
 import {
   EmergencyContactResponse,
   IEmergencyContactDocument,
-} from "./safety.types";
+} from "./safety.types.js";
 import {
   CreateEmergencyContactInput,
   UpdateEmergencyContactInput,
-} from "./safety.schema";
-import { env } from "../../config/env";
+} from "./safety.schema.js";
+import { env } from "../../config/env.js";
 import {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
   ConflictError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export class EmergencyContactService {
   /**

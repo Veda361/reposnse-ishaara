@@ -1,4 +1,4 @@
-import { Role } from "../../shared/constants/roles.constants";
+import { Role } from "../../shared/constants/roles.constants.js";
 
 export const DOMAIN_EVENT_TYPES = {
   RIDE_REQUEST_CREATED: "RIDE_REQUEST_CREATED",

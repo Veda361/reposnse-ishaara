@@ -1,5 +1,5 @@
-import { SurveyResponse, ISurveyResponse } from "./survey.model";
-import { CreateSurveyInput } from "./survey.schema";
+import { SurveyResponse, ISurveyResponse } from "./survey.model.js";
+import { CreateSurveyInput } from "./survey.schema.js";
 
 export interface GetSurveysQuery {
   page?: number;

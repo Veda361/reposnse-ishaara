@@ -1,21 +1,21 @@
 import { Types } from "mongoose";
-import { VehicleModel, normalizeRegistrationNumber } from "./vehicle.model";
-import { IVehicleDocument } from "./vehicle.types";
+import { VehicleModel, normalizeRegistrationNumber } from "./vehicle.model.js";
+import { IVehicleDocument } from "./vehicle.types.js";
 import {
   CreateVehicleInput,
   UpdateVehicleInput,
   ListAgencyVehiclesQueryInput,
-} from "./vehicle.schema";
-import { AgencyModel } from "../agencies/agency.model";
-import { AgencyStatus } from "../agencies/agency.types";
+} from "./vehicle.schema.js";
+import { AgencyModel } from "../agencies/agency.model.js";
+import { AgencyStatus } from "../agencies/agency.types.js";
 import {
   NotFoundError,
   ConflictError,
   ForbiddenError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export interface ListAgencyVehiclesResult {
   items: IVehicleDocument[];

@@ -1,5 +1,5 @@
 import { Types } from "mongoose";
-import { EmergencyStatus, EmergencyType, EmergencyContactRelationship } from "./safety.constants";
+import { EmergencyStatus, EmergencyType, EmergencyContactRelationship } from "./safety.constants.js";
 
 /**
  * Location snapshot captured at SOS trigger time.

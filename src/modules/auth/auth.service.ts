@@ -1,8 +1,8 @@
 import { IncomingHttpHeaders } from "http";
 import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "./auth.config";
-import { BetterAuthSessionResult, BetterAuthUser } from "./auth.types";
-import { logger } from "../../config/logger";
+import { auth } from "./auth.config.js";
+import { BetterAuthSessionResult, BetterAuthUser } from "./auth.types.js";
+import { logger } from "../../config/logger.js";
 
 export class AuthService {
   /**

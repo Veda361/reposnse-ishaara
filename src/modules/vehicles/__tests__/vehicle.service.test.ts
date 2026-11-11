@@ -1,15 +1,15 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel, normalizeRegistrationNumber, toCleanVehicleResponse } from "../vehicle.model";
-import { vehicleService } from "../vehicle.service";
-import { VehicleType } from "../vehicle.types";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ConflictError, NotFoundError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel, normalizeRegistrationNumber, toCleanVehicleResponse } from "../vehicle.model.js";
+import { vehicleService } from "../vehicle.service.js";
+import { VehicleType } from "../vehicle.types.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ConflictError, NotFoundError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Vehicle Service & Model Unit/Integration Tests", () => {
   const TEST_PREFIX = `vehicle_srv_${Date.now()}_`;

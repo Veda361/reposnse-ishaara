@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { NOTIFICATION_STATUS, DEVICE_PLATFORM } from "./notification.constants";
+import { NOTIFICATION_STATUS, DEVICE_PLATFORM } from "./notification.constants.js";
 
 export const listNotificationsQuerySchema = z.object({
   page: z.coerce.number().int().positive().default(1),

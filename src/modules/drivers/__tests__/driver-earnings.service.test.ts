@@ -1,26 +1,26 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../driver.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideModel } from "../../rides/ride.model";
-import { PaymentModel } from "../../payments/payment.model";
-import { SettlementModel } from "../../payments/settlement.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VerificationStatus, DriverStatus } from "../driver.types";
-import { TripStatus } from "../../trips/trip.types";
-import { RideStatus } from "../../rides/ride.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../driver.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { PaymentModel } from "../../payments/payment.model.js";
+import { SettlementModel } from "../../payments/settlement.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VerificationStatus, DriverStatus } from "../driver.types.js";
+import { TripStatus } from "../../trips/trip.types.js";
+import { RideStatus } from "../../rides/ride.constants.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_PROVIDER,
   SETTLEMENT_STATUS,
-} from "../../payments/payment.constants";
+} from "../../payments/payment.constants.js";
 import {
   driverEarningsService,
   resolveEarningsPeriodBounds,
-} from "../driver-earnings.service";
+} from "../driver-earnings.service.js";
 
 describe("Phase 16: Driver Earnings Service Unit & Integration Tests", () => {
   const TEST_PREFIX = `driver_earn_svc_${Date.now()}_`;

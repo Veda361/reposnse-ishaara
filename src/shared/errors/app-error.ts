@@ -1,4 +1,4 @@
-import { ERROR_CODES, ErrorCode } from "./error-codes";
+import { ERROR_CODES, ErrorCode } from "./error-codes.js";
 
 /**
  * Base typed application error class.

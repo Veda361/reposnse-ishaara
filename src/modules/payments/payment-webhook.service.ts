@@ -1,25 +1,25 @@
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
-import { PaymentWebhookEventModel } from "./webhook-event.model";
-import { PaymentModel } from "./payment.model";
+import { PaymentWebhookEventModel } from "./webhook-event.model.js";
+import { PaymentModel } from "./payment.model.js";
 import {
   PAYMENT_STATUS,
   SETTLEMENT_STATUS,
-} from "./payment.constants";
-import { ledgerService } from "./ledger.service";
-import { SettlementModel } from "./settlement.model";
-import { settlementService } from "./settlement.service";
-import { RefundModel } from "./refund.model";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { RideModel } from "../rides/ride.model";
-import { realtimeGateway } from "../realtime/realtime.gateway";
-import { outboxService } from "../events/outbox.service";
-import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { AppError } from "../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./payment.constants.js";
+import { ledgerService } from "./ledger.service.js";
+import { SettlementModel } from "./settlement.model.js";
+import { settlementService } from "./settlement.service.js";
+import { RefundModel } from "./refund.model.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { RideModel } from "../rides/ride.model.js";
+import { realtimeGateway } from "../realtime/realtime.gateway.js";
+import { outboxService } from "../events/outbox.service.js";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export interface WebhookProcessingResult {
   status: "processed" | "ignored_duplicate" | "unhandled";

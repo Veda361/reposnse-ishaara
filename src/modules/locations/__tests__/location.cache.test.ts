@@ -1,7 +1,7 @@
 import test, { describe } from "node:test";
 import assert from "node:assert/strict";
-import { LocationCache } from "../location.cache";
-import { ResolvedLocation } from "../location.types";
+import { LocationCache } from "../location.cache.js";
+import { ResolvedLocation } from "../location.types.js";
 
 const mockLocation: ResolvedLocation = {
   latitude: 25.2677,

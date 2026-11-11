@@ -1,5 +1,5 @@
-import { ResolvedLocation, LocationSearchParams } from "./location.types";
-import { env } from "../../config/env";
+import { ResolvedLocation, LocationSearchParams } from "./location.types.js";
+import { env } from "../../config/env.js";
 
 interface CacheEntry<T = unknown> {
   data: T;

@@ -1,17 +1,17 @@
 import { Response, NextFunction } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
 import {
   NotificationService,
   notificationService,
-} from "./notification.service";
+} from "./notification.service.js";
 import {
   listNotificationsQuerySchema,
   notificationIdParamSchema,
-} from "./notification.schema";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./notification.schema.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class NotificationController {
   private service: NotificationService;

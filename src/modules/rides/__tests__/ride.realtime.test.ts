@@ -1,22 +1,22 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideRequestModel } from "../../ride-requests/ride-request.model";
-import { RideModel } from "../ride.model";
-import { RideService } from "../ride.service";
-import { RideEventPublisher } from "../ride-event.publisher";
-import { RealtimeGateway } from "../../realtime/realtime.gateway";
-import { RideStatus } from "../ride.constants";
-import { RideRequestStatus } from "../../ride-requests/ride-request.constants";
-import { UserRole, ROLES } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { VehicleType } from "../../vehicles/vehicle.types";
-import { TripStatus } from "../../trips/trip.types";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideRequestModel } from "../../ride-requests/ride-request.model.js";
+import { RideModel } from "../ride.model.js";
+import { RideService } from "../ride.service.js";
+import { RideEventPublisher } from "../ride-event.publisher.js";
+import { RealtimeGateway } from "../../realtime/realtime.gateway.js";
+import { RideStatus } from "../ride.constants.js";
+import { RideRequestStatus } from "../../ride-requests/ride-request.constants.js";
+import { UserRole, ROLES } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { VehicleType } from "../../vehicles/vehicle.types.js";
+import { TripStatus } from "../../trips/trip.types.js";
 
 describe("Ride Realtime Synchronization Tests", () => {
   const TEST_PREFIX = `ride_rt_${Date.now()}_`;

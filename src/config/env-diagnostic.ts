@@ -5,7 +5,7 @@ import {
   isGeocodingConfigured,
   isRoadsConfigured,
   isRoadsSnapEnabled,
-} from "./env";
+} from "./env.js";
 
 export interface EnvAuditItem {
   variable: string;

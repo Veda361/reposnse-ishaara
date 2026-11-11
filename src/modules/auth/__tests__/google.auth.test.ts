@@ -2,10 +2,10 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import { createApp } from "../../../app";
-import { configuredGoogleAudiences, mongoAuthClient } from "../auth.config";
-import { userService } from "../../users/user.service";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
+import { createApp } from "../../../app.js";
+import { configuredGoogleAudiences, mongoAuthClient } from "../auth.config.js";
+import { userService } from "../../users/user.service.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
 
 describe("Google Social Sign-In & ID-Token Audience Verification Tests", () => {
   const app = createApp();

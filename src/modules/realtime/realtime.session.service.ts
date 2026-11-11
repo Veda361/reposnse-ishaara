@@ -6,17 +6,17 @@ import {
   IVoiceSession,
   VoiceSessionResponse,
   toCleanVoiceSessionResponse,
-} from "../voice/sessions/voice-session.model";
-import { InputMode } from "../voice/voice.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+} from "../voice/sessions/voice-session.model.js";
+import { InputMode } from "../voice/voice.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 import {
   NotFoundError,
   ForbiddenError,
   ConflictError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class RealtimeSessionService {
   /**

@@ -1,8 +1,8 @@
 import test, { describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { LocationOrchestrator } from "../location.orchestrator";
-import { ILocationProvider, LocationSearchParams, ResolvedLocation } from "../location.types";
-import { env } from "../../../config/env";
+import { LocationOrchestrator } from "../location.orchestrator.js";
+import { ILocationProvider, LocationSearchParams, ResolvedLocation } from "../location.types.js";
+import { env } from "../../../config/env.js";
 
 describe("Location Orchestrator & Cost Control Tests", () => {
   const originalPrimary = env.LOCATION_PRIMARY_PROVIDER;

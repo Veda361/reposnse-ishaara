@@ -2,9 +2,9 @@ import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import {
   GoogleRoadsProvider,
-} from "../providers/google-roads.provider";
-import { LatLngPoint } from "../location.types";
-import { BadRequestError } from "../../../shared/errors/app-error";
+} from "../providers/google-roads.provider.js";
+import { LatLngPoint } from "../location.types.js";
+import { BadRequestError } from "../../../shared/errors/app-error.js";
 
 describe("GoogleRoadsProvider Unit Tests (Phase 05 Roads API Integration)", () => {
   const originalFetch = globalThis.fetch;

@@ -1,9 +1,9 @@
 import test, { describe, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { LocationService } from "../location.service";
-import { LocationCache } from "../location.cache";
-import { GoogleGeocodingProvider } from "../providers/google-geocoding.provider";
-import { ResolvedLocation } from "../location.types";
+import { LocationService } from "../location.service.js";
+import { LocationCache } from "../location.cache.js";
+import { GoogleGeocodingProvider } from "../providers/google-geocoding.provider.js";
+import { ResolvedLocation } from "../location.types.js";
 
 describe("Geocoding Service & Caching Unit Tests (Phase 02)", () => {
   let cache: LocationCache;

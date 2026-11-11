@@ -1,14 +1,14 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
 import {
   EmergencyContactService,
   emergencyContactService,
-} from "./emergency-contact.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { CreateEmergencyContactInput, UpdateEmergencyContactInput } from "./safety.schema";
+} from "./emergency-contact.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { CreateEmergencyContactInput, UpdateEmergencyContactInput } from "./safety.schema.js";
 
 /**
  * Phase 15: EmergencyContactController

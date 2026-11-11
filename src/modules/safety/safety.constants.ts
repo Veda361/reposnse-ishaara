@@ -1,4 +1,4 @@
-import { RideStatus } from "../rides/ride.constants";
+import { RideStatus } from "../rides/ride.constants.js";
 
 /**
  * Emergency event types supported in Phase 15.

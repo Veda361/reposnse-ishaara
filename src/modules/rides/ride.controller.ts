@@ -1,14 +1,14 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { rideService, RideService } from "./ride.service";
-import { driverService } from "../drivers/driver.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
-import { CancelRideInput } from "./ride.schema";
-import { driverLocationService } from "../drivers/driver-location.service";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { rideService, RideService } from "./ride.service.js";
+import { driverService } from "../drivers/driver.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
+import { CancelRideInput } from "./ride.schema.js";
+import { driverLocationService } from "../drivers/driver-location.service.js";
 
 
 export class RideController {

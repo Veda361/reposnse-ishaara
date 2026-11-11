@@ -1,6 +1,6 @@
-import { IEmergencyEventDocument, EmergencyEventResponse } from "./safety.types";
-import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway";
-import { logger } from "../../config/logger";
+import { IEmergencyEventDocument, EmergencyEventResponse } from "./safety.types.js";
+import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway.js";
+import { logger } from "../../config/logger.js";
 
 /**
  * Safety Event Publisher — dispatches targeted realtime WebSocket events

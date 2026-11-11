@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { rankingService, CandidateEvaluation } from "../ranking.service";
-import { RouteMatchResult, DiscoveryItemDto } from "../matching.types";
+import { rankingService, CandidateEvaluation } from "../ranking.service.js";
+import { RouteMatchResult, DiscoveryItemDto } from "../matching.types.js";
 
 describe("RankingService Unit Tests", () => {
   const createMockCandidate = (tripId: string, score: number): CandidateEvaluation => ({

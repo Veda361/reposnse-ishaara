@@ -1,13 +1,13 @@
 import { Request, Response } from "express";
-import { adminDriverService } from "./admin-driver.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { adminDriverService } from "./admin-driver.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 import {
   ListPendingDriversQuery,
   RejectDriverBody,
   AssignVehicleBody,
   UnassignVehicleBody,
-} from "./admin-driver.schema";
+} from "./admin-driver.schema.js";
 
 export class AdminDriverController {
   /**

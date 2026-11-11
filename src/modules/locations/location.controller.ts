@@ -1,13 +1,13 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { locationService } from "./location.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { locationService } from "./location.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 import {
   GeocodeQuery,
   LocationSearchQuery,
   ReverseGeocodeQuery,
-} from "./location.schema";
+} from "./location.schema.js";
 
 export class LocationController {
   /**

@@ -1,8 +1,8 @@
-import { DistanceService, distanceService } from "./distance.service";
-import { DirectionService, directionService } from "./direction.service";
-import { RouteMatchResult, CompatibilityLevel } from "./matching.types";
-import { MATCHING_CONSTANTS } from "./matching.constants";
-import { ITripDocument } from "../trips/trip.types";
+import { DistanceService, distanceService } from "./distance.service.js";
+import { DirectionService, directionService } from "./direction.service.js";
+import { RouteMatchResult, CompatibilityLevel } from "./matching.types.js";
+import { MATCHING_CONSTANTS } from "./matching.constants.js";
+import { ITripDocument } from "../trips/trip.types.js";
 
 export interface RouteMatchingOptions {
   maxPickupDistanceMeters?: number;

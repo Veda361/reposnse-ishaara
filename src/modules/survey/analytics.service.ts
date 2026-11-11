@@ -1,4 +1,4 @@
-import { SurveyResponse } from "./survey.model";
+import { SurveyResponse } from "./survey.model.js";
 
 export interface AnalyticsFilterQuery {
   college?: string;

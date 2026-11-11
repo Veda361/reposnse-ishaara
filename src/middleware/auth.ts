@@ -1,10 +1,10 @@
 import { Response, NextFunction } from "express";
-import { AuthenticatedRequest } from "../shared/types/common.types";
-import { UnauthorizedError, ForbiddenError, AppError } from "../shared/errors/app-error";
-import { ERROR_CODES } from "../shared/errors/error-codes";
-import { authService } from "../modules/auth/auth.service";
-import { userService } from "../modules/users/user.service";
-import { logger } from "../config/logger";
+import { AuthenticatedRequest } from "../shared/types/common.types.js";
+import { UnauthorizedError, ForbiddenError, AppError } from "../shared/errors/app-error.js";
+import { ERROR_CODES } from "../shared/errors/error-codes.js";
+import { authService } from "../modules/auth/auth.service.js";
+import { userService } from "../modules/users/user.service.js";
+import { logger } from "../config/logger.js";
 
 /**
  * Resolves the authenticated Better Auth session and reconciles the Isahara application user.

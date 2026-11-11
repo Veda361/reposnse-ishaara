@@ -1,14 +1,14 @@
 import { Types } from "mongoose";
-import { RideModel } from "../rides/ride.model";
-import { IRideDocument } from "../rides/ride.types";
-import { RideStatus, TERMINAL_RIDE_STATUSES } from "../rides/ride.constants";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { IDriverProfileDocument } from "../drivers/driver.types";
-import { TripModel } from "../trips/trip.model";
-import { ITripDocument } from "../trips/trip.types";
-import { routeProjectionService, RouteProjectionResult } from "./route-projection.service";
-import { etaService } from "./eta.service";
-import { distanceService } from "../matching/distance.service";
+import { RideModel } from "../rides/ride.model.js";
+import { IRideDocument } from "../rides/ride.types.js";
+import { RideStatus, TERMINAL_RIDE_STATUSES } from "../rides/ride.constants.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
+import { TripModel } from "../trips/trip.model.js";
+import { ITripDocument } from "../trips/trip.types.js";
+import { routeProjectionService, RouteProjectionResult } from "./route-projection.service.js";
+import { etaService } from "./eta.service.js";
+import { distanceService } from "../matching/distance.service.js";
 import {
   TrackingResponse,
   TrackingState,
@@ -16,16 +16,16 @@ import {
   TrackingDriverInfo,
   TrackingRouteInfo,
   TrackingETAInfo,
-} from "./tracking.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
+} from "./tracking.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
 import {
   NotFoundError,
   ForbiddenError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class TrackingService {
   /**

@@ -2,9 +2,9 @@ import {
   VoiceIntentResult,
   VoiceIntentType,
   IntentContext,
-} from "../voice.types";
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
+} from "../voice.types.js";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
 import { z } from "zod";
 
 /**

@@ -1,11 +1,11 @@
-import { createApp } from "./app";
-import { connectDatabase, disconnectDatabase } from "./config/database";
-import { env } from "./config/env";
-import { logger } from "./config/logger";
-import { mongoAuthClient } from "./modules/auth/auth.config";
-import { realtimeGateway } from "./modules/realtime/realtime.gateway";
-import { outboxWorker } from "./modules/events/outbox.worker";
-import { presenceWorker } from "./workers/presence.worker";
+import { createApp } from "./app.js";
+import { connectDatabase, disconnectDatabase } from "./config/database.js";
+import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
+import { mongoAuthClient } from "./modules/auth/auth.config.js";
+import { realtimeGateway } from "./modules/realtime/realtime.gateway.js";
+import { outboxWorker } from "./modules/events/outbox.worker.js";
+import { presenceWorker } from "./workers/presence.worker.js";
 import { Server } from "http";
 
 const PORT = process.env.PORT

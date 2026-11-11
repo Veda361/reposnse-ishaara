@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fareService } from "../fare.service";
-import { env } from "../../../config/env";
+import { fareService } from "../fare.service.js";
+import { env } from "../../../config/env.js";
 
 describe("Phase 13: Fare Calculation & Financial Arithmetic Invariant", () => {
   it("should calculate fare based on distance and enforce integer paise", () => {

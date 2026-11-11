@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { MIN_RATING_SCORE, MAX_RATING_SCORE, MAX_REVIEW_LENGTH } from "./rating.constants";
+import { MIN_RATING_SCORE, MAX_RATING_SCORE, MAX_REVIEW_LENGTH } from "./rating.constants.js";
 
 /**
  * Zod schema for rating submission.

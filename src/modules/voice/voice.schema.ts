@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { InputMode } from "./voice.types";
+import { InputMode } from "./voice.types.js";
 
 /**
  * Validates payload for device-recognized transcript submissions.

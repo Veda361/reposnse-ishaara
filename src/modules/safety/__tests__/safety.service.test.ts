@@ -14,17 +14,17 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import mongoose, { Types } from "mongoose";
-import { SafetyService } from "../safety.service";
-import { EmergencyEventModel } from "../safety.model";
-import { SafetyAuditEventModel } from "../safety-audit.model";
-import { EmergencyContactModel } from "../emergency-contact.model";
-import { EmergencyStatus, EmergencyType } from "../safety.constants";
-import { RideModel } from "../../rides/ride.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserModel } from "../../users/user.model";
-import { RideStatus } from "../../rides/ride.constants";
-import { ROLES } from "../../../shared/constants/roles.constants";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
+import { SafetyService } from "../safety.service.js";
+import { EmergencyEventModel } from "../safety.model.js";
+import { SafetyAuditEventModel } from "../safety-audit.model.js";
+import { EmergencyContactModel } from "../emergency-contact.model.js";
+import { EmergencyStatus, EmergencyType } from "../safety.constants.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserModel } from "../../users/user.model.js";
+import { RideStatus } from "../../rides/ride.constants.js";
+import { ROLES } from "../../../shared/constants/roles.constants.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
 
 // Helpers
 let passengerUser: any;

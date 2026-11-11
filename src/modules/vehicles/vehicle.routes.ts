@@ -1,13 +1,13 @@
 import { Router } from "express";
-import { vehicleController } from "./vehicle.controller";
-import { requireAuth, requireDriverConductor } from "../../middleware/authorization";
-import { validateBody, validateParams } from "../../middleware/validation";
+import { vehicleController } from "./vehicle.controller.js";
+import { requireAuth, requireDriverConductor } from "../../middleware/authorization.js";
+import { validateBody, validateParams } from "../../middleware/validation.js";
 import {
   createVehicleSchema,
   updateVehicleSchema,
   vehicleIdParamSchema,
-} from "./vehicle.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "./vehicle.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

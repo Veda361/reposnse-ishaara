@@ -1,37 +1,37 @@
 import { v4 as uuidv4 } from "uuid";
 import { Types } from "mongoose";
-import { PaymentModel, IPaymentDocument, toPaymentResponse } from "./payment.model";
+import { PaymentModel, IPaymentDocument, toPaymentResponse } from "./payment.model.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_PROVIDER,
   SETTLEMENT_STATUS,
   PaymentStatus,
-} from "./payment.constants";
+} from "./payment.constants.js";
 import {
   PaymentRecord,
   CheckoutSessionDetails,
   PaymentVerificationInput,
   RefundRecord,
-} from "./payment.types";
-import { validatePaymentTransition } from "./payment.state-machine";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { fareService } from "./fare.service";
-import { ledgerService } from "./ledger.service";
-import { paymentProvider } from "./payment-provider/razorpay.provider";
-import { RefundModel, toRefundResponse } from "./refund.model";
-import { SettlementModel } from "./settlement.model";
-import { settlementService } from "./settlement.service";
-import { realtimeGateway } from "../realtime/realtime.gateway";
-import { outboxService } from "../events/outbox.service";
-import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { AppError } from "../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { distanceService } from "../matching/distance.service";
+} from "./payment.types.js";
+import { validatePaymentTransition } from "./payment.state-machine.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { fareService } from "./fare.service.js";
+import { ledgerService } from "./ledger.service.js";
+import { paymentProvider } from "./payment-provider/razorpay.provider.js";
+import { RefundModel, toRefundResponse } from "./refund.model.js";
+import { SettlementModel } from "./settlement.model.js";
+import { settlementService } from "./settlement.service.js";
+import { realtimeGateway } from "../realtime/realtime.gateway.js";
+import { outboxService } from "../events/outbox.service.js";
+import { DOMAIN_EVENT_TYPES } from "../events/domain-event.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { distanceService } from "../matching/distance.service.js";
 
 export interface CreatePaymentOrderParams {
   userId: string;

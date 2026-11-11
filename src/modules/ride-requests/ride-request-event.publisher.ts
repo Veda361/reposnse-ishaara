@@ -1,7 +1,7 @@
-import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway";
-import { RideRequestResponse } from "./ride-request.types";
-import { RideRequestEventPayload } from "../realtime/realtime.types";
-import { logger } from "../../config/logger";
+import { realtimeGateway, RealtimeGateway } from "../realtime/realtime.gateway.js";
+import { RideRequestResponse } from "./ride-request.types.js";
+import { RideRequestEventPayload } from "../realtime/realtime.types.js";
+import { logger } from "../../config/logger.js";
 
 export class RideRequestEventPublisher {
   private gateway: RealtimeGateway;

@@ -2,12 +2,12 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../driver.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { emailService } from "../../auth/email.service";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../driver.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { emailService } from "../../auth/email.service.js";
 
 describe("Phase 02: Driver Domain & Onboarding Foundation Tests", () => {
   const app = createApp();

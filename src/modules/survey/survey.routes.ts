@@ -1,9 +1,9 @@
 import { Router } from "express";
-import { surveyController } from "./survey.controller";
-import { surveyRateLimiter } from "../../middleware/rate-limit";
-import { validateBody } from "../../middleware/validation";
-import { createSurveySchema } from "./survey.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+import { surveyController } from "./survey.controller.js";
+import { surveyRateLimiter } from "../../middleware/rate-limit.js";
+import { validateBody } from "../../middleware/validation.js";
+import { createSurveySchema } from "./survey.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

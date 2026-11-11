@@ -162,3 +162,4 @@ Command: `NODE_ENV=test npx tsx --test src/config/__tests__/cors.test.ts`
 ℹ pass 12
 ℹ fail 0
 ```
+

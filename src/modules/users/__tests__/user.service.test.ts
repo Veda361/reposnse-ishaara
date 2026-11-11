@@ -1,12 +1,12 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { userService } from "../user.service";
-import { UserModel, toCleanUserResponse } from "../user.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ConflictError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { userService } from "../user.service.js";
+import { UserModel, toCleanUserResponse } from "../user.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ConflictError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("User Service & Model Unit/Integration Tests", () => {
   const TEST_PREFIX = `test_${Date.now()}_`;

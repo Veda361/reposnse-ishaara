@@ -1,14 +1,14 @@
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
 import {
   IRoadsProvider,
   LatLngPoint,
   SnappedPoint,
   SnapToRoadsParams,
   SnapToRoadsResult,
-} from "../location.types";
-import { BadRequestError } from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+} from "../location.types.js";
+import { BadRequestError } from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 /**
  * Raw response item structure from Google Roads API snapToRoads.

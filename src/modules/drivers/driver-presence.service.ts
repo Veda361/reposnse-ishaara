@@ -1,15 +1,15 @@
 import { Types } from "mongoose";
-import { DriverProfileModel } from "./driver.model";
+import { DriverProfileModel } from "./driver.model.js";
 import {
   DriverStatus,
   VerificationStatus,
   IDriverProfileDocument,
   DriverCurrentLocation,
-} from "./driver.types";
-import { TripModel } from "../trips/trip.model";
-import { TripStatus, ITripDocument } from "../trips/trip.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+} from "./driver.types.js";
+import { TripModel } from "../trips/trip.model.js";
+import { TripStatus, ITripDocument } from "../trips/trip.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export type DriverTripIneligibilityReason =
   | "ELIGIBLE"

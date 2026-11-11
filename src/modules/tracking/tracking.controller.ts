@@ -1,12 +1,12 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { trackingService, TrackingService } from "./tracking.service";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError, NotFoundError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role, ROLES } from "../../shared/constants/roles.constants";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { trackingService, TrackingService } from "./tracking.service.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError, NotFoundError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role, ROLES } from "../../shared/constants/roles.constants.js";
 
 export class TrackingController {
   private service: TrackingService;

@@ -1,37 +1,37 @@
 import { Types } from "mongoose";
-import { VehicleModel } from "./vehicle.model";
-import { IVehicleDocument } from "./vehicle.types";
+import { VehicleModel } from "./vehicle.model.js";
+import { IVehicleDocument } from "./vehicle.types.js";
 import {
   DriverVehicleAssignmentModel,
   toCleanAssignmentResponse,
-} from "./assignment.model";
+} from "./assignment.model.js";
 import {
   IDriverVehicleAssignmentDocument,
   CleanAssignmentResponse,
   AssignmentActorRole,
-} from "./assignment.types";
-import { DriverProfileModel } from "../drivers/driver.model";
+} from "./assignment.types.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
 import {
   DriverStatus,
   VerificationStatus,
-} from "../drivers/driver.types";
-import { UserModel } from "../users/user.model";
-import { UserRole } from "../../shared/constants/roles.constants";
-import { AgencyMembershipModel } from "../agencies/agency-membership.model";
-import { AgencyMembershipStatus } from "../agencies/agency-membership.types";
-import { TripModel } from "../trips/trip.model";
-import { TripStatus } from "../trips/trip.types";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { realtimeGateway } from "../realtime/realtime.gateway";
+} from "../drivers/driver.types.js";
+import { UserModel } from "../users/user.model.js";
+import { UserRole } from "../../shared/constants/roles.constants.js";
+import { AgencyMembershipModel } from "../agencies/agency-membership.model.js";
+import { AgencyMembershipStatus } from "../agencies/agency-membership.types.js";
+import { TripModel } from "../trips/trip.model.js";
+import { TripStatus } from "../trips/trip.types.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { realtimeGateway } from "../realtime/realtime.gateway.js";
 import {
   NotFoundError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export interface AssignVehicleParams {
   vehicleId: string;

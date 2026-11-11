@@ -1,14 +1,14 @@
-import { env } from "../../config/env";
-import { FareBreakdown } from "./payment.types";
+import { env } from "../../config/env.js";
+import { FareBreakdown } from "./payment.types.js";
 import {
   PricingPolicy,
   FareEstimate,
   FareSnapshot,
-} from "./fare.types";
-import { pricingPolicyRegistry } from "./pricing-policy";
-import { AppError } from "../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./fare.types.js";
+import { pricingPolicyRegistry } from "./pricing-policy.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export interface FareCalculationInput {
   distanceMeters?: number;

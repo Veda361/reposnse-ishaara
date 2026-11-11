@@ -2,14 +2,14 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../vehicle.model";
-import { VehicleType } from "../vehicle.types";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../vehicle.model.js";
+import { VehicleType } from "../vehicle.types.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Vehicle Management API Integration Tests", () => {
   const TEST_PREFIX = `veh_api_${Date.now()}_`;

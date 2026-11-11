@@ -1,12 +1,12 @@
 import { randomUUID } from "crypto";
-import { OutboxService, outboxService } from "./outbox.service";
+import { OutboxService, outboxService } from "./outbox.service.js";
 import {
   NotificationOrchestrator,
   notificationOrchestrator,
-} from "../notifications/notification.orchestrator";
-import { DomainEvent } from "./domain-event.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
+} from "../notifications/notification.orchestrator.js";
+import { DomainEvent } from "./domain-event.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
 
 export class OutboxWorker {
   private workerId: string;

@@ -1,11 +1,11 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
-import { createApp } from "../../../app";
-import { emailService } from "../email.service";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { mongoAuthClient } from "../auth.config";
+import { createApp } from "../../../app.js";
+import { emailService } from "../email.service.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { mongoAuthClient } from "../auth.config.js";
 
 describe("Email OTP Authentication & User Reconciliation Tests", () => {
   const app = createApp();

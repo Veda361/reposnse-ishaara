@@ -3,20 +3,20 @@ import {
   NotificationModel,
   toNotificationResponse,
   INotificationDocument,
-} from "./notification.model";
+} from "./notification.model.js";
 import {
   NotificationResponse,
   PaginatedNotificationsResponse,
   NotificationListQuery,
-} from "./notification.types";
-import { NOTIFICATION_STATUS } from "./notification.constants";
+} from "./notification.types.js";
+import { NOTIFICATION_STATUS } from "./notification.constants.js";
 import {
   BadRequestError,
   NotFoundError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export class NotificationService {
   /**

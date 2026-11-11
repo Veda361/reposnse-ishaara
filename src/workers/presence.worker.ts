@@ -1,8 +1,8 @@
 import { randomUUID } from "crypto";
-import { DriverProfileModel } from "../modules/drivers/driver.model";
-import { DriverStatus } from "../modules/drivers/driver.types";
-import { env } from "../config/env";
-import { logger } from "../config/logger";
+import { DriverProfileModel } from "../modules/drivers/driver.model.js";
+import { DriverStatus } from "../modules/drivers/driver.types.js";
+import { env } from "../config/env.js";
+import { logger } from "../config/logger.js";
 
 export class PresenceWorker {
   private workerId: string;

@@ -1,12 +1,12 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { SafetyService, safetyService } from "./safety.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError, NotFoundError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { Role } from "../../shared/constants/roles.constants";
-import { CreateSosInput, CancelSosInput } from "./safety.schema";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { SafetyService, safetyService } from "./safety.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError, NotFoundError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { Role } from "../../shared/constants/roles.constants.js";
+import { CreateSosInput, CancelSosInput } from "./safety.schema.js";
 
 /**
  * Phase 15: SafetyController

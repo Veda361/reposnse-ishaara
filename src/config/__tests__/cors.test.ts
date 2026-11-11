@@ -1,10 +1,10 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import request from "supertest";
-import { createApp } from "../../app";
-import { resolveAllowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../env";
-import { trustedOrigins } from "../../modules/auth/auth.config";
-import { connectDatabase, disconnectDatabase } from "../database";
+import { createApp } from "../../app.js";
+import { resolveAllowedOrigins, DEFAULT_ALLOWED_ORIGINS } from "../env.js";
+import { trustedOrigins } from "../../modules/auth/auth.config.js";
+import { connectDatabase, disconnectDatabase } from "../database.js";
 
 describe("CORS Security & Preflight Configuration Tests", () => {
   const app = createApp();

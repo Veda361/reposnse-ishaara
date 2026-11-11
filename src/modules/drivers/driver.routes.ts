@@ -1,32 +1,32 @@
 import { Router } from "express";
-import { driverController } from "./driver.controller";
-import { tripController } from "../trips/trip.controller";
-import { requireAuth, requireDriverConductor } from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
+import { driverController } from "./driver.controller.js";
+import { tripController } from "../trips/trip.controller.js";
+import { requireAuth, requireDriverConductor } from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
 import {
   createDriverProfileSchema,
   updateDriverProfileSchema,
   updateDriverLocationSchema,
   submitDriverVerificationSchema,
-} from "./driver.schema";
+} from "./driver.schema.js";
 import {
   driverOperationalContextQuerySchema,
   driverEarningsQuerySchema,
-} from "./driver-operations.schema";
-import { listDriverTripsQuerySchema } from "../trips/trip.schema";
-import { rideRequestController } from "../ride-requests/ride-request.controller";
-import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
-import { rideController } from "../rides/ride.controller";
-import { listRidesQuerySchema } from "../rides/ride.schema";
-import { ratingController } from "../ratings/rating.controller";
-import { agencyMembershipController } from "../agencies/agency-membership.controller";
+} from "./driver-operations.schema.js";
+import { listDriverTripsQuerySchema } from "../trips/trip.schema.js";
+import { rideRequestController } from "../ride-requests/ride-request.controller.js";
+import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema.js";
+import { rideController } from "../rides/ride.controller.js";
+import { listRidesQuerySchema } from "../rides/ride.schema.js";
+import { ratingController } from "../ratings/rating.controller.js";
+import { agencyMembershipController } from "../agencies/agency-membership.controller.js";
 import {
   createAgencyMembershipBodySchema,
   listDriverMembershipsQuerySchema,
-} from "../agencies/agency-membership.schema";
-import { vehicleController } from "../vehicles/vehicle.controller";
-import { asyncHandler } from "../../shared/utils/async-handler";
-import { gpsLocationRateLimiter } from "../../middleware/rate-limit";
+} from "../agencies/agency-membership.schema.js";
+import { vehicleController } from "../vehicles/vehicle.controller.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
+import { gpsLocationRateLimiter } from "../../middleware/rate-limit.js";
 
 const router = Router();
 

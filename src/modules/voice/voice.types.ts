@@ -1,6 +1,6 @@
 import { Types } from "mongoose";
-import { ResolvedLocation } from "../locations/location.types";
-import { CleanTripResponse } from "../trips/trip.types";
+import { ResolvedLocation } from "../locations/location.types.js";
+import { CleanTripResponse } from "../trips/trip.types.js";
 
 /**
  * Supported Speech-to-Text Providers.

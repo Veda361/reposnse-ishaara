@@ -4,7 +4,7 @@ import {
   TripStatus,
   CleanTripResponse,
   PublicTripResponse,
-} from "./trip.types";
+} from "./trip.types.js";
 
 const pointSchema = new Schema(
   {

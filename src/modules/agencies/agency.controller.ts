@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { agencyService } from "./agency.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { CreateAgencyInput, UpdateAgencyInput, ListAgenciesQueryInput } from "./agency.schema";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { verifyAdminKey } from "../../middleware/authorization";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { agencyService } from "./agency.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { CreateAgencyInput, UpdateAgencyInput, ListAgenciesQueryInput } from "./agency.schema.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { verifyAdminKey } from "../../middleware/authorization.js";
 
 export class AgencyController {
   /**

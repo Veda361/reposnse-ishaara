@@ -4,10 +4,10 @@ import {
   computeAverageScore,
   toDriverRatingSummaryResponse,
   zeroRatingSummaryResponse,
-} from "./rating-summary.model";
-import { RatingModel } from "./rating.model";
-import { DriverRatingSummaryResponse } from "./rating.types";
-import { logger } from "../../config/logger";
+} from "./rating-summary.model.js";
+import { RatingModel } from "./rating.model.js";
+import { DriverRatingSummaryResponse } from "./rating.types.js";
+import { logger } from "../../config/logger.js";
 
 export class RatingSummaryService {
   /**

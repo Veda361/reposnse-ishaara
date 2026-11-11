@@ -1,11 +1,11 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { tripService } from "./trip.service";
-import { driverService } from "../drivers/driver.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { verifyAdminKey } from "../../middleware/authorization";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { tripService } from "./trip.service.js";
+import { driverService } from "../drivers/driver.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { verifyAdminKey } from "../../middleware/authorization.js";
 import {
   CreateTripInput,
   AgencyCreateTripInput,
@@ -14,7 +14,7 @@ import {
   ListDriverTripsQuery,
   ListAgencyTripsQuery,
   ActiveTripsQuery,
-} from "./trip.schema";
+} from "./trip.schema.js";
 
 export class TripController {
   /**

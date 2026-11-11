@@ -2,17 +2,17 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { TripModel } from "../trip.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { VehicleType } from "../../vehicles/vehicle.types";
-import { TripStatus } from "../trip.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { TripModel } from "../trip.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { VehicleType } from "../../vehicles/vehicle.types.js";
+import { TripStatus } from "../trip.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Trip Management API Integration Tests", () => {
   const TEST_PREFIX = `trip_api_${Date.now()}_`;

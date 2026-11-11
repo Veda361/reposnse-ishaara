@@ -1,16 +1,16 @@
-import { logger } from "../../config/logger";
-import { LocationCache, locationCache } from "./location.cache";
-import { LocationOrchestrator, locationOrchestrator } from "./location.orchestrator";
+import { logger } from "../../config/logger.js";
+import { LocationCache, locationCache } from "./location.cache.js";
+import { LocationOrchestrator, locationOrchestrator } from "./location.orchestrator.js";
 import {
   GeocodeQuery,
   LocationSearchQuery,
   ReverseGeocodeQuery,
-} from "./location.schema";
-import { ResolvedLocation } from "./location.types";
+} from "./location.schema.js";
+import { ResolvedLocation } from "./location.types.js";
 import {
   GoogleGeocodingProvider,
   googleGeocodingProvider,
-} from "./providers/google-geocoding.provider";
+} from "./providers/google-geocoding.provider.js";
 
 export class LocationService {
   private orchestrator: LocationOrchestrator;

@@ -1,25 +1,25 @@
 import { Types } from "mongoose";
-import { RatingModel, toRatingResponse } from "./rating.model";
-import { RatingSummaryService, ratingSummaryService } from "./rating-summary.service";
+import { RatingModel, toRatingResponse } from "./rating.model.js";
+import { RatingSummaryService, ratingSummaryService } from "./rating-summary.service.js";
 import {
   IRatingDocument,
   RatingResponse,
   RatingEligibilityResponse,
   SubmitRatingInput,
   SubmitRatingContext,
-} from "./rating.types";
-import { RATING_ROLE, RatingRole, MIN_RATING_SCORE, MAX_RATING_SCORE } from "./rating.constants";
-import { RideModel } from "../rides/ride.model";
-import { RideStatus } from "../rides/ride.constants";
-import { ROLES } from "../../shared/constants/roles.constants";
+} from "./rating.types.js";
+import { RATING_ROLE, RatingRole, MIN_RATING_SCORE, MAX_RATING_SCORE } from "./rating.constants.js";
+import { RideModel } from "../rides/ride.model.js";
+import { RideStatus } from "../rides/ride.constants.js";
+import { ROLES } from "../../shared/constants/roles.constants.js";
 import {
   NotFoundError,
   ForbiddenError,
   BadRequestError,
   ConflictError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 /**
  * Phase 14: RatingService

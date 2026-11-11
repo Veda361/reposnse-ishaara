@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document, Model, Types } from "mongoose";
-import { DEVICE_PLATFORM, DevicePlatform } from "./notification.constants";
+import { DEVICE_PLATFORM, DevicePlatform } from "./notification.constants.js";
 
 export interface IDeviceTokenDocument extends Document {
   userId: Types.ObjectId;

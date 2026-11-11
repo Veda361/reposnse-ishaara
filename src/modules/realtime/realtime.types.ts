@@ -1,6 +1,6 @@
-import { VoiceTripDraftResponse } from "../voice/voice.types";
-import { VoiceSessionStatus } from "../voice/sessions/voice-session.model";
-import { DiscoveryItemDto } from "../matching/matching.types";
+import { VoiceTripDraftResponse } from "../voice/voice.types.js";
+import { VoiceSessionStatus } from "../voice/sessions/voice-session.model.js";
+import { DiscoveryItemDto } from "../matching/matching.types.js";
 
 export type ClientMessageType =
   | "SESSION_START"
@@ -226,5 +226,5 @@ export interface RideTrackingEndedPayload {
   timestamp: string;
 }
 
-export { RideTrackingUpdatedPayload } from "../tracking/tracking.types";
+export { RideTrackingUpdatedPayload } from "../tracking/tracking.types.js";
 

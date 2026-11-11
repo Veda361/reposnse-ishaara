@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { paymentWebhookService } from "./payment-webhook.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { paymentWebhookService } from "./payment-webhook.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 
 export class PaymentWebhookController {
   /**

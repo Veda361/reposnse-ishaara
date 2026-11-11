@@ -1,14 +1,14 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { realtimeSessionService } from "../realtime.session.service";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { realtimeSessionService } from "../realtime.session.service.js";
 import {
   VoiceSessionModel,
   VoiceSessionStatus,
-} from "../../voice/sessions/voice-session.model";
-import { InputMode } from "../../voice/voice.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+} from "../../voice/sessions/voice-session.model.js";
+import { InputMode } from "../../voice/voice.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Realtime Voice Session Service Unit Tests", () => {
   const driverId1 = new mongoose.Types.ObjectId();

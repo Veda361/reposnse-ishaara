@@ -1,19 +1,19 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideModel } from "../../rides/ride.model";
-import { driverLocationService } from "../../drivers/driver-location.service";
-import { trackingService } from "../tracking.service";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { VehicleType } from "../../vehicles/vehicle.types";
-import { TripStatus } from "../../trips/trip.types";
-import { RideStatus } from "../../rides/ride.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { driverLocationService } from "../../drivers/driver-location.service.js";
+import { trackingService } from "../tracking.service.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { VehicleType } from "../../vehicles/vehicle.types.js";
+import { TripStatus } from "../../trips/trip.types.js";
+import { RideStatus } from "../../rides/ride.constants.js";
 
 describe("Phase 11: Tracking Concurrency & Race Condition Tests", () => {
   const TEST_PREFIX = `track_conc_${Date.now()}_`;

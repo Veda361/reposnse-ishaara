@@ -4,7 +4,7 @@ import {
   TranscriptionOptions,
   TranscriptionResult,
   ProviderHealthStatus,
-} from "./voice.types";
+} from "./voice.types.js";
 
 /**
  * Common provider-independent abstraction for all Speech-to-Text engines.

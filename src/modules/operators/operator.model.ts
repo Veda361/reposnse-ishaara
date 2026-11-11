@@ -2,7 +2,7 @@ import mongoose, { Schema, Model } from "mongoose";
 import {
   IBusOperatorDocument,
   CleanBusOperatorResponse,
-} from "./operator.types";
+} from "./operator.types.js";
 
 const payoutAccountSchema = new Schema(
   {

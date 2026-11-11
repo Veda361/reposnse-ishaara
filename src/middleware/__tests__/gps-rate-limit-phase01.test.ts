@@ -7,11 +7,11 @@ import {
   createRateLimiter,
   apiRateLimiter,
   gpsLocationRateLimiter,
-} from "../rate-limit";
-import { createApp } from "../../app";
-import { UserRole } from "../../shared/constants/roles.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+} from "../rate-limit.js";
+import { createApp } from "../../app.js";
+import { UserRole } from "../../shared/constants/roles.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 
 describe("Phase 01-B: GPS Telemetry Rate Limiting & Exemption Test Suite", () => {
   describe("Helper: isGpsTelemetryRequest predicate accuracy", () => {

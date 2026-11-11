@@ -3,13 +3,13 @@ import {
   TripModel,
   toCleanTripResponse,
   toPublicTripResponse,
-} from "./trip.model";
+} from "./trip.model.js";
 import {
   TripStatus,
   CleanTripResponse,
   PublicTripResponse,
   TripActorRole,
-} from "./trip.types";
+} from "./trip.types.js";
 import {
   CreateTripInput,
   AgencyCreateTripInput,
@@ -18,28 +18,28 @@ import {
   ListDriverTripsQuery,
   ListAgencyTripsQuery,
   ActiveTripsQuery,
-} from "./trip.schema";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { DriverStatus, VerificationStatus } from "../drivers/driver.types";
-import { VehicleModel } from "../vehicles/vehicle.model";
-import { UserModel } from "../users/user.model";
-import { AgencyModel } from "../agencies/agency.model";
-import { AgencyMembershipModel } from "../agencies/agency-membership.model";
-import { AgencyMembershipStatus } from "../agencies/agency-membership.types";
-import { DriverVehicleAssignmentModel } from "../vehicles/assignment.model";
+} from "./trip.schema.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { DriverStatus, VerificationStatus } from "../drivers/driver.types.js";
+import { VehicleModel } from "../vehicles/vehicle.model.js";
+import { UserModel } from "../users/user.model.js";
+import { AgencyModel } from "../agencies/agency.model.js";
+import { AgencyMembershipModel } from "../agencies/agency-membership.model.js";
+import { AgencyMembershipStatus } from "../agencies/agency-membership.types.js";
+import { DriverVehicleAssignmentModel } from "../vehicles/assignment.model.js";
 import {
   NotFoundError,
   ConflictError,
   BadRequestError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { routingService } from "../routing/routing.service";
-import { tripDiscoveryChangeSource } from "../realtime/trip-discovery-change.source";
-import { driverPresenceService } from "../drivers/driver-presence.service";
-import { locationService } from "../locations/location.service";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { routingService } from "../routing/routing.service.js";
+import { tripDiscoveryChangeSource } from "../realtime/trip-discovery-change.source.js";
+import { driverPresenceService } from "../drivers/driver-presence.service.js";
+import { locationService } from "../locations/location.service.js";
 
 /**
  * Computes great-circle distance between two geographic coordinates in meters

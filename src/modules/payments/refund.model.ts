@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { REFUND_STATUS, RefundStatus } from "./payment.constants";
-import { RefundRecord } from "./payment.types";
+import { REFUND_STATUS, RefundStatus } from "./payment.constants.js";
+import { RefundRecord } from "./payment.types.js";
 
 export interface IRefundDocument extends Document {
   paymentId: mongoose.Types.ObjectId;

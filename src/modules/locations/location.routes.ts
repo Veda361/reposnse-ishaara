@@ -1,14 +1,14 @@
 import { Router } from "express";
-import { locationController } from "./location.controller";
-import { requireAuth } from "../../middleware/authorization";
-import { locationRateLimiter } from "../../middleware/rate-limit";
-import { validateQuery } from "../../middleware/validation";
+import { locationController } from "./location.controller.js";
+import { requireAuth } from "../../middleware/authorization.js";
+import { locationRateLimiter } from "../../middleware/rate-limit.js";
+import { validateQuery } from "../../middleware/validation.js";
 import {
   geocodeQuerySchema,
   locationSearchQuerySchema,
   reverseGeocodeQuerySchema,
-} from "./location.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
+} from "./location.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
 
 const router = Router();
 

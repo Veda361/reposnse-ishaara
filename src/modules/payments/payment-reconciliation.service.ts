@@ -1,7 +1,7 @@
-import { PaymentModel } from "./payment.model";
-import { PAYMENT_STATUS } from "./payment.constants";
-import { paymentProvider } from "./payment-provider/razorpay.provider";
-import { logger } from "../../config/logger";
+import { PaymentModel } from "./payment.model.js";
+import { PAYMENT_STATUS } from "./payment.constants.js";
+import { paymentProvider } from "./payment-provider/razorpay.provider.js";
+import { logger } from "../../config/logger.js";
 
 export interface ReconciliationDiscrepancy {
   paymentId: string;

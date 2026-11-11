@@ -4,8 +4,8 @@ import {
   VoiceIntentType,
   VoiceTripDraftStatus,
   VoiceTripDraftResponse,
-} from "../voice.types";
-import { ResolvedLocation } from "../../locations/location.types";
+} from "../voice.types.js";
+import { ResolvedLocation } from "../../locations/location.types.js";
 
 export interface IVoiceTripDraft extends Document {
   _id: Types.ObjectId;

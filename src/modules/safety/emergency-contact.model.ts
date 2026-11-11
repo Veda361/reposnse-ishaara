@@ -2,8 +2,8 @@ import mongoose, { Schema, Model } from "mongoose";
 import {
   IEmergencyContactDocument,
   EmergencyContactResponse,
-} from "./safety.types";
-import { EmergencyContactRelationship } from "./safety.constants";
+} from "./safety.types.js";
+import { EmergencyContactRelationship } from "./safety.constants.js";
 
 const emergencyContactSchema = new Schema<IEmergencyContactDocument>(
   {

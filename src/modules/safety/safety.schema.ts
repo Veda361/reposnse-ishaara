@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { EmergencyType, EmergencyContactRelationship } from "./safety.constants";
+import { EmergencyType, EmergencyContactRelationship } from "./safety.constants.js";
 
 /**
  * Zod schema for SOS trigger body.

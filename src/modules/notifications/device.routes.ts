@@ -1,7 +1,7 @@
 import { Router } from "express";
-import { deviceController } from "./device.controller";
-import { requireAuth } from "../../middleware/auth";
-import { pushTokenRateLimiter } from "../../middleware/rate-limit";
+import { deviceController } from "./device.controller.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { pushTokenRateLimiter } from "../../middleware/rate-limit.js";
 
 const router = Router();
 

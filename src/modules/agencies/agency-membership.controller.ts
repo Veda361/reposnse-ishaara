@@ -1,16 +1,16 @@
 import { Request, Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { agencyMembershipService } from "./agency-membership.service";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { agencyMembershipService } from "./agency-membership.service.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 import {
   CreateAgencyMembershipInput,
   RejectAgencyMembershipInput,
   ListAgencyMembershipsQueryInput,
   ListDriverMembershipsQueryInput,
-} from "./agency-membership.schema";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { verifyAdminKey } from "../../middleware/authorization";
+} from "./agency-membership.schema.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { verifyAdminKey } from "../../middleware/authorization.js";
 
 export class AgencyMembershipController {
   /**

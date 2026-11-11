@@ -14,13 +14,13 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import { Types } from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { EmergencyContactModel } from "../emergency-contact.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { EmergencyContactRelationship } from "../safety.constants";
-import { env } from "../../../config/env";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { EmergencyContactModel } from "../emergency-contact.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { EmergencyContactRelationship } from "../safety.constants.js";
+import { env } from "../../../config/env.js";
 
 /**
  * Creates an app with preRouterMiddleware that injects authenticated user.

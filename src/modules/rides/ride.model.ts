@@ -1,6 +1,6 @@
 import mongoose, { Schema, Model } from "mongoose";
-import { IRideDocument, RideResponse } from "./ride.types";
-import { RideStatus } from "./ride.constants";
+import { IRideDocument, RideResponse } from "./ride.types.js";
+import { RideStatus } from "./ride.constants.js";
 
 const pointSchema = new Schema(
   {

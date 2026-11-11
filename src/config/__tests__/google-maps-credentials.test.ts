@@ -7,7 +7,7 @@ import {
   isGeocodingConfigured,
   isRoadsConfigured,
   isRoadsSnapEnabled,
-} from "../env";
+} from "../env.js";
 
 describe("Google Maps Platform Credential Architecture Tests (Phase 01)", () => {
   const baseValidDevEnv: Record<string, string> = {

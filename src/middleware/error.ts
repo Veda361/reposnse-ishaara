@@ -1,12 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { ZodError } from "zod";
 import mongoose from "mongoose";
-import { AppError } from "../shared/errors/app-error";
-import { ERROR_CODES } from "../shared/errors/error-codes";
-import { sendError } from "../shared/responses/api-response";
-import { logger } from "../config/logger";
-import { env } from "../config/env";
-import { HTTP_STATUS } from "../shared/constants/api.constants";
+import { AppError } from "../shared/errors/app-error.js";
+import { ERROR_CODES } from "../shared/errors/error-codes.js";
+import { sendError } from "../shared/responses/api-response.js";
+import { logger } from "../config/logger.js";
+import { env } from "../config/env.js";
+import { HTTP_STATUS } from "../shared/constants/api.constants.js";
 
 /**
  * Global Express error handling middleware.

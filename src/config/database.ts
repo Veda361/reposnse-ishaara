@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
-import { env } from "./env";
-import { logger } from "./logger";
+import { env } from "./env.js";
+import { logger } from "./logger.js";
 
 const MONGO_CONNECT_TIMEOUT_MS = 15000;
 

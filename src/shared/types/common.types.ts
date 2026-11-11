@@ -1,6 +1,6 @@
 import { Request } from "express";
-import { Role } from "../constants/roles.constants";
-import type { AuthenticatedContext } from "../../modules/auth/auth.types";
+import { Role } from "../constants/roles.constants.js";
+import type { AuthenticatedContext } from "../../modules/auth/auth.types.js";
 
 export interface PaginationParams {
   page: number;

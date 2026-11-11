@@ -3,7 +3,7 @@ import {
   AgencyMembershipModel,
   toCleanDriverMembershipResponse,
   toCleanAgencyMembershipResponse,
-} from "./agency-membership.model";
+} from "./agency-membership.model.js";
 import {
   AgencyMembershipStatus,
   CleanDriverMembershipResponse,
@@ -11,26 +11,26 @@ import {
   ListAgencyMembershipsResult,
   ListDriverMembershipsResult,
   IAgencyMembershipDocument,
-} from "./agency-membership.types";
+} from "./agency-membership.types.js";
 import {
   CreateAgencyMembershipInput,
   RejectAgencyMembershipInput,
   ListAgencyMembershipsQueryInput,
   ListDriverMembershipsQueryInput,
-} from "./agency-membership.schema";
-import { AgencyModel } from "./agency.model";
-import { AgencyStatus, IAgencyDocument } from "./agency.types";
-import { DriverProfileModel } from "../drivers/driver.model";
-import { IDriverProfileDocument } from "../drivers/driver.types";
-import { UserModel } from "../users/user.model";
+} from "./agency-membership.schema.js";
+import { AgencyModel } from "./agency.model.js";
+import { AgencyStatus, IAgencyDocument } from "./agency.types.js";
+import { DriverProfileModel } from "../drivers/driver.model.js";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
+import { UserModel } from "../users/user.model.js";
 import {
   NotFoundError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export class AgencyMembershipService {
   /**

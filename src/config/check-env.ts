@@ -1,4 +1,4 @@
-import { auditEnvironmentVariables } from "./env-diagnostic";
+import { auditEnvironmentVariables } from "./env-diagnostic.js";
 
 /**
  * CLI runner for safe zero-exposure environment audit.

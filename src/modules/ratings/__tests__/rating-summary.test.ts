@@ -12,14 +12,14 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserModel } from "../../users/user.model";
-import { RatingModel } from "../rating.model";
-import { DriverRatingSummaryModel, computeAverageScore } from "../rating-summary.model";
-import { RatingSummaryService } from "../rating-summary.service";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VerificationStatus, DriverStatus } from "../../drivers/driver.types";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserModel } from "../../users/user.model.js";
+import { RatingModel } from "../rating.model.js";
+import { DriverRatingSummaryModel, computeAverageScore } from "../rating-summary.model.js";
+import { RatingSummaryService } from "../rating-summary.service.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VerificationStatus, DriverStatus } from "../../drivers/driver.types.js";
 
 const summaryService = new RatingSummaryService();
 

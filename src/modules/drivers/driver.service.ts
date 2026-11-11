@@ -1,29 +1,29 @@
 import { Types } from "mongoose";
-import { DriverProfileModel, toCleanDriverVerificationResponse } from "./driver.model";
+import { DriverProfileModel, toCleanDriverVerificationResponse } from "./driver.model.js";
 import {
   IDriverProfileDocument,
   VerificationStatus,
   DriverStatus,
   CleanDriverVerificationResponse,
-} from "./driver.types";
-import { UserModel } from "../users/user.model";
-import { UserRole } from "../../shared/constants/roles.constants";
+} from "./driver.types.js";
+import { UserModel } from "../users/user.model.js";
+import { UserRole } from "../../shared/constants/roles.constants.js";
 import {
   NotFoundError,
   ConflictError,
   ForbiddenError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 import {
   CreateDriverProfileInput,
   UpdateDriverProfileInput,
   UpdateDriverLocationInput,
   SubmitDriverVerificationInput,
-} from "./driver.schema";
-import { driverLocationService } from "./driver-location.service";
-import { driverOperationsService } from "./driver-operations.service";
+} from "./driver.schema.js";
+import { driverLocationService } from "./driver-location.service.js";
+import { driverOperationsService } from "./driver-operations.service.js";
 
 export class DriverService {
   /**

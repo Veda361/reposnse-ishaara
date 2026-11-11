@@ -3,18 +3,18 @@ import {
   LedgerTransactionModel,
   LedgerEntryModel,
   ILedgerTransactionDocument,
-} from "./ledger.model";
+} from "./ledger.model.js";
 import {
   LEDGER_ACCOUNT,
   LEDGER_DIRECTION,
   LEDGER_TRANSACTION_TYPE,
   LedgerTransactionType,
-} from "./payment.constants";
-import { LedgerEntryItem, LedgerTransactionRecord } from "./payment.types";
-import { AppError } from "../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "./payment.constants.js";
+import { LedgerEntryItem, LedgerTransactionRecord } from "./payment.types.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export interface PostLedgerTransactionInput {
   type: LedgerTransactionType;

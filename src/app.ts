@@ -1,18 +1,18 @@
 import express, { Express, Request, Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
-import { env, parseClientUrls, resolveAllowedOrigins } from "./config/env";
-import { logger } from "./config/logger";
+import { env, parseClientUrls, resolveAllowedOrigins } from "./config/env.js";
+import { logger } from "./config/logger.js";
 import { toNodeHandler } from "better-auth/node";
-import { auth } from "./modules/auth/auth.config";
-import apiV1Router from "./routes";
-import healthRoutes from "./modules/health/health.routes";
-import { errorHandler } from "./middleware/error";
-import { sendError } from "./shared/responses/api-response";
-import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants";
-import { ERROR_CODES } from "./shared/errors/error-codes";
-import { apiRateLimiter } from "./middleware/rate-limit";
-import { emailService } from "./modules/auth/email.service";
+import { auth } from "./modules/auth/auth.config.js";
+import apiV1Router from "./routes/index.js";
+import healthRoutes from "./modules/health/health.routes.js";
+import { errorHandler } from "./middleware/error.js";
+import { sendError } from "./shared/responses/api-response.js";
+import { HTTP_STATUS, API_PREFIX } from "./shared/constants/api.constants.js";
+import { ERROR_CODES } from "./shared/errors/error-codes.js";
+import { apiRateLimiter } from "./middleware/rate-limit.js";
+import { emailService } from "./modules/auth/email.service.js";
 
 export interface CreateAppOptions {
   preRouterMiddleware?: express.RequestHandler;

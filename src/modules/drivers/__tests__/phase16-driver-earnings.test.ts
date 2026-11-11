@@ -37,21 +37,21 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose, { Types } from "mongoose";
 import request from "supertest";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../driver.model";
-import { TripModel } from "../../trips/trip.model";
-import { RideModel } from "../../rides/ride.model";
-import { PaymentModel } from "../../payments/payment.model";
-import { SettlementModel } from "../../payments/settlement.model";
-import { LedgerTransactionModel, LedgerEntryModel } from "../../payments/ledger.model";
-import { ledgerService } from "../../payments/ledger.service";
-import { driverEarningsService } from "../driver-earnings.service";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VerificationStatus, DriverStatus } from "../driver.types";
-import { TripStatus } from "../../trips/trip.types";
-import { RideStatus } from "../../rides/ride.constants";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../driver.model.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { PaymentModel } from "../../payments/payment.model.js";
+import { SettlementModel } from "../../payments/settlement.model.js";
+import { LedgerTransactionModel, LedgerEntryModel } from "../../payments/ledger.model.js";
+import { ledgerService } from "../../payments/ledger.service.js";
+import { driverEarningsService } from "../driver-earnings.service.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VerificationStatus, DriverStatus } from "../driver.types.js";
+import { TripStatus } from "../../trips/trip.types.js";
+import { RideStatus } from "../../rides/ride.constants.js";
 import {
   PAYMENT_STATUS,
   PAYMENT_PROVIDER,
@@ -59,7 +59,7 @@ import {
   LEDGER_DIRECTION,
   LEDGER_TRANSACTION_TYPE,
   LEDGER_ACCOUNT,
-} from "../../payments/payment.constants";
+} from "../../payments/payment.constants.js";
 
 const makeAuthApp = (getUser: () => any) =>
   createApp({

@@ -1,4 +1,4 @@
-import { RideStatus } from "../rides/ride.constants";
+import { RideStatus } from "../rides/ride.constants.js";
 
 /**
  * Authoritative derived tracking state reflecting operational GPS & route progress.

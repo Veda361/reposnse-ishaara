@@ -5,11 +5,11 @@ import {
   CleanDriverMembershipResponse,
   CleanAgencyMembershipResponse,
   SafeMembershipDriverInfo,
-} from "./agency-membership.types";
-import { IAgencyDocument } from "./agency.types";
-import { IDriverProfileDocument } from "../drivers/driver.types";
-import { maskLicenseNumber } from "../drivers/driver.model";
-import { IUserDocument } from "../users/user.types";
+} from "./agency-membership.types.js";
+import { IAgencyDocument } from "./agency.types.js";
+import { IDriverProfileDocument } from "../drivers/driver.types.js";
+import { maskLicenseNumber } from "../drivers/driver.model.js";
+import { IUserDocument } from "../users/user.types.js";
 
 const agencyMembershipSchema = new Schema<IAgencyMembershipDocument>(
   {

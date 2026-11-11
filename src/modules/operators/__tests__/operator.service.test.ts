@@ -1,14 +1,14 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { BusOperatorModel } from "../operator.model";
-import { busOperatorService } from "../operator.service";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserModel } from "../../users/user.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { VehicleType } from "../../../shared/constants/vehicle.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { BusOperatorModel } from "../operator.model.js";
+import { busOperatorService } from "../operator.service.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserModel } from "../../users/user.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { VehicleType } from "../../../shared/constants/vehicle.constants.js";
 
 describe("Phase 17: BusOperator Entity & Service Tests", () => {
   const TEST_PREFIX = `bus_op_test_${Date.now()}_`;

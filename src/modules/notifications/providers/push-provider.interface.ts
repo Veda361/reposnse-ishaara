@@ -1,4 +1,4 @@
-import { NotificationPriority } from "../notification.constants";
+import { NotificationPriority } from "../notification.constants.js";
 
 export interface PushMessage {
   token: string;

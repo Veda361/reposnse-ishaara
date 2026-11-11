@@ -5,7 +5,7 @@ import {
   DriverStatus,
   CleanDriverProfileResponse,
   CleanDriverVerificationResponse,
-} from "./driver.types";
+} from "./driver.types.js";
 
 /**
  * Masks raw driver license number for sensitive data privacy.

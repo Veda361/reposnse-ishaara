@@ -1,6 +1,6 @@
 import { Response } from "express";
-import { ApiSuccessResponse, ApiErrorResponse } from "./response.types";
-import { HTTP_STATUS } from "../constants/api.constants";
+import { ApiSuccessResponse, ApiErrorResponse } from "./response.types.js";
+import { HTTP_STATUS } from "../constants/api.constants.js";
 
 export interface SendSuccessOptions<T = unknown> {
   res: Response;

@@ -1,19 +1,19 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../driver.model";
-import { driverLocationService, DriverLocationService } from "../driver-location.service";
-import { VerificationStatus, DriverStatus } from "../driver.types";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { RideModel } from "../../rides/ride.model";
-import { RideStatus } from "../../rides/ride.constants";
-import { TripModel } from "../../trips/trip.model";
-import { TripStatus } from "../../trips/trip.types";
-import { VehicleModel } from "../../vehicles/vehicle.model";
-import { VehicleType } from "../../vehicles/vehicle.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../driver.model.js";
+import { driverLocationService, DriverLocationService } from "../driver-location.service.js";
+import { VerificationStatus, DriverStatus } from "../driver.types.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { RideModel } from "../../rides/ride.model.js";
+import { RideStatus } from "../../rides/ride.constants.js";
+import { TripModel } from "../../trips/trip.model.js";
+import { TripStatus } from "../../trips/trip.types.js";
+import { VehicleModel } from "../../vehicles/vehicle.model.js";
+import { VehicleType } from "../../vehicles/vehicle.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Phase 10: Driver Location Service Unit & Integration Tests", () => {
   const TEST_PREFIX = `loc_srv_test_${Date.now()}_`;

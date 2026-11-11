@@ -1,10 +1,10 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { IntentService } from "../intent/intent.service";
-import { TextNormalizer } from "../intent/normalizer";
-import { DeterministicEntityExtractor } from "../intent/entity-extractor";
-import { VoiceIntentType } from "../voice.types";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { IntentService } from "../intent/intent.service.js";
+import { TextNormalizer } from "../intent/normalizer.js";
+import { DeterministicEntityExtractor } from "../intent/entity-extractor.js";
+import { VoiceIntentType } from "../voice.types.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("NLP & Intent Extraction Engine Unit Tests", () => {
   const service = new IntentService();

@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { v4 as uuidv4 } from "uuid";
 import Razorpay from "razorpay";
-import { env } from "../../../config/env";
-import { logger } from "../../../config/logger";
+import { env } from "../../../config/env.js";
+import { logger } from "../../../config/logger.js";
 import {
   PaymentProvider,
   CreateProviderOrderInput,
@@ -13,10 +13,10 @@ import {
   ProviderRefundDetails,
   CreateProviderTransferInput,
   ProviderTransferDetails,
-} from "./payment-provider.interface";
-import { AppError } from "../../../shared/errors/app-error";
-import { HTTP_STATUS } from "../../../shared/constants/api.constants";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+} from "./payment-provider.interface.js";
+import { AppError } from "../../../shared/errors/app-error.js";
+import { HTTP_STATUS } from "../../../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 /**
  * Razorpay Payment Gateway Adapter

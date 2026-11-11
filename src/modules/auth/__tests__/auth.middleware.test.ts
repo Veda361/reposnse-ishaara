@@ -1,11 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { requireAuth } from "../../../middleware/auth";
-import { requireRole, requireUser, requireDriverConductor } from "../../../middleware/authorization";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
-import { AuthenticatedRequest } from "../../../shared/types/common.types";
-import { AppError } from "../../../shared/errors/app-error";
+import { requireAuth } from "../../../middleware/auth.js";
+import { requireRole, requireUser, requireDriverConductor } from "../../../middleware/authorization.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
+import { AuthenticatedRequest } from "../../../shared/types/common.types.js";
+import { AppError } from "../../../shared/errors/app-error.js";
 
 describe("Authentication & Authorization Middleware Tests", () => {
   describe("requireAuth()", () => {

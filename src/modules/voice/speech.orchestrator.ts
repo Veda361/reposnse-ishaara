@@ -1,19 +1,19 @@
-import { SpeechToTextProvider } from "./speech.provider";
-import { GoogleSpeechProvider } from "./providers/google/google-stt.provider";
-import { OpenAISpeechProvider } from "./providers/openai/openai-stt.provider";
-import { WhisperSpeechProvider } from "./providers/whisper/whisper-stt.provider";
-import { DeviceSpeechProvider, deviceSpeechProvider } from "./providers/device/device-stt.provider";
+import { SpeechToTextProvider } from "./speech.provider.js";
+import { GoogleSpeechProvider } from "./providers/google/google-stt.provider.js";
+import { OpenAISpeechProvider } from "./providers/openai/openai-stt.provider.js";
+import { WhisperSpeechProvider } from "./providers/whisper/whisper-stt.provider.js";
+import { DeviceSpeechProvider, deviceSpeechProvider } from "./providers/device/device-stt.provider.js";
 import {
   SpeechProviderName,
   AudioInput,
   TranscriptionOptions,
   TranscriptionResult,
   ProviderHealthStatus,
-} from "./voice.types";
-import { env } from "../../config/env";
-import { logger } from "../../config/logger";
-import { AppError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./voice.types.js";
+import { env } from "../../config/env.js";
+import { logger } from "../../config/logger.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export interface SpeechOrchestratorOptions {
   primaryProvider?: SpeechProviderName;

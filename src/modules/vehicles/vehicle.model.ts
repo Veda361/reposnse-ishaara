@@ -3,7 +3,7 @@ import {
   IVehicleDocument,
   CleanVehicleResponse,
   VehicleType,
-} from "./vehicle.types";
+} from "./vehicle.types.js";
 
 /**
  * Normalizes vehicle registration numbers for consistent storage and uniqueness matching.

@@ -1,18 +1,18 @@
 import { describe, it, before, after } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel, toCleanDriverProfileResponse, maskLicenseNumber } from "../driver.model";
-import { driverService } from "../driver.service";
-import { UserRole } from "../../../shared/constants/roles.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel, toCleanDriverProfileResponse, maskLicenseNumber } from "../driver.model.js";
+import { driverService } from "../driver.service.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
 import {
   ConflictError,
   ForbiddenError,
   BadRequestError,
   NotFoundError,
-} from "../../../shared/errors/app-error";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+} from "../../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("DriverProfile Service & Model Unit/Integration Tests", () => {
   const TEST_PREFIX = `driver_srv_test_${Date.now()}_`;

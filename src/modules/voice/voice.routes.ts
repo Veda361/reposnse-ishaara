@@ -1,16 +1,16 @@
 import { Router } from "express";
 import multer from "multer";
-import { voiceController } from "./voice.controller";
-import { requireAuth, requireDriverConductor } from "../../middleware/authorization";
-import { voiceRateLimiter } from "../../middleware/rate-limit";
-import { validateParams, validateBody } from "../../middleware/validation";
+import { voiceController } from "./voice.controller.js";
+import { requireAuth, requireDriverConductor } from "../../middleware/authorization.js";
+import { voiceRateLimiter } from "../../middleware/rate-limit.js";
+import { validateParams, validateBody } from "../../middleware/validation.js";
 import {
   DraftIdParamSchema,
   ConfirmDraftInputSchema,
   CreateVoiceSessionInputSchema,
-} from "./voice.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
-import { env } from "../../config/env";
+} from "./voice.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
+import { env } from "../../config/env.js";
 
 const router = Router();
 

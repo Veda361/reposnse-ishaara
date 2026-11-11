@@ -1,22 +1,22 @@
 import { Types } from "mongoose";
-import { DomainEvent } from "../events/domain-event.types";
+import { DomainEvent } from "../events/domain-event.types.js";
 import {
   NotificationEventMapper,
   notificationEventMapper,
-} from "./notification-event.mapper";
-import { NotificationModel, INotificationDocument } from "./notification.model";
-import { NotificationPreferenceModel } from "./notification-preference.model";
+} from "./notification-event.mapper.js";
+import { NotificationModel, INotificationDocument } from "./notification.model.js";
+import { NotificationPreferenceModel } from "./notification-preference.model.js";
 import {
   DeviceTokenService,
   deviceTokenService,
-} from "./device-token.service";
+} from "./device-token.service.js";
 import {
   PushNotificationProvider,
   PushDeliveryResult,
-} from "./providers/push-provider.interface";
-import { fcmPushProvider } from "./providers/fcm.provider";
-import { NOTIFICATION_CATEGORY } from "./notification.constants";
-import { logger } from "../../config/logger";
+} from "./providers/push-provider.interface.js";
+import { fcmPushProvider } from "./providers/fcm.provider.js";
+import { NOTIFICATION_CATEGORY } from "./notification.constants.js";
+import { logger } from "../../config/logger.js";
 
 export class NotificationOrchestrator {
   private mapper: NotificationEventMapper;

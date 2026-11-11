@@ -2,14 +2,14 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import request from "supertest";
 import mongoose from "mongoose";
-import { createApp } from "../../../app";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { NotificationModel } from "../notification.model";
-import { DeviceTokenModel } from "../device-token.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { HTTP_STATUS } from "../../../shared/constants/api.constants";
-import { DOMAIN_EVENT_TYPES } from "../../events/domain-event.types";
+import { createApp } from "../../../app.js";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { NotificationModel } from "../notification.model.js";
+import { DeviceTokenModel } from "../device-token.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { HTTP_STATUS } from "../../../shared/constants/api.constants.js";
+import { DOMAIN_EVENT_TYPES } from "../../events/domain-event.types.js";
 
 describe("Phase 12: Notification & Device REST API Integration Tests", () => {
   const TEST_PREFIX = `notif_api_${Date.now()}_`;

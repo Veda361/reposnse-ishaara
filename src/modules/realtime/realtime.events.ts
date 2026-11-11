@@ -2,9 +2,9 @@ import {
   RealtimeEnvelope,
   ClientMessageType,
   ServerMessageType,
-} from "./realtime.types";
-import { AppError } from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
+} from "./realtime.types.js";
+import { AppError } from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
 
 export class RealtimeEventBuilder {
   /**

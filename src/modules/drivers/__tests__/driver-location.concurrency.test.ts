@@ -1,12 +1,12 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert";
 import mongoose from "mongoose";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../driver.model";
-import { driverLocationService } from "../driver-location.service";
-import { VerificationStatus, DriverStatus } from "../driver.types";
-import { UserRole } from "../../../shared/constants/roles.constants";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../driver.model.js";
+import { driverLocationService } from "../driver-location.service.js";
+import { VerificationStatus, DriverStatus } from "../driver.types.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
 
 describe("Phase 10: Driver Location Concurrency & Race Condition Tests", () => {
   const TEST_PREFIX = `loc_conc_test_${Date.now()}_`;

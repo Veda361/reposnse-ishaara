@@ -1,9 +1,9 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { routeProjectionService } from "../route-projection.service";
-import { etaService } from "../eta.service";
-import { distanceService } from "../../matching/distance.service";
-import { env } from "../../../config/env";
+import { routeProjectionService } from "../route-projection.service.js";
+import { etaService } from "../eta.service.js";
+import { distanceService } from "../../matching/distance.service.js";
+import { env } from "../../../config/env.js";
 
 describe("Phase 11: Route Projection, Progress & ETA Unit Tests", () => {
   beforeEach(() => {

@@ -2,14 +2,14 @@ import { describe, it, before, after } from "node:test";
 import assert from "node:assert/strict";
 import mongoose from "mongoose";
 import { IncomingMessage } from "http";
-import { connectDatabase, disconnectDatabase } from "../../../config/database";
-import { realtimeAuthService } from "../realtime.auth";
-import { UserModel } from "../../users/user.model";
-import { DriverProfileModel } from "../../drivers/driver.model";
-import { UserRole } from "../../../shared/constants/roles.constants";
-import { DriverStatus, VerificationStatus } from "../../drivers/driver.types";
-import { authService } from "../../auth/auth.service";
-import { ERROR_CODES } from "../../../shared/errors/error-codes";
+import { connectDatabase, disconnectDatabase } from "../../../config/database.js";
+import { realtimeAuthService } from "../realtime.auth.js";
+import { UserModel } from "../../users/user.model.js";
+import { DriverProfileModel } from "../../drivers/driver.model.js";
+import { UserRole } from "../../../shared/constants/roles.constants.js";
+import { DriverStatus, VerificationStatus } from "../../drivers/driver.types.js";
+import { authService } from "../../auth/auth.service.js";
+import { ERROR_CODES } from "../../../shared/errors/error-codes.js";
 
 describe("Realtime WebSocket Auth & Authorization Guard Tests", () => {
   const TEST_PREFIX = `rt_auth_${Date.now()}_`;

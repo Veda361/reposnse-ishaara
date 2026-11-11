@@ -1,17 +1,17 @@
 import { Router } from "express";
-import { userController } from "./user.controller";
-import { rideRequestController } from "../ride-requests/ride-request.controller";
-import { requireAuth } from "../../middleware/auth";
-import { requireUser } from "../../middleware/authorization";
-import { validateBody, validateQuery } from "../../middleware/validation";
-import { onboardingSchema, updateProfileSchema } from "./user.schema";
-import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema";
-import { rideController } from "../rides/ride.controller";
-import { listRidesQuerySchema } from "../rides/ride.schema";
-import { asyncHandler } from "../../shared/utils/async-handler";
-import { emergencyContactController } from "../safety/emergency-contact.controller";
-import { createEmergencyContactSchema, updateEmergencyContactSchema } from "../safety/safety.schema";
-import { emergencyContactRateLimiter } from "../../middleware/rate-limit";
+import { userController } from "./user.controller.js";
+import { rideRequestController } from "../ride-requests/ride-request.controller.js";
+import { requireAuth } from "../../middleware/auth.js";
+import { requireUser } from "../../middleware/authorization.js";
+import { validateBody, validateQuery } from "../../middleware/validation.js";
+import { onboardingSchema, updateProfileSchema } from "./user.schema.js";
+import { listRideRequestsQuerySchema } from "../ride-requests/ride-request.schema.js";
+import { rideController } from "../rides/ride.controller.js";
+import { listRidesQuerySchema } from "../rides/ride.schema.js";
+import { asyncHandler } from "../../shared/utils/async-handler.js";
+import { emergencyContactController } from "../safety/emergency-contact.controller.js";
+import { createEmergencyContactSchema, updateEmergencyContactSchema } from "../safety/safety.schema.js";
+import { emergencyContactRateLimiter } from "../../middleware/rate-limit.js";
 
 const router = Router();
 

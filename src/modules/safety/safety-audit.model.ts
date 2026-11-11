@@ -1,6 +1,6 @@
 import mongoose, { Schema, Model } from "mongoose";
-import { ISafetyAuditEventDocument } from "./safety.types";
-import { EmergencyStatus } from "./safety.constants";
+import { ISafetyAuditEventDocument } from "./safety.types.js";
+import { EmergencyStatus } from "./safety.constants.js";
 
 const safetyAuditEventSchema = new Schema<ISafetyAuditEventDocument>(
   {

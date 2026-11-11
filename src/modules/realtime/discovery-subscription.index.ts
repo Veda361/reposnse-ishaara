@@ -1,9 +1,9 @@
 import { WebSocket } from "ws";
-import { IDiscoverySession } from "../matching/discovery-session.model";
-import { WebSocketTransport } from "./transports/websocket.transport";
-import { ITripDocument } from "../trips/trip.types";
-import { calculateDistanceMeters } from "../trips/trip.service";
-import { logger } from "../../config/logger";
+import { IDiscoverySession } from "../matching/discovery-session.model.js";
+import { WebSocketTransport } from "./transports/websocket.transport.js";
+import { ITripDocument } from "../trips/trip.types.js";
+import { calculateDistanceMeters } from "../trips/trip.service.js";
+import { logger } from "../../config/logger.js";
 
 export interface ActiveDiscoverySubscriber {
   sessionId: string;

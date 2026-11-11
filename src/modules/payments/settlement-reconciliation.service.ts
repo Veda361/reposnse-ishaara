@@ -1,10 +1,10 @@
 import { Types } from "mongoose";
-import { SettlementModel } from "./settlement.model";
-import { PaymentModel } from "./payment.model";
-import { BusOperatorModel } from "../operators/operator.model";
-import { SETTLEMENT_STATUS, PAYMENT_STATUS } from "./payment.constants";
-import { settlementService, SETTLEMENT_LEASE_TIMEOUT_MS } from "./settlement.service";
-import { logger } from "../../config/logger";
+import { SettlementModel } from "./settlement.model.js";
+import { PaymentModel } from "./payment.model.js";
+import { BusOperatorModel } from "../operators/operator.model.js";
+import { SETTLEMENT_STATUS, PAYMENT_STATUS } from "./payment.constants.js";
+import { settlementService, SETTLEMENT_LEASE_TIMEOUT_MS } from "./settlement.service.js";
+import { logger } from "../../config/logger.js";
 
 export interface SettlementAuditDiscrepancy {
   settlementId?: string;

@@ -1,21 +1,21 @@
 import { Response } from "express";
-import { AuthenticatedRequest } from "../../shared/types/common.types";
-import { vehicleService } from "./vehicle.service";
-import { vehicleAssignmentService } from "./vehicle-assignment.service";
-import { driverService } from "../drivers/driver.service";
-import { toCleanVehicleResponse } from "./vehicle.model";
-import { toCleanAssignmentResponse } from "./assignment.model";
-import { sendSuccess } from "../../shared/responses/api-response";
-import { HTTP_STATUS } from "../../shared/constants/api.constants";
+import { AuthenticatedRequest } from "../../shared/types/common.types.js";
+import { vehicleService } from "./vehicle.service.js";
+import { vehicleAssignmentService } from "./vehicle-assignment.service.js";
+import { driverService } from "../drivers/driver.service.js";
+import { toCleanVehicleResponse } from "./vehicle.model.js";
+import { toCleanAssignmentResponse } from "./assignment.model.js";
+import { sendSuccess } from "../../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../../shared/constants/api.constants.js";
 import {
   CreateVehicleInput,
   UpdateVehicleInput,
   AssignVehicleInput,
   UnassignVehicleInput,
   ListAgencyVehiclesQueryInput,
-} from "./vehicle.schema";
-import { UnauthorizedError } from "../../shared/errors/app-error";
-import { verifyAdminKey } from "../../middleware/authorization";
+} from "./vehicle.schema.js";
+import { UnauthorizedError } from "../../shared/errors/app-error.js";
+import { verifyAdminKey } from "../../middleware/authorization.js";
 
 export class VehicleController {
   /**

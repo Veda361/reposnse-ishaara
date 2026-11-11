@@ -4,8 +4,8 @@ import {
   PAYMENT_PROVIDER,
   PaymentStatus,
   PaymentProviderType,
-} from "./payment.constants";
-import { PaymentRecord } from "./payment.types";
+} from "./payment.constants.js";
+import { PaymentRecord } from "./payment.types.js";
 
 export interface IPaymentDocument extends Document {
   rideId: mongoose.Types.ObjectId;

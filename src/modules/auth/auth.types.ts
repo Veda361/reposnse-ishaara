@@ -1,4 +1,4 @@
-import { IUserDocument } from "../users/user.types";
+import { IUserDocument } from "../users/user.types.js";
 
 /**
  * Authenticated request context attached by the Isahara auth middleware.

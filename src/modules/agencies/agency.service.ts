@@ -3,25 +3,25 @@ import {
   AgencyModel,
   toCleanPublicAgencyResponse,
   toCleanPrivateAgencyResponse,
-} from "./agency.model";
+} from "./agency.model.js";
 import {
   CleanPublicAgencyResponse,
   CleanPrivateAgencyResponse,
   AgencyStatus,
-} from "./agency.types";
+} from "./agency.types.js";
 import {
   CreateAgencyInput,
   UpdateAgencyInput,
   ListAgenciesQueryInput,
-} from "./agency.schema";
+} from "./agency.schema.js";
 import {
   NotFoundError,
   ConflictError,
   ForbiddenError,
   BadRequestError,
-} from "../../shared/errors/app-error";
-import { ERROR_CODES } from "../../shared/errors/error-codes";
-import { logger } from "../../config/logger";
+} from "../../shared/errors/app-error.js";
+import { ERROR_CODES } from "../../shared/errors/error-codes.js";
+import { logger } from "../../config/logger.js";
 
 export class AgencyService {
   /**

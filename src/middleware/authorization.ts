@@ -1,12 +1,12 @@
 import { Response, NextFunction, RequestHandler, Request } from "express";
-import { AuthenticatedRequest } from "../shared/types/common.types";
-import { Role, ROLES } from "../shared/constants/roles.constants";
-import { ForbiddenError, UnauthorizedError } from "../shared/errors/app-error";
-import { env } from "../config/env";
-import { sendError } from "../shared/responses/api-response";
-import { HTTP_STATUS } from "../shared/constants/api.constants";
-import { ERROR_CODES } from "../shared/errors/error-codes";
-import { requireAuth } from "./auth";
+import { AuthenticatedRequest } from "../shared/types/common.types.js";
+import { Role, ROLES } from "../shared/constants/roles.constants.js";
+import { ForbiddenError, UnauthorizedError } from "../shared/errors/app-error.js";
+import { env } from "../config/env.js";
+import { sendError } from "../shared/responses/api-response.js";
+import { HTTP_STATUS } from "../shared/constants/api.constants.js";
+import { ERROR_CODES } from "../shared/errors/error-codes.js";
+import { requireAuth } from "./auth.js";
 
 import { timingSafeEqual, createHash } from "crypto";
 

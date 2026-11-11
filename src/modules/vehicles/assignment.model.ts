@@ -2,9 +2,9 @@ import mongoose, { Schema, Model } from "mongoose";
 import {
   IDriverVehicleAssignmentDocument,
   CleanAssignmentResponse,
-} from "./assignment.types";
-import { IVehicleDocument } from "./vehicle.types";
-import { toCleanVehicleResponse } from "./vehicle.model";
+} from "./assignment.types.js";
+import { IVehicleDocument } from "./vehicle.types.js";
+import { toCleanVehicleResponse } from "./vehicle.model.js";
 
 const driverVehicleAssignmentSchema =
   new Schema<IDriverVehicleAssignmentDocument>(

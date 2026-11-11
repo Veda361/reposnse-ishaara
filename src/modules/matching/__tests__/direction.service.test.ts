@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { directionService } from "../direction.service";
+import { directionService } from "../direction.service.js";
 
 describe("DirectionService Unit Tests", () => {
   describe("calculateBearing", () => {

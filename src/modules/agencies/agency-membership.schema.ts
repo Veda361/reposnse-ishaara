@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AgencyMembershipStatus } from "./agency-membership.types";
+import { AgencyMembershipStatus } from "./agency-membership.types.js";
 
 const objectIdRegex = /^[0-9a-fA-F]{24}$/;
 

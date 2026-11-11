@@ -1,7 +1,7 @@
 import { Types, Document } from "mongoose";
-import { RideStatus } from "./ride.constants";
-import { GeoJSONPoint } from "../drivers/driver.types";
-import { FareEstimate, FareSnapshot } from "../payments/fare.types";
+import { RideStatus } from "./ride.constants.js";
+import { GeoJSONPoint } from "../drivers/driver.types.js";
+import { FareEstimate, FareSnapshot } from "../payments/fare.types.js";
 
 /**
  * Normalized physical waypoint for ride pickup/destination.

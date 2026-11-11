@@ -1,5 +1,5 @@
 import { Types, Document } from "mongoose";
-import { GeoJSONPoint } from "../drivers/driver.types";
+import { GeoJSONPoint } from "../drivers/driver.types.js";
 
 /**
  * Trip lifecycle status states.

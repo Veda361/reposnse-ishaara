@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Model } from "mongoose";
-import { DOMAIN_EVENT_TYPES, DomainEventType } from "./domain-event.types";
-import { env } from "../../config/env";
+import { DOMAIN_EVENT_TYPES, DomainEventType } from "./domain-event.types.js";
+import { env } from "../../config/env.js";
 
 export const OUTBOX_STATUS = {
   PENDING: "PENDING",

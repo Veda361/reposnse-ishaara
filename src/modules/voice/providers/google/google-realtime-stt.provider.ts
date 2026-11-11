@@ -2,12 +2,12 @@ import {
   RealtimeSpeechProvider,
   RealtimeSpeechEvent,
   RealtimeSessionOptions,
-} from "../../realtime-speech.provider";
-import { BufferedStreamingSpeechAdapter } from "../streaming/buffered-streaming.adapter";
-import { SpeechOrchestrator } from "../../speech.orchestrator";
-import { GoogleSpeechProvider } from "./google-stt.provider";
-import { env } from "../../../../config/env";
-import { logger } from "../../../../config/logger";
+} from "../../realtime-speech.provider.js";
+import { BufferedStreamingSpeechAdapter } from "../streaming/buffered-streaming.adapter.js";
+import { SpeechOrchestrator } from "../../speech.orchestrator.js";
+import { GoogleSpeechProvider } from "./google-stt.provider.js";
+import { env } from "../../../../config/env.js";
+import { logger } from "../../../../config/logger.js";
 
 /**
  * Google Realtime Speech-to-Text Provider.
