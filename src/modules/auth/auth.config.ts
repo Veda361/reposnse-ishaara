@@ -32,13 +32,26 @@ const trustedOrigins: string[] = [
 // Index 1 (and subsequent) are added to the allowed audience list for native Android ID token verification
 const googleClientIds: string[] = [];
 
-const webClientId = env.GOOGLE_WEB_CLIENT_ID || env.GOOGLE_CLIENT_ID;
-if (webClientId) {
-  googleClientIds.push(webClientId);
+const rawWebClientIds = (env.GOOGLE_WEB_CLIENT_ID || env.GOOGLE_CLIENT_ID || "")
+  .split(/[,;\s|]+/)
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+for (const id of rawWebClientIds) {
+  if (!googleClientIds.includes(id)) {
+    googleClientIds.push(id);
+  }
 }
 
-if (env.GOOGLE_ANDROID_CLIENT_ID && !googleClientIds.includes(env.GOOGLE_ANDROID_CLIENT_ID)) {
-  googleClientIds.push(env.GOOGLE_ANDROID_CLIENT_ID);
+const rawAndroidClientIds = (env.GOOGLE_ANDROID_CLIENT_ID || "")
+  .split(/[,;\s|]+/)
+  .map((id) => id.trim())
+  .filter(Boolean);
+
+for (const id of rawAndroidClientIds) {
+  if (!googleClientIds.includes(id)) {
+    googleClientIds.push(id);
+  }
 }
 
 // Development fallback if no credentials supplied in non-production
