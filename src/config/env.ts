@@ -57,6 +57,44 @@ export function parseClientUrls(rawUrlString?: string): string[] {
   return validOrigins;
 }
 
+/**
+ * Standard authorized frontend origins across local development and production environments.
+ * Ensures localhost development ports (3000, 3001, 5173), production consumer web,
+ * and production agency dashboard are always securely recognized without wildcard CORS.
+ */
+export const DEFAULT_ALLOWED_ORIGINS: readonly string[] = Object.freeze([
+  "http://localhost:3000",
+  "http://127.0.0.1:3000",
+  "http://localhost:3001",
+  "http://127.0.0.1:3001",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://ishaara-web-dashboard.vercel.app",
+  "https://ishara-web.vercel.app",
+  "https://ishaara-user-web.vercel.app",
+  "https://ishara-user-web.vercel.app",
+]);
+
+/**
+ * Resolves the complete set of authorized origins combining standard defaults
+ * and dynamically parsed CLIENT_URL entries. Strips trailing slashes, deduplicates,
+ * and rejects wildcards / malformed URLs.
+ */
+export function resolveAllowedOrigins(rawUrlString?: string): string[] {
+  const parsedDynamic = parseClientUrls(rawUrlString);
+  const combined = [...DEFAULT_ALLOWED_ORIGINS, ...parsedDynamic];
+  const uniqueOrigins: string[] = [];
+
+  for (const origin of combined) {
+    const normalized = origin.trim().replace(/\/$/, "");
+    if (normalized && !uniqueOrigins.includes(normalized)) {
+      uniqueOrigins.push(normalized);
+    }
+  }
+
+  return uniqueOrigins;
+}
+
 const envSchema = z
   .object({
     NODE_ENV: z

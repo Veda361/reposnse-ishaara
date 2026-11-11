@@ -1,7 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import helmet from "helmet";
 import cors from "cors";
-import { env, parseClientUrls } from "./config/env";
+import { env, parseClientUrls, resolveAllowedOrigins } from "./config/env";
 import { logger } from "./config/logger";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./modules/auth/auth.config";
@@ -32,20 +32,12 @@ export const createApp = (options?: CreateAppOptions): Express => {
 
   /**
    * CORS Configuration
-   * In development: allows configured CLIENT_URL origins and standard localhost origins.
-   * In production: restricts strictly to configured CLIENT_URL origins.
+   * Allows authorized development origins (localhost:3000, 3001, 5173),
+   * production consumer frontend, production agency dashboard, and dynamic CLIENT_URL origins.
+   * Wildcard CORS is strictly prevented, and untrusted origins are rejected.
    */
-  const parsedClientOrigins = parseClientUrls(env.CLIENT_URL);
-  const allowedOrigins = new Set<string>(
-    [
-      ...parsedClientOrigins,
-      env.NODE_ENV !== "production" ? "http://localhost:3000" : undefined,
-      env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : undefined,
-      env.NODE_ENV !== "production" ? "http://localhost:5173" : undefined,
-      env.NODE_ENV !== "production" ? "http://127.0.0.1:5173" : undefined,
-      env.NODE_ENV !== "production" ? "http://localhost:3001" : undefined,
-    ].filter((origin): origin is string => Boolean(origin))
-  );
+  const allowedOriginsList = resolveAllowedOrigins(env.CLIENT_URL);
+  const allowedOrigins = new Set<string>(allowedOriginsList);
 
   app.use(
     cors({
@@ -60,7 +52,7 @@ export const createApp = (options?: CreateAppOptions): Express => {
         }
 
         logger.warn(`CORS blocked request from origin: ${origin}`);
-        return callback(new Error(`CORS policy does not allow access from origin: ${origin}`));
+        return callback(null, false);
       },
       credentials: true,
       methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],

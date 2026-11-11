@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { mongodbAdapter } from "better-auth/adapters/mongodb";
 import { bearer, emailOTP } from "better-auth/plugins";
 import { MongoClient } from "mongodb";
-import { env, parseClientUrls } from "../../config/env";
+import { env, parseClientUrls, resolveAllowedOrigins } from "../../config/env";
 import { logger } from "../../config/logger";
 import { emailService } from "./email.service";
 
@@ -14,22 +14,23 @@ export const mongoAuthClient = new MongoClient(env.MONGODB_URI, {
 });
 const authDb = mongoAuthClient.db();
 
-// Origins allowed to interact with authentication endpoints & cookies
-const trustedOrigins: string[] = [
-  ...parseClientUrls(env.CLIENT_URL),
-  ...(env.NODE_ENV !== "production"
-    ? [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-      ]
-    : []),
-].filter((origin, index, self) => Boolean(origin) && self.indexOf(origin) === index);
+// Origins allowed to interact with authentication endpoints & cookies.
+// Uses the unified origin resolver to guarantee exact match with Express CORS.
+export const trustedOrigins: string[] = resolveAllowedOrigins(env.CLIENT_URL);
+
+// Known authorized Google OAuth Client IDs across the Ishara ecosystem:
+// 1. Backend/Firebase Web Client ID
+// 2. Consumer Web Frontend Client ID (ishara-user-web)
+// 3. Native Android App Client ID
+export const DEFAULT_GOOGLE_CLIENT_IDS: readonly string[] = Object.freeze([
+  "879711366748-vte2ip1qrc5vf2jd13hcvgisprraqoc9.apps.googleusercontent.com",
+  "710758057789-f40u0f6qgvd3h8okjpcchmicbnru01lf.apps.googleusercontent.com",
+  "879711366748-ue20krt93hu039a1v4dcv49htkoj7lu4.apps.googleusercontent.com",
+]);
 
 // Resolve allowed Google Client IDs / Audiences:
 // Index 0 represents the primary Web Client ID paired with clientSecret for Web OAuth
-// Index 1 (and subsequent) are added to the allowed audience list for native Android ID token verification
+// Subsequent IDs are added to the allowed audience list for native Android and Web ID token verification
 const googleClientIds: string[] = [];
 
 const rawWebClientIds = (env.GOOGLE_WEB_CLIENT_ID || env.GOOGLE_CLIENT_ID || "")
@@ -51,6 +52,16 @@ const rawAndroidClientIds = (env.GOOGLE_ANDROID_CLIENT_ID || "")
 for (const id of rawAndroidClientIds) {
   if (!googleClientIds.includes(id)) {
     googleClientIds.push(id);
+  }
+}
+
+// In production, ensure all known Ishara ecosystem client IDs are recognized
+// so that valid tokens from web and mobile apps are never rejected due to audience mismatch
+if (env.NODE_ENV === "production") {
+  for (const id of DEFAULT_GOOGLE_CLIENT_IDS) {
+    if (!googleClientIds.includes(id)) {
+      googleClientIds.push(id);
+    }
   }
 }
 
