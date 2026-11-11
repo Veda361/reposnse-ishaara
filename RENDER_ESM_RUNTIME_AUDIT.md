@@ -92,3 +92,4 @@ Under `NodeNext` with `"type": "module"`, Node.js requires explicit file extensi
 ## 5. Audit Conclusion
 
 The repository was already authored in ESM style, but was being miscompiled into CommonJS by `tsc` due to the missing `"type": "module"` declaration in `package.json`. Adding `"type": "module"` and affixing `.js` extensions to all relative imports enables native ESM output, fully resolving `ERR_REQUIRE_ESM` on Render.
+
